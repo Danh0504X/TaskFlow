@@ -1,18 +1,40 @@
-const express = require("express");
-const cors = require("cors");
-const dotenv = require("dotenv");  
-const apiRoutes = require("./routes/api");
-dotenv.config();
+import express from 'express'
+import cors from 'cors'
+import cookieParser from 'cookie-parser'
 
-const app = express();
+import { env } from './config/enviroment.js'
+import { corsOptions } from './config/cors.js'
+import { connectDB } from './lib/db.js'
+import { errorHandlingMiddleware } from './middlewares/errorHandlingMiddleware.js'
+import apiRoutes from './routes/api.js'
 
-app.use(cors());
-app.use(express.json());
-app.use("/api", apiRoutes);
+const START_SERVER = () => {
+  const app = express()
 
-const PORT = process.env.PORT || 5000;
+  // Core middlewares
+  app.use(cors(corsOptions))
+  app.use(express.json())
+  app.use(express.urlencoded({ extended: true }))
+  app.use(cookieParser())
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-}); 
+  // Routes
+  app.use('/api', apiRoutes)
 
+  // Error handling middleware (phải đặt sau cùng, sau tất cả routes)
+  app.use(errorHandlingMiddleware)
+
+  app.listen(env.PORT, () => {
+    console.log(`🚀 Server is running on port ${env.PORT} [${env.BUILD_MODE}]`)
+  })
+}
+
+// Kết nối database trước, kết nối thành công mới khởi động server
+;(async () => {
+  try {
+    await connectDB()
+    START_SERVER()
+  } catch (error) {
+    console.error('❌ Failed to start server:', error)
+    process.exit(1)
+  }
+})()

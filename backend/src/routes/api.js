@@ -1,15 +1,14 @@
-const express = require('express');
-const router = express.Router();
+import express from 'express'
+import authRoute from './authRoute.js'
 
-router.get("/", (req, res) => {
-  res.json({ message: "Welcome to the API!" });
-}
-);
+const router = express.Router()
 
-router.get("/hello", (req, res) => {
-  res.json({ message: 'Hello, World!' });
-});
+// Health check / API root
+router.get('/', (req, res) => {
+  res.json({ message: 'Welcome to the API!' })
+})
 
+// Feature routers
+router.use('/auth', authRoute)
 
-
-module.exports = router;
+export default router
