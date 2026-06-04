@@ -1,6 +1,6 @@
 import bcrypt from 'bcrypt'
 import { StatusCodes } from 'http-status-codes'
-import User from '../modles/user.js'
+import User from '../modles/users.js'
 import { JwtProvider } from '../providers/JwtProvider.js'
 import { sessionService } from './sessionService.js'
 import { env } from '../config/enviroment.js'
@@ -16,7 +16,6 @@ const REFRESH_TOKEN_TTL = '14d'
 
 const buildUserInfo = (user) => ({
   _id: user._id,
-  username: user.username,
   email: user.email,
   fullName: user.fullName,
   avatarUrl: user.avatarUrl,
@@ -58,12 +57,12 @@ const generateTokens = async (userInfo) => {
 }
 
 const signUp = async (body) => {
-  const { username, email, password, fullName } = body
+  const { email, password, fullName } = body
 
-  if (!username || !email || !password || !fullName) {
+  if (!email || !password || !fullName) {
     throw new ApiError(
       StatusCodes.BAD_REQUEST,
-      'Username, email, password and full name are required!',
+      'Email, password and full name are required!',
     )
   }
 
@@ -71,22 +70,15 @@ const signUp = async (body) => {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid email format')
   }
 
-  const existingUser = await User.findOne({
-    $or: [{ username: username.toLowerCase() }, { email: email.toLowerCase() }],
-  })
+  const existingUser = await User.findOne({ email: email.toLowerCase() })
 
-  if (existingUser?.username === username.toLowerCase()) {
-    throw new ApiError(StatusCodes.CONFLICT, 'Username already exists')
-  }
-
-  if (existingUser?.email === email.toLowerCase()) {
+  if (existingUser) {
     throw new ApiError(StatusCodes.CONFLICT, 'Email already exists')
   }
 
   const passwordHash = await bcrypt.hash(password, 10)
 
   const user = await User.create({
-    username,
     email,
     fullName,
     passwordHash,
@@ -104,32 +96,27 @@ const signUp = async (body) => {
 }
 
 const signIn = async (body) => {
-  const { username, email, password } = body
+  const { email, password } = body
 
-  // Cho phép đăng nhập bằng username hoặc email (gmail)
-  const identifier = username || email
-
-  if (!identifier || !password) {
+  if (!email || !password) {
     throw new ApiError(
       StatusCodes.BAD_REQUEST,
-      'Username or email and password are required',
+      'Email and password are required',
     )
   }
 
-  const login = identifier.toLowerCase().trim()
-  const user = await User.findOne({
-    $or: [{ username: login }, { email: login }],
-  })
+  const login = email.toLowerCase().trim()
+  const user = await User.findOne({ email: login })
 
   if (!user || user.authProvider !== 'local' || !user.passwordHash) {
-    throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid username/email or password')
+    throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid email or password')
   }
 
   ensureAccountCanSignIn(user)
 
   const isPasswordValid = await bcrypt.compare(password, user.passwordHash)
   if (!isPasswordValid) {
-    throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid username/email or password')
+    throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid email or password')
   }
 
   const userInfo = buildUserInfo(user)

@@ -10,20 +10,6 @@ const userSchema = new mongoose.Schema(
       maxlength: 100,
     },
 
-    username: {
-      type: String,
-      required: function () {
-        return this.authProvider === 'local'
-      },
-      unique: true,
-      sparse: true,
-      lowercase: true,
-      trim: true,
-      minlength: 3,
-      maxlength: 30,
-      match: /^[a-zA-Z0-9_]+$/,
-    },
-
     email: {
       type: String,
       required: true,
