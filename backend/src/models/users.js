@@ -32,6 +32,13 @@ const userSchema = new mongoose.Schema(
       default: null,
     },
 
+    bio: {
+      type: String,
+      trim: true,
+      maxlength: 500,
+      default: '',
+    },
+
     authProvider: {
       type: String,
       enum: ['local', 'google'],

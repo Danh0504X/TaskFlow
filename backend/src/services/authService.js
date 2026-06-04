@@ -1,6 +1,6 @@
 import bcrypt from 'bcrypt'
 import { StatusCodes } from 'http-status-codes'
-import User from '../modles/users.js'
+import User from '../models/users.js'
 import { JwtProvider } from '../providers/JwtProvider.js'
 import { sessionService } from './sessionService.js'
 import { env } from '../config/enviroment.js'

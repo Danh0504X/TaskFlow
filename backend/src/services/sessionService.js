@@ -1,4 +1,4 @@
-import Session from '../modles/sessions.js'
+import Session from '../models/sessions.js'
 
 // Thời gian sống của session / refresh token (14 ngày)
 const REFRESH_TOKEN_TTL_MS = 14 * 24 * 60 * 60 * 1000

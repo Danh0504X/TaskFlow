@@ -1,22 +1,16 @@
 import JWT from 'jsonwebtoken'
 
 const generateToken = async (userInfo, secretKey, tokenLife) => {
-  try {
-    return JWT.sign(userInfo, secretKey, {
-      algorithm: 'HS256',
-      expiresIn: tokenLife,
-    })
-  } catch (error) {
-    throw new Error(error)
-  }
+  return JWT.sign(userInfo, secretKey, {
+    algorithm: 'HS256',
+    expiresIn: tokenLife,
+  })
 }
 
 const verifyToken = async (token, secretKey) => {
-  try {
-    return JWT.verify(token, secretKey)
-  } catch (error) {
-    throw new Error(error)
-  }
+  // Giữ nguyên error gốc (TokenExpiredError / JsonWebTokenError) để nơi gọi
+  // có thể phân biệt qua err.name thay vì chỉ dựa vào message.
+  return JWT.verify(token, secretKey)
 }
 
 export const JwtProvider = {
