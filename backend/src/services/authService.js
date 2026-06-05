@@ -3,7 +3,7 @@ import { StatusCodes } from 'http-status-codes'
 import User from '../models/users.js'
 import { JwtProvider } from '../providers/JwtProvider.js'
 import { sessionService } from './sessionService.js'
-import { env } from '../config/enviroment.js'
+import { env } from '../config/environment.js'
 import ApiError from '../utils/ApiError.js'
 import { EMAIL_REGEX } from '../utils/constants.js'
 

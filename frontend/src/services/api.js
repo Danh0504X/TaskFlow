@@ -2,8 +2,9 @@ import axios from 'axios';
 
 // Khởi tạo instance axios
 const api = axios.create({
-  baseURL: 'http://localhost:5000/api', // Thay đổi baseURL theo cổng backend của bạn
+  baseURL: 'http://localhost:5001/api', // Đã trỏ về đúng cổng mặc định của Backend (5001)
   timeout: 10000,
+  withCredentials: true, // Quan trọng: Cho phép trình duyệt tự động đính kèm Cookie (chứa token) vào request
   headers: {
     'Content-Type': 'application/json',
   },
