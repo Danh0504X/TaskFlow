@@ -1,10 +1,12 @@
 import { StatusCodes } from 'http-status-codes'
 import mongoose from 'mongoose'
 import Project from '../models/projects.js'
+import Sprint from '../models/sprints.js'
+import Issue from '../models/issues.js'
 import ApiError from '../utils/ApiError.js'
 
-// NOTE: Đây mới là KHUNG service. 
-// Logic thật sự sẽ được hiện thực sau.
+// Các status hợp lệ của project (khớp với enum trong models/projects.js).
+const PROJECT_STATUSES = ['ACTIVE', 'COMPLETED', 'CANCELLED']
 
 const ensureValidObjectId = (id, label = 'id') => {
   if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -13,13 +15,22 @@ const ensureValidObjectId = (id, label = 'id') => {
 }
 
 // Tạo project. Người tạo trở thành OWNER và là 1 member ACTIVE.
-const createProject = async (userId, body) => {
-  // TODO:
-  // - Validate body (name bắt buộc).
-  // - Tạo project với createdBy = userId.
-  // - members = [{ userId, role: 'OWNER', status: 'ACTIVE' }].
-  // - return project vừa tạo.
-  throw new ApiError(StatusCodes.NOT_IMPLEMENTED, 'createProject is not implemented yet')
+const createProject = async (userId, body = {}) => {
+  const { name, description, deadline } = body
+
+  if (!name || !name.trim()) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Project name is required')
+  }
+
+  const project = await Project.create({
+    name: name.trim(),
+    description: description?.trim() || '',
+    deadline: deadline || null,
+    createdBy: userId,
+    members: [{ userId, role: 'OWNER', status: 'ACTIVE' }],
+  })
+
+  return project
 }
 
 // Lấy danh sách project mà user là member (chưa bị xóa mềm).
@@ -43,21 +54,72 @@ const getProjectById = async (projectId, userId) => {
 
 // Cập nhật project.
 
-const updateProject = async (projectId, body) => {
+const updateProject = async (projectId, body = {}) => {
   ensureValidObjectId(projectId, 'project id')
-  // TODO:
-  // - Chỉ cho update các field cho phép (name, description, deadline, status...).
-  // - Project.findOneAndUpdate({ _id, isDeleted: false }, payload, { new: true }).
-  throw new ApiError(StatusCodes.NOT_IMPLEMENTED, 'updateProject is not implemented yet')
+
+  // Chỉ cho phép cập nhật các field này.
+  const payload = {}
+
+  if (body.name !== undefined) {
+    if (!body.name || !body.name.trim()) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'Project name cannot be empty')
+    }
+    payload.name = body.name.trim()
+  }
+
+  if (body.description !== undefined) {
+    payload.description = body.description?.trim() || ''
+  }
+
+  if (body.deadline !== undefined) {
+    payload.deadline = body.deadline || null
+  }
+
+  if (body.status !== undefined) {
+    if (!PROJECT_STATUSES.includes(body.status)) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid project status')
+    }
+    payload.status = body.status
+  }
+
+  if (Object.keys(payload).length === 0) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'No valid fields to update')
+  }
+
+  const project = await Project.findOneAndUpdate(
+    { _id: projectId, isDeleted: false },
+    payload,
+    { new: true, runValidators: true },
+  )
+
+  if (!project) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Project not found')
+  }
+
+  return project
 }
 
-// Xóa mềm project.
+// Xóa mềm project (đồng thời cascade soft-delete sprint/issue thuộc project).
 const deleteProject = async (projectId) => {
   ensureValidObjectId(projectId, 'project id')
-  // TODO:
-  // - Project.findOneAndUpdate({ _id, isDeleted: false }, { isDeleted: true }).
-  // - (Tùy chọn) cascade soft-delete các sprint/issue thuộc project.
-  throw new ApiError(StatusCodes.NOT_IMPLEMENTED, 'deleteProject is not implemented yet')
+
+  const project = await Project.findOneAndUpdate(
+    { _id: projectId, isDeleted: false },
+    { isDeleted: true },
+    { new: true },
+  )
+
+  if (!project) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Project not found')
+  }
+
+  // Cascade soft-delete các sprint và issue thuộc project.
+  await Promise.all([
+    Sprint.updateMany({ projectId, isDeleted: false }, { isDeleted: true }),
+    Issue.updateMany({ projectId, isDeleted: false }, { isDeleted: true }),
+  ])
+
+  return project
 }
 
 export const projectService = {

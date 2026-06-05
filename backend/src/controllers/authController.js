@@ -2,7 +2,7 @@ import { StatusCodes } from 'http-status-codes'
 import ms from 'ms'
 import { authService } from '../services/authService.js'
 import { asyncHandler } from '../middlewares/asyncHandler.js'
-import { env } from '../config/enviroment.js'
+import { env } from '../config/environment.js'
 
 const isProduction = env.BUILD_MODE === 'production'
 

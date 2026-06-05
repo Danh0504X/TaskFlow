@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Local env overrides (secrets). `.env` giữ default public, `.env.local` cho máy cá nhân.
+.env.local
+.env.*.local
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

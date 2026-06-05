@@ -1,4 +1,4 @@
-import { env } from './enviroment.js'
+import { env } from './environment.js'
 
 // Cấu hình CORS cơ bản cho dự án
 export const corsOptions = {

@@ -1,0 +1,24 @@
+@import 'tailwindcss';
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+}
+
+/* Giữ màu chữ rõ ràng khi Chrome tự động điền (autofill) */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #0f172a; /* slate-900 */
+  -webkit-box-shadow: 0 0 0 1000px white inset;
+  caret-color: #0f172a;
+}
