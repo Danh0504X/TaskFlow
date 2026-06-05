@@ -22,7 +22,7 @@ const assertValidEmail = (email) => {
   }
 }
 
-// Gửi email chào mừng (không qua token/rate limit). Dùng được sau khi đăng ký.
+
 const sendWelcomeEmail = async ({ to, name }) => {
   assertValidEmail(to)
   await emailService.sendEmailByTemplate({
@@ -92,7 +92,7 @@ const verifyEmail = async ({ email, code }) => {
 
   await User.updateOne({ _id: tokenDoc.userId }, { isEmailVerified: true })
 
-  // Token chỉ dùng 1 lần -> xoá ngay sau khi verify thành công
+  
   await emailTokenService.deleteEmailToken({
     email,
     purpose: EMAIL_PURPOSE.VERIFY_EMAIL,
