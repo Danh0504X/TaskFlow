@@ -10,11 +10,18 @@ const generateOtpCode = () => crypto.randomInt(100000, 1000000).toString()
 const generateResetToken = () => crypto.randomBytes(32).toString('hex')
 
 // Hash token/mã bằng HMAC-SHA256 + secret. Không bao giờ lưu plain text.
-const hashToken = (token) =>
-  crypto
+const hashToken = (token) => {
+  if (!env.EMAIL_TOKEN_SECRET) {
+    throw new Error(
+      'Thiếu EMAIL_TOKEN_SECRET trong backend/.env. Hãy thêm biến này rồi RESTART server (dotenv chỉ đọc .env lúc khởi động).',
+    )
+  }
+
+  return crypto
     .createHmac('sha256', env.EMAIL_TOKEN_SECRET)
     .update(String(token))
     .digest('hex')
+}
 
 // Xoá toàn bộ token cũ cùng email + purpose (đảm bảo chỉ token mới nhất hiệu lực)
 const deleteEmailToken = async ({ email, purpose }) => {

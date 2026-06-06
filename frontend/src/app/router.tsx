@@ -7,6 +7,7 @@ import {
 import MainLayout from '@/components/layout/MainLayout'
 import DashboardPage from '@/features/dashboard/pages/DashboardPage'
 import LoginPage from '@/features/auth/pages/LoginPage'
+import VerifyEmailPage from '@/features/auth/pages/VerifyEmailPage'
 import { useAuthStore } from '@/features/auth/authStore'
 
 // Chặn truy cập trang cần đăng nhập.
@@ -38,6 +39,14 @@ const router = createBrowserRouter([
     element: (
       <PublicOnlyRoute>
         <LoginPage />
+      </PublicOnlyRoute>
+    ),
+  },
+  {
+    path: '/verify-email',
+    element: (
+      <PublicOnlyRoute>
+        <VerifyEmailPage />
       </PublicOnlyRoute>
     ),
   },

@@ -32,6 +32,18 @@ export const signUp = asyncHandler(async (req, res) => {
   res.status(StatusCodes.CREATED).json(result)
 })
 
+export const verifyEmail = asyncHandler(async (req, res) => {
+  const result = await authService.verifyEmailAndLogin(req.body)
+  const { accessToken, refreshToken } = result.data
+
+  setAuthCookies(res, { accessToken, refreshToken })
+
+  res.status(StatusCodes.OK).json({
+    message: 'Email verified successfully',
+    ...result,
+  })
+})
+
 export const signOut = asyncHandler(async (req, res) => {
   console.log('Call: ⛳authController.js -> signOut()')
   const refreshToken = req.cookies?.refreshToken

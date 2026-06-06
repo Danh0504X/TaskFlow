@@ -4,12 +4,34 @@ import type {
   SignInResponse,
   SignUpPayload,
   SignUpResponse,
+  VerifyEmailPayload,
+  VerifyEmailResponse,
 } from './auth.types'
 
 // Lớp gọi API cho auth. Mọi endpoint nằm dưới prefix /auth (xem VITE_API_BASE_URL).
 export const authApi = {
   signUp: async (payload: SignUpPayload): Promise<SignUpResponse> => {
     const res = await api.post<SignUpResponse>('/auth/sign-up', payload)
+    return res.data
+  },
+
+  /** Xác thực mã email sau khi đăng ký -> backend set cookie & trả userInfo. */
+  verifyEmail: async (
+    payload: VerifyEmailPayload,
+  ): Promise<VerifyEmailResponse> => {
+    const res = await api.post<VerifyEmailResponse>(
+      '/auth/verify-email',
+      payload,
+    )
+    return res.data
+  },
+
+  /** Gửi lại mã xác thực email. */
+  resendVerifyCode: async (email: string): Promise<{ message: string }> => {
+    const res = await api.post<{ message: string }>(
+      '/email/send-verify-code',
+      { email },
+    )
     return res.data
   },
 

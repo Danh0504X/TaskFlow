@@ -1,6 +1,7 @@
 import express from 'express'
 import {
   signUp,
+  verifyEmail,
   signIn,
   googleSignIn,
   signOut,
@@ -10,6 +11,8 @@ import {
 const router = express.Router()
 
 router.post('/sign-up', signUp)
+
+router.post('/verify-email', verifyEmail)
 
 router.post('/sign-in', signIn)
 

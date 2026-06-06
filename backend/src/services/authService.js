@@ -5,11 +5,9 @@ import { JwtProvider } from '../providers/JwtProvider.js'
 import { sessionService } from './sessionService.js'
 import { env } from '../config/environment.js'
 import ApiError from '../utils/ApiError.js'
-import { EMAIL_REGEX } from '../utils/constants.js'
-
-// import { emailService } from './emailService.js'
-// import ResetPassword from '../models/ResetPassword.js'
-// import ResetPasswordRateLimit from '../models/ResetPasswordRateLimit.js'
+import { EMAIL_REGEX, EMAIL_PURPOSE } from '../utils/constants.js'
+import { emailAccountService } from './email/emailAccountService.js'
+import { emailTokenService } from './email/emailTokenService.js'
 
 const ACCESS_TOKEN_TTL = '15m'
 const REFRESH_TOKEN_TTL = '14d'
@@ -22,6 +20,7 @@ const buildUserInfo = (user) => ({
   authProvider: user.authProvider,
   isEmailVerified: user.isEmailVerified,
   status: user.status,
+  role: user.role,
 })
 
 const ensureAccountCanSignIn = (user) => {
@@ -70,27 +69,98 @@ const signUp = async (body) => {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid email format')
   }
 
-  const existingUser = await User.findOne({ email: email.toLowerCase() })
+  const normalizedEmail = email.toLowerCase().trim()
+  const existingUser = await User.findOne({ email: normalizedEmail })
 
-  if (existingUser) {
+  // Đã có tài khoản ĐÃ xác thực -> email thực sự bị trùng
+  if (existingUser && existingUser.isEmailVerified) {
     throw new ApiError(StatusCodes.CONFLICT, 'Email already exists')
   }
 
   const passwordHash = await bcrypt.hash(password, 10)
 
-  const user = await User.create({
-    email,
-    fullName,
-    passwordHash,
-    authProvider: 'local',
-    isEmailVerified: false,
-    status: 'active',
-  })
+  // Tồn tại nhưng CHƯA xác thực -> cập nhật lại thông tin (cho phép đăng ký lại).
+  // Chưa tồn tại -> tạo mới ở trạng thái chưa xác thực.
+  if (existingUser) {
+    existingUser.fullName = fullName
+    existingUser.passwordHash = passwordHash
+    await existingUser.save()
+  } else {
+    await User.create({
+      email: normalizedEmail,
+      fullName,
+      passwordHash,
+      authProvider: 'local',
+      isEmailVerified: false,
+      status: 'active',
+    })
+  }
+
+  // Gửi mã xác thực; user chỉ đăng nhập được sau khi nhập đúng mã.
+  await emailAccountService.sendVerifyCode({ email: normalizedEmail })
 
   return {
-    message: 'User created successfully',
+    message: 'Đăng ký thành công. Vui lòng kiểm tra email để nhập mã xác thực.',
+    data: { email: normalizedEmail, needVerifyEmail: true },
+  }
+}
+
+// Xác thực mã email sau khi đăng ký -> set isEmailVerified, gửi welcome, đăng nhập luôn.
+const verifyEmailAndLogin = async (body) => {
+  const { email, code } = body
+
+  if (!email || !code) {
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      'Email and verification code are required',
+    )
+  }
+
+  const tokenDoc = await emailTokenService.verifyEmailToken({
+    email,
+    purpose: EMAIL_PURPOSE.VERIFY_EMAIL,
+    token: code,
+  })
+
+  if (!tokenDoc) {
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      'Mã xác thực không đúng hoặc đã hết hạn',
+    )
+  }
+
+  const user = await User.findById(tokenDoc.userId)
+  if (!user) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'User not found')
+  }
+
+  ensureAccountCanSignIn(user)
+
+  user.isEmailVerified = true
+  await user.save()
+
+  // Token dùng 1 lần -> xoá ngay sau khi xác thực thành công
+  await emailTokenService.deleteEmailToken({
+    email,
+    purpose: EMAIL_PURPOSE.VERIFY_EMAIL,
+  })
+
+  // Gửi email chào mừng (fire-and-forget: lỗi gửi mail không chặn đăng nhập)
+  emailAccountService
+    .sendWelcomeEmail({ to: user.email, name: user.fullName })
+    .catch((err) => console.error('🔥 Welcome email failed:', err.message))
+
+  const userInfo = buildUserInfo(user)
+  const { accessToken, refreshToken } = await generateTokens(userInfo)
+  await sessionService.createSession(user._id, refreshToken)
+
+  return {
+    status: 'success',
     data: {
-      userInfo: buildUserInfo(user),
+      userInfo,
+      accessToken,
+      refreshToken,
+      fullName: user.fullName,
     },
   }
 }
@@ -304,6 +374,7 @@ const signInWithGoogle = async ({ accessToken }) => {
 
 export const authService = {
   signUp,
+  verifyEmailAndLogin,
   signIn,
   signInWithGoogle,
   signOut,

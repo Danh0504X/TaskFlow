@@ -1,7 +1,11 @@
 import { useCallback } from 'react'
 import { authApi } from '../auth.api'
 import { useAuthStore } from '../authStore'
-import type { SignInPayload, SignUpPayload } from '../auth.types'
+import type {
+  SignInPayload,
+  SignUpPayload,
+  VerifyEmailPayload,
+} from '../auth.types'
 
 // Hook tiện ích gói các action auth + trạng thái user.
 // Component chỉ cần gọi hook này, không cần biết chi tiết api/store.
@@ -19,13 +23,25 @@ export const useAuth = () => {
     [setUser],
   )
 
-  // Backend signUp không set cookie -> đăng ký xong tự đăng nhập luôn cho mượt.
+  // Đăng ký KHÔNG đăng nhập ngay: backend gửi mã xác thực, user phải nhập mã.
   const signUp = useCallback(
-    async (payload: SignUpPayload) => {
-      await authApi.signUp(payload)
-      return signIn({ email: payload.email, password: payload.password })
+    (payload: SignUpPayload) => authApi.signUp(payload),
+    [],
+  )
+
+  // Nhập đúng mã -> backend set cookie & trả userInfo -> lưu user (đã đăng nhập).
+  const verifyEmail = useCallback(
+    async (payload: VerifyEmailPayload) => {
+      const res = await authApi.verifyEmail(payload)
+      setUser(res.data.userInfo)
+      return res
     },
-    [signIn],
+    [setUser],
+  )
+
+  const resendCode = useCallback(
+    (email: string) => authApi.resendVerifyCode(email),
+    [],
   )
 
   const googleSignIn = useCallback(
@@ -51,6 +67,8 @@ export const useAuth = () => {
     isAuthenticated: !!user,
     signIn,
     signUp,
+    verifyEmail,
+    resendCode,
     googleSignIn,
     signOut,
   }

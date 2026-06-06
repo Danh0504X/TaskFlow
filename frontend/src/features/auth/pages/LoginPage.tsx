@@ -39,11 +39,13 @@ const LoginPage = () => {
     setLoading(true) 
     try {
       if (isSignUp) {
+        // Đăng ký xong -> sang trang nhập mã xác thực (kèm email qua state).
         await signUp({ fullName, email, password })
+        navigate('/verify-email', { state: { email } })
       } else {
         await signIn({ email, password })
+        navigate('/', { replace: true })
       }
-      navigate('/', { replace: true })
     } catch (err) {
       setError(getErrorMessage(err, 'Có lỗi xảy ra, vui lòng thử lại'))
     } finally {

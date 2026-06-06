@@ -26,6 +26,11 @@ export interface SignUpPayload {
   fullName: string
 }
 
+export interface VerifyEmailPayload {
+  email: string
+  code: string
+}
+
 // ----- Response nhận về -----
 
 /** Trả về từ /auth/sign-in và /auth/google. Token được set qua httpOnly cookie. */
@@ -38,10 +43,14 @@ export interface SignInResponse {
   }
 }
 
-/** Trả về từ /auth/sign-up (chưa set cookie, user cần đăng nhập sau). */
+/** Trả về từ /auth/sign-up: chưa đăng nhập, chỉ báo cần nhập mã xác thực. */
 export interface SignUpResponse {
   message: string
   data: {
-    userInfo: UserInfo
+    email: string
+    needVerifyEmail?: boolean
   }
 }
+
+/** Trả về từ /auth/verify-email: giống sign-in (set cookie + userInfo). */
+export type VerifyEmailResponse = SignInResponse
