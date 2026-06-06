@@ -14,7 +14,7 @@ const ensureValidObjectId = (id, label = 'id') => {
   }
 }
 
-// Lấy danh sách tài khoản (phân trang đơn giản, mới nhất trước).
+// Lấy danh sách tài khoản 
 const getAllUsers = async (query = {}) => {
   const page = Math.max(1, Number(query.page) || 1)
   const limit = Math.min(100, Math.max(1, Number(query.limit) || 20))
@@ -100,7 +100,7 @@ const createUser = async (body = {}) => {
     status: status || 'active',
   })
 
-  // Không trả passwordHash (toJSON của model đã loại, nhưng chuẩn hóa lại cho chắc).
+  // Không trả passwordHash 
   return user.toJSON()
 }
 

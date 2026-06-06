@@ -76,21 +76,6 @@ export const refreshToken = asyncHandler(async (req, res) => {
   })
 })
 
-export const forgotPassword = asyncHandler(async (req, res) => {
-  const result = await authService.forgotPassword(req.body)
-  res.status(StatusCodes.OK).json(result)
-})
-
-export const verifyResetToken = asyncHandler(async (req, res) => {
-  const result = await authService.verifyResetToken(req.body)
-  res.status(StatusCodes.OK).json(result)
-})
-
-export const resetPassword = asyncHandler(async (req, res) => {
-  const result = await authService.resetPassword(req.body)
-  res.status(StatusCodes.OK).json(result)
-})
-
 export const changePassword = asyncHandler(async (req, res) => {
   const result = await authService.changePassword(req.user._id, req.body)
   res.status(StatusCodes.OK).json(result)

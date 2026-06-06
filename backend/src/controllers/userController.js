@@ -2,7 +2,7 @@ import { StatusCodes } from 'http-status-codes'
 import { asyncHandler } from '../middlewares/asyncHandler.js'
 import { userService } from '../services/userService.js'
 
-// [Admin] Lấy danh sách tài khoản (có phân trang & lọc).
+// [Admin] Lấy danh sách tài khoản 
 export const getAllUsers = asyncHandler(async (req, res) => {
   const result = await userService.getAllUsers(req.query)
 
