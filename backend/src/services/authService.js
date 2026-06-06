@@ -251,31 +251,6 @@ const refreshToken = async (refreshToken) => {
   return { accessToken }
 }
 
-const forgotPassword = async () => {
-  // Temporarily disabled because email service/reset-password models are commented out.
-  // const emailSent = await emailService.sendPasswordResetEmail(user.email, token)
-  throw new ApiError(
-    StatusCodes.SERVICE_UNAVAILABLE,
-    'Forgot password is temporarily disabled.',
-  )
-}
-
-const verifyResetToken = async () => {
-  // Temporarily disabled because reset-password models are commented out.
-  throw new ApiError(
-    StatusCodes.SERVICE_UNAVAILABLE,
-    'Reset token verification is temporarily disabled.',
-  )
-}
-
-const resetPassword = async () => {
-  // Temporarily disabled because email service/reset-password models are commented out.
-  throw new ApiError(
-    StatusCodes.SERVICE_UNAVAILABLE,
-    'Reset password is temporarily disabled.',
-  )
-}
-
 const changePassword = async (userId, { currentPassword, newPassword }) => {
   if (!currentPassword || !newPassword) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Current and new password are required')
@@ -379,8 +354,5 @@ export const authService = {
   signInWithGoogle,
   signOut,
   refreshToken,
-  forgotPassword,
-  verifyResetToken,
-  resetPassword,
   changePassword,
 }

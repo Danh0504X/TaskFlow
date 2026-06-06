@@ -2,6 +2,7 @@ import express from 'express'
 import authRoute from './authRoute.js'
 import projectRoute from './projectRoute.js'
 import emailRoute from './emailRoute.js'
+import userRoute from './userRoute.js'
 
 const router = express.Router()
 
@@ -14,5 +15,6 @@ router.get('/', (req, res) => {
 router.use('/auth', authRoute)
 router.use('/projects', projectRoute)
 router.use('/email', emailRoute)
+router.use('/admin/users', userRoute)
 
 export default router

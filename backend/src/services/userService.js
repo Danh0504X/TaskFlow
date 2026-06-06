@@ -14,7 +14,7 @@ const ensureValidObjectId = (id, label = 'id') => {
   }
 }
 
-// Lấy danh sách tài khoản (phân trang đơn giản, mới nhất trước).
+// Lấy danh sách tài khoản 
 const getAllUsers = async (query = {}) => {
   const page = Math.max(1, Number(query.page) || 1)
   const limit = Math.min(100, Math.max(1, Number(query.limit) || 20))
@@ -95,12 +95,12 @@ const createUser = async (body = {}) => {
     fullName: fullName.trim(),
     passwordHash,
     authProvider: 'local',
-    isEmailVerified: true, // admin tạo trực tiếp -> coi như đã xác thực
+    isEmailVerified: true, // admin tạo trực tiếp -> coi như đã xác thực 
     role: role || USER_ROLE.USER,
     status: status || 'active',
   })
 
-  // Không trả passwordHash (toJSON của model đã loại, nhưng chuẩn hóa lại cho chắc).
+  // Không trả passwordHash 
   return user.toJSON()
 }
 
