@@ -1,0 +1,47 @@
+import api from '@/lib/api'
+import type { ApiResponse } from '@/lib/http'
+import type {
+  CreateProjectPayload,
+  Project,
+  UpdateProjectPayload,
+} from './project.types'
+
+// Lớp gọi API cho project. Mọi endpoint nằm dưới prefix /projects.
+// Backend luôn trả { message, data } -> ta bóc lấy `data` trả về cho hook dùng.
+export const projectApi = {
+  /** GET /projects — danh sách project user tham gia. */
+  getMyProjects: async (): Promise<Project[]> => {
+    const res = await api.get<ApiResponse<Project[]>>('/projects')
+    return res.data.data
+  },
+
+  /** GET /projects/:id — chi tiết 1 project. */
+  getById: async (projectId: string): Promise<Project> => {
+    const res = await api.get<ApiResponse<Project>>(`/projects/${projectId}`)
+    return res.data.data
+  },
+
+  /** POST /projects — tạo project mới. */
+  create: async (payload: CreateProjectPayload): Promise<Project> => {
+    const res = await api.post<ApiResponse<Project>>('/projects', payload)
+    return res.data.data
+  },
+
+  /** PUT /projects/:id — cập nhật project. */
+  update: async (
+    projectId: string,
+    payload: UpdateProjectPayload,
+  ): Promise<Project> => {
+    const res = await api.put<ApiResponse<Project>>(
+      `/projects/${projectId}`,
+      payload,
+    )
+    return res.data.data
+  },
+
+  /** DELETE /projects/:id — xoá mềm project. */
+  remove: async (projectId: string): Promise<Project> => {
+    const res = await api.delete<ApiResponse<Project>>(`/projects/${projectId}`)
+    return res.data.data
+  },
+}
