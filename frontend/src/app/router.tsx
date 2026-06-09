@@ -7,6 +7,7 @@ import {
 import MainLayout from '@/components/layout/MainLayout'
 import DashboardPage from '@/features/dashboard/pages/DashboardPage'
 import LoginPage from '@/features/auth/pages/LoginPage'
+import RegisterPage from '@/features/auth/pages/RegisterPage'
 import VerifyEmailPage from '@/features/auth/pages/VerifyEmailPage'
 import { useAuthStore } from '@/features/auth/authStore'
 
@@ -39,6 +40,14 @@ const router = createBrowserRouter([
     element: (
       <PublicOnlyRoute>
         <LoginPage />
+      </PublicOnlyRoute>
+    ),
+  },
+  {
+    path: '/register',
+    element: (
+      <PublicOnlyRoute>
+        <RegisterPage />
       </PublicOnlyRoute>
     ),
   },
