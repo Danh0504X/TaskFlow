@@ -23,11 +23,21 @@ const getTransporter = () => {
   return transporter
 }
 
+// Build header "From" hợp lệ (RFC). Nếu EMAIL_FROM chỉ là tên hiển thị (không có
+// địa chỉ email) thì ghép với địa chỉ đã xác thực -> tránh mail bị coi là spam.
+const buildFrom = () => {
+  const name = env.EMAIL_FROM?.trim()
+  const address = env.EMAIL_USER
+  if (!name) return address
+  if (name.includes('<') || name.includes('@')) return name
+  return `${name} <${address}>`
+}
+
 // Gửi email cấp thấp dùng chung
 const sendEmail = async ({ to, subject, html }) => {
   try {
     await getTransporter().sendMail({
-      from: env.EMAIL_FROM || env.EMAIL_USER,
+      from: buildFrom(),
       to,
       subject,
       html,

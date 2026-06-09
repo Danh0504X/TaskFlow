@@ -32,6 +32,11 @@ export const signUp = asyncHandler(async (req, res) => {
   res.status(StatusCodes.CREATED).json(result)
 })
 
+export const checkEmail = asyncHandler(async (req, res) => {
+  const result = await authService.checkEmailAvailability(req.body?.email)
+  res.status(StatusCodes.OK).json(result)
+})
+
 export const verifyEmail = asyncHandler(async (req, res) => {
   const result = await authService.verifyEmailAndLogin(req.body)
   const { accessToken, refreshToken } = result.data

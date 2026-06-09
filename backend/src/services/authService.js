@@ -105,6 +105,25 @@ const signUp = async (body) => {
   }
 }
 
+// Kiểm tra email đã dùng được hay chưa (cho bước 1 form đăng ký).
+// Mirror đúng điều kiện ở signUp: chỉ coi là "đã dùng" khi tài khoản ĐÃ xác thực.
+// Tài khoản tồn tại nhưng chưa xác thực -> vẫn cho đăng ký lại nên xem là còn trống.
+const checkEmailAvailability = async (email) => {
+  if (!email) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Email is required')
+  }
+
+  if (!EMAIL_REGEX.test(email)) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid email format')
+  }
+
+  const normalizedEmail = email.toLowerCase().trim()
+  const existingUser = await User.findOne({ email: normalizedEmail })
+  const taken = Boolean(existingUser && existingUser.isEmailVerified)
+
+  return { email: normalizedEmail, available: !taken }
+}
+
 // Xác thực mã email sau khi đăng ký -> set isEmailVerified, gửi welcome, đăng nhập luôn.
 const verifyEmailAndLogin = async (body) => {
   const { email, code } = body
@@ -375,6 +394,7 @@ const signInWithGoogle = async ({ accessToken }) => {
 
 export const authService = {
   signUp,
+  checkEmailAvailability,
   verifyEmailAndLogin,
   signIn,
   signInWithGoogle,

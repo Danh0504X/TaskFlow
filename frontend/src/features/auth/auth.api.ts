@@ -15,6 +15,17 @@ export const authApi = {
     return res.data
   },
 
+  /** Kiểm tra email đã được sử dụng chưa (trước khi sang bước nhập mật khẩu). */
+  checkEmail: async (
+    email: string,
+  ): Promise<{ email: string; available: boolean }> => {
+    const res = await api.post<{ email: string; available: boolean }>(
+      '/auth/check-email',
+      { email },
+    )
+    return res.data
+  },
+
   /** Xác thực mã email sau khi đăng ký -> backend set cookie & trả userInfo. */
   verifyEmail: async (
     payload: VerifyEmailPayload,

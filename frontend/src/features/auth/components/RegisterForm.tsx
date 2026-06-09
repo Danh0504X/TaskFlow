@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type FocusEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -24,25 +24,64 @@ import {
 // Form đăng ký 2 bước: (1) Họ tên + Email, (2) Mật khẩu + Xác nhận.
 const RegisterForm = () => {
   const navigate = useNavigate()
-  const { signUp, googleSignIn } = useAuth()
+  const { signUp, checkEmail, googleSignIn } = useAuth()
 
   const [step, setStep] = useState<1 | 2>(1)
   const [serverError, setServerError] = useState('')
+  const [checkingEmail, setCheckingEmail] = useState(false)
 
   const {
     register,
     handleSubmit,
     trigger,
+    setError,
+    getValues,
     formState: { errors, dirtyFields, isSubmitting },
   } = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     mode: 'onChange',
   })
 
-  // Chỉ sang bước 2 khi field bước 1 hợp lệ.
+  // register email riêng để vừa giữ onBlur gốc của react-hook-form,
+  // vừa gắn thêm việc kiểm tra email tồn tại ngay khi rời khỏi ô email.
+  const emailField = register('email')
+
+  // Kiểm tra email đã có trong hệ thống chưa (chỉ chạy khi định dạng hợp lệ).
+  // Trả về true nếu email còn dùng được (chưa ai đăng ký).
+  const verifyEmailAvailable = async () => {
+    const isEmailValid = await trigger('email')
+    if (!isEmailValid) return false
+
+    setServerError('')
+    setCheckingEmail(true)
+    try {
+      const { available } = await checkEmail(getValues('email'))
+      if (!available) {
+        setError('email', { type: 'manual', message: 'Email đã được sử dụng.' })
+        return false
+      }
+      return true
+    } catch (err) {
+      setServerError(
+        getApiErrorMessage(err, 'Không kiểm tra được email, vui lòng thử lại'),
+      )
+      return false
+    } finally {
+      setCheckingEmail(false)
+    }
+  }
+
+  // Vừa rời ô email -> kiểm tra ngay (gọi cả onBlur gốc của react-hook-form).
+  const handleEmailBlur = (event: FocusEvent<HTMLInputElement>) => {
+    emailField.onBlur(event)
+    void verifyEmailAvailable()
+  }
+
+  // Sang bước 2 khi: (1) tên hợp lệ và (2) email hợp lệ + chưa có người dùng.
   const handleNextStep = async () => {
-    const isStep1Valid = await trigger(['fullName', 'email'])
-    if (isStep1Valid) setStep(2)
+    const isNameValid = await trigger('fullName')
+    const isEmailAvailable = await verifyEmailAvailable()
+    if (isNameValid && isEmailAvailable) setStep(2)
   }
 
   // Đăng ký KHÔNG đăng nhập ngay -> backend gửi mã, chuyển sang trang nhập mã xác thực.
@@ -100,7 +139,8 @@ const RegisterForm = () => {
             <div>
               <label className={labelClass}>Email Address</label>
               <Input
-                {...register('email')}
+                {...emailField}
+                onBlur={handleEmailBlur}
                 type="email"
                 placeholder="john@example.com"
                 className={cn('mt-1.5', inputClass)}
@@ -155,7 +195,7 @@ const RegisterForm = () => {
         type={step === 1 ? 'button' : 'submit'}
         onClick={step === 1 ? handleNextStep : undefined}
         variant="primary"
-        loading={isSubmitting}
+        loading={isSubmitting || checkingEmail}
         className={primaryButtonClass}
       >
         {step === 1 ? (

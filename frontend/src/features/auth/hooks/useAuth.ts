@@ -29,6 +29,12 @@ export const useAuth = () => {
     [],
   )
 
+  // Kiểm tra email còn trống hay đã có người dùng (cho bước 1 đăng ký).
+  const checkEmail = useCallback(
+    (email: string) => authApi.checkEmail(email),
+    [],
+  )
+
   // Nhập đúng mã -> backend set cookie & trả userInfo -> lưu user (đã đăng nhập).
   const verifyEmail = useCallback(
     async (payload: VerifyEmailPayload) => {
@@ -67,6 +73,7 @@ export const useAuth = () => {
     isAuthenticated: !!user,
     signIn,
     signUp,
+    checkEmail,
     verifyEmail,
     resendCode,
     googleSignIn,
