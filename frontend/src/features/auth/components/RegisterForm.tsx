@@ -13,6 +13,13 @@ import { getApiErrorMessage } from '@/lib/http'
 import { useAuth } from '../hooks/useAuth'
 import { registerSchema } from '../auth.schema'
 import type { RegisterFormValues } from '../auth.schema'
+import {
+  errorClass,
+  ghostButtonClass,
+  inputClass,
+  labelClass,
+  primaryButtonClass,
+} from '../auth.styles'
 
 // Form đăng ký 2 bước: (1) Họ tên + Email, (2) Mật khẩu + Xác nhận.
 const RegisterForm = () => {
@@ -26,7 +33,7 @@ const RegisterForm = () => {
     register,
     handleSubmit,
     trigger,
-    formState: { errors, isSubmitting },
+    formState: { errors, dirtyFields, isSubmitting },
   } = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     mode: 'onChange',
@@ -68,7 +75,7 @@ const RegisterForm = () => {
   })
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="relative w-full space-y-6">
+    <form onSubmit={handleSubmit(onSubmit)} className="relative w-full space-y-5">
       <AnimatePresence mode="wait">
         {step === 1 && (
           <motion.div
@@ -78,32 +85,28 @@ const RegisterForm = () => {
             exit={{ opacity: 0, x: -20, transition: { duration: 0.2 } }}
             className="space-y-4"
           >
-            <div className="space-y-2">
-              <label className="ml-1 block text-[14px] font-semibold text-[#494454]">
-                Full Name
-              </label>
+            <div>
+              <label className={labelClass}>Full Name</label>
               <Input
                 {...register('fullName')}
                 placeholder="John Doe"
-                className="w-full rounded-[12px] border border-[#cbc3d7] bg-white/30 py-3 text-[#0b1c30] backdrop-blur-md placeholder:text-[#cbc3d7]/70 focus:border-transparent focus:ring-2 focus:ring-[#6b38d4]"
+                className={cn('mt-1.5', inputClass)}
               />
               {errors.fullName && (
-                <p className="ml-1 text-xs text-red-500">{errors.fullName.message}</p>
+                <p className={errorClass}>{errors.fullName.message}</p>
               )}
             </div>
 
-            <div className="space-y-2">
-              <label className="ml-1 block text-[14px] font-semibold text-[#494454]">
-                Email Address
-              </label>
+            <div>
+              <label className={labelClass}>Email Address</label>
               <Input
                 {...register('email')}
                 type="email"
                 placeholder="john@example.com"
-                className="w-full rounded-[12px] border border-[#cbc3d7] bg-white/30 py-3 text-[#0b1c30] backdrop-blur-md placeholder:text-[#cbc3d7]/70 focus:border-transparent focus:ring-2 focus:ring-[#6b38d4]"
+                className={cn('mt-1.5', inputClass)}
               />
               {errors.email && (
-                <p className="ml-1 text-xs text-red-500">{errors.email.message}</p>
+                <p className={errorClass}>{errors.email.message}</p>
               )}
             </div>
           </motion.div>
@@ -117,35 +120,29 @@ const RegisterForm = () => {
             exit={{ opacity: 0, x: 20, transition: { duration: 0.2 } }}
             className="space-y-4"
           >
-            <div className="space-y-2">
-              <label className="ml-1 block text-[14px] font-semibold text-[#494454]">
-                Password
-              </label>
+            <div>
+              <label className={labelClass}>Password</label>
               <Input
                 {...register('password')}
                 type="password"
                 placeholder="••••••••"
-                className="w-full rounded-[12px] border border-[#cbc3d7] bg-white/30 py-3 text-[#0b1c30] backdrop-blur-md placeholder:text-[#cbc3d7]/70 focus:border-transparent focus:ring-2 focus:ring-[#6b38d4]"
+                className={cn('mt-1.5', inputClass)}
               />
-              {errors.password && (
-                <p className="ml-1 text-xs text-red-500">{errors.password.message}</p>
+              {dirtyFields.password && errors.password && (
+                <p className={errorClass}>{errors.password.message}</p>
               )}
             </div>
 
-            <div className="space-y-2">
-              <label className="ml-1 block text-[14px] font-semibold text-[#494454]">
-                Confirm Password
-              </label>
+            <div>
+              <label className={labelClass}>Confirm Password</label>
               <Input
                 {...register('confirmPassword')}
                 type="password"
                 placeholder="••••••••"
-                className="w-full rounded-[12px] border border-[#cbc3d7] bg-white/30 py-3 text-[#0b1c30] backdrop-blur-md placeholder:text-[#cbc3d7]/70 focus:border-transparent focus:ring-2 focus:ring-[#6b38d4]"
+                className={cn('mt-1.5', inputClass)}
               />
-              {errors.confirmPassword && (
-                <p className="ml-1 text-xs text-red-500">
-                  {errors.confirmPassword.message}
-                </p>
+              {dirtyFields.confirmPassword && errors.confirmPassword && (
+                <p className={errorClass}>{errors.confirmPassword.message}</p>
               )}
             </div>
           </motion.div>
@@ -159,16 +156,12 @@ const RegisterForm = () => {
         onClick={step === 1 ? handleNextStep : undefined}
         variant="primary"
         loading={isSubmitting}
-        className={cn(
-          'w-full rounded-[12px] py-6 text-[16px] font-semibold transition-transform',
-          'bg-gradient-to-br from-[#8455ef] to-[#6b38d4] text-white',
-          'border-none shadow-[inset_0_1px_0_rgba(255,255,255,0.3)] hover:scale-[1.02] active:scale-[0.98]',
-        )}
+        className={primaryButtonClass}
       >
         {step === 1 ? (
           <span className="flex items-center justify-center gap-2">
             Continue
-            <ArrowRight className="h-5 w-5" />
+            <ArrowRight className="h-[18px] w-[18px]" />
           </span>
         ) : (
           'Create account'
@@ -180,21 +173,21 @@ const RegisterForm = () => {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="space-y-6 pt-2"
+          className="space-y-5"
         >
-          <div className="relative flex items-center py-2">
-            <div className="flex-grow border-t border-[#cbc3d7]" />
-            <span className="mx-4 flex-shrink text-[12px] font-medium text-[#494454]">
+          <div className="relative flex items-center">
+            <div className="flex-grow border-t border-[#cbc3d7]/60" />
+            <span className="mx-3 flex-shrink text-[12px] font-medium text-[#a89db8]">
               or join with
             </span>
-            <div className="flex-grow border-t border-[#cbc3d7]" />
+            <div className="flex-grow border-t border-[#cbc3d7]/60" />
           </div>
 
           <Button
             variant="ghost"
             type="button"
             onClick={() => loginWithGoogle()}
-            className="flex h-[48px] w-full items-center justify-center space-x-3 rounded-[12px] border border-white/40 bg-white/40 text-[14px] font-semibold text-[#0b1c30] backdrop-blur-xl transition-all hover:bg-white/80 active:scale-95"
+            className={ghostButtonClass}
           >
             <img
               src="https://www.gstatic.com/images/branding/product/1x/googleg_48dp.png"
@@ -204,10 +197,13 @@ const RegisterForm = () => {
             <span>Google</span>
           </Button>
 
-          <footer className="pt-2 text-center">
-            <p className="text-[16px] text-[#494454]">
+          <footer className="text-center">
+            <p className="text-[14px] text-[#494454]">
               Already have an account?{' '}
-              <Link to="/login" className="font-bold text-[#6b38d4] hover:underline">
+              <Link
+                to="/login"
+                className="font-semibold text-[#6b38d4] transition-colors hover:text-[#8455ef] hover:underline"
+              >
                 Log in
               </Link>
             </p>
