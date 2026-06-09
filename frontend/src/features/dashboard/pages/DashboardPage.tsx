@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/features/auth/hooks/useAuth'
+import Button from '@/components/ui/Button'
+import ProjectsView from '@/features/projects/components/ProjectsView'
 
 const DashboardPage = () => {
   const navigate = useNavigate()
@@ -18,24 +20,33 @@ const DashboardPage = () => {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-slate-100">
-      <div className="text-center">
-        <h1 className="text-2xl font-bold text-slate-800">Dashboard</h1>
-        {user && (
-          <p className="mt-1 text-sm text-slate-500">
-            Xin chào, {user.fullName}
-          </p>
-        )}
-      </div>
+    <div className="min-h-screen bg-slate-100">
+      {/* Thanh điều hướng trên cùng */}
+      <header className="border-b border-slate-200 bg-white">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-3">
+          <span className="text-lg font-bold text-slate-800">TaskFlow</span>
+          <div className="flex items-center gap-3">
+            {user && (
+              <span className="text-sm text-slate-500">
+                Xin chào, <span className="font-medium text-slate-700">{user.fullName}</span>
+              </span>
+            )}
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={handleLogout}
+              loading={loading}
+            >
+              Đăng xuất
+            </Button>
+          </div>
+        </div>
+      </header>
 
-      <button
-        type="button"
-        onClick={handleLogout}
-        disabled={loading}
-        className="rounded-lg bg-red-600 px-6 py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-60"
-      >
-        {loading ? 'Đang đăng xuất...' : 'Đăng xuất'}
-      </button>
+      {/* Nội dung: bảng quản lý project */}
+      <main>
+        <ProjectsView />
+      </main>
     </div>
   )
 }

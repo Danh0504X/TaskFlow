@@ -1,21 +1,21 @@
 import AuthLayout from '../components/AuthLayout'
-import LoginForm from '../components/LoginForm'
+import RegisterForm from '../components/RegisterForm'
 
-const LoginPage = () => {
+const RegisterPage = () => {
   return (
     <AuthLayout>
       <header className="text-center md:text-left">
         <h2 className="text-[26px] font-bold leading-tight tracking-tight text-[#0b1c30]">
-          Chào mừng trở lại
+          Start your journey
         </h2>
         <p className="mt-1.5 text-[15px] text-[#494454]">
-          Đăng nhập để tiếp tục.
+          Create your workspace in seconds.
         </p>
       </header>
 
-      <LoginForm />
+      <RegisterForm />
     </AuthLayout>
   )
 }
 
-export default LoginPage
+export default RegisterPage
