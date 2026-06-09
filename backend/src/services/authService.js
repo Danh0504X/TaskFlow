@@ -303,26 +303,52 @@ const signInWithGoogle = async ({ accessToken }) => {
     throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid Google access token')
   }
 
-  const { sub: googleId, email, name, picture } = googlePayload
+  const { sub: googleId, email, name, picture, email_verified } = googlePayload
   if (!googleId || !email) {
     throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid Google profile')
   }
 
+  // Google có thể trả email_verified dạng boolean true hoặc chuỗi 'true'.
+  const isGoogleEmailVerified =
+    email_verified === true || email_verified === 'true'
+
+  const normalizedEmail = email.toLowerCase().trim()
+
+  // Tìm theo googleId (đã từng đăng nhập Google) hoặc theo email (đã đăng ký
+  // local cùng email) -> gián tiếp liên kết 2 tài khoản cùng email.
   let user = await User.findOne({
-    $or: [{ googleId }, { email: email.toLowerCase() }],
+    $or: [{ googleId }, { email: normalizedEmail }],
   })
 
   if (user) {
     ensureAccountCanSignIn(user)
-    user.googleId = user.googleId || googleId
-    user.authProvider = user.authProvider || 'google'
+
+    // Tài khoản đã có nhưng CHƯA gắn Google (vd đăng ký bằng local/mật khẩu):
+    // chỉ cho phép liên kết khi email đã được Google xác minh, tránh việc dùng
+    // email chưa xác minh để chiếm tài khoản người khác.
+    const isLinkingGoogle = !user.googleId
+    if (isLinkingGoogle && !isGoogleEmailVerified) {
+      throw new ApiError(
+        StatusCodes.UNAUTHORIZED,
+        'Email chưa được Google xác minh nên không thể liên kết với tài khoản hiện có.',
+      )
+    }
+
+    // Gắn Google vào tài khoản đang có. Giữ nguyên authProvider & passwordHash
+    // để tài khoản local vẫn đăng nhập được bằng cả mật khẩu lẫn Google.
+    if (!user.googleId) user.googleId = googleId
     user.isEmailVerified = true
-    user.avatarUrl = user.avatarUrl || picture || null
+    if (!user.avatarUrl && picture) user.avatarUrl = picture
     await user.save()
   } else {
+    // Chưa có tài khoản nào -> tạo mới bằng Google (yêu cầu email đã xác minh).
+    if (!isGoogleEmailVerified) {
+      throw new ApiError(StatusCodes.UNAUTHORIZED, 'Google email is not verified')
+    }
+
     user = await User.create({
-      fullName: name || email.split('@')[0],
-      email,
+      fullName: name || normalizedEmail.split('@')[0],
+      email: normalizedEmail,
       avatarUrl: picture || null,
       authProvider: 'google',
       googleId,
