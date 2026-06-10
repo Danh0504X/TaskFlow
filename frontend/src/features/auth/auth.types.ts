@@ -11,6 +11,7 @@ export interface UserInfo {
   authProvider: AuthProvider
   isEmailVerified: boolean
   status: string
+  role?: string
 }
 
 // ----- Payload gửi lên -----

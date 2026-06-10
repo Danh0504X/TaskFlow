@@ -392,6 +392,10 @@ const signInWithGoogle = async ({ accessToken }) => {
   }
 }
 
+// Lấy thông tin user hiện tại từ user doc đã được protectedRoute gắn vào req.
+// Dùng cho GET /auth/me (khôi phục phiên khi tải lại app).
+const getMe = (user) => buildUserInfo(user)
+
 export const authService = {
   signUp,
   checkEmailAvailability,
@@ -401,4 +405,5 @@ export const authService = {
   signOut,
   refreshToken,
   changePassword,
+  getMe,
 }

@@ -86,6 +86,16 @@ export const changePassword = asyncHandler(async (req, res) => {
   res.status(StatusCodes.OK).json(result)
 })
 
+// Trả thông tin user đang đăng nhập (dựa vào accessToken trong cookie).
+// protectedRoute đã xác thực token & gắn req.user trước khi vào đây.
+export const getMe = asyncHandler(async (req, res) => {
+  const userInfo = authService.getMe(req.user)
+  res.status(StatusCodes.OK).json({
+    message: 'Get current user successfully',
+    data: { userInfo },
+  })
+})
+
 export const googleSignIn = asyncHandler(async (req, res) => {
   const result = await authService.signInWithGoogle(req.body)
   const { accessToken, refreshToken, fullName } = result.data

@@ -1,9 +1,11 @@
 import api from '@/lib/api'
+import type { ApiResponse } from '@/lib/http'
 import type {
   SignInPayload,
   SignInResponse,
   SignUpPayload,
   SignUpResponse,
+  UserInfo,
   VerifyEmailPayload,
   VerifyEmailResponse,
 } from './auth.types'
@@ -59,5 +61,17 @@ export const authApi = {
 
   signOut: async (): Promise<void> => {
     await api.post('/auth/sign-out')
+  },
+
+  /**
+   * Lấy thông tin user hiện tại từ cookie (khôi phục phiên khi tải lại app).
+   * skipAuthRedirect: không cho interceptor tự đá về /login khi 401 — đây chỉ
+   * là bước "thăm dò" phiên, chưa đăng nhập là chuyện bình thường.
+   */
+  me: async (): Promise<UserInfo> => {
+    const res = await api.get<ApiResponse<{ userInfo: UserInfo }>>('/auth/me', {
+      skipAuthRedirect: true,
+    })
+    return res.data.data.userInfo
   },
 }

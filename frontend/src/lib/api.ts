@@ -5,6 +5,14 @@ import axios, {
 } from 'axios'
 import { useAuthStore } from '@/features/auth/authStore'
 
+// Cho phép truyền cờ tuỳ chỉnh trên config request.
+// skipAuthRedirect: bỏ qua việc tự đá về /login khi gặp 401 (dùng cho /auth/me).
+declare module 'axios' {
+  interface AxiosRequestConfig {
+    skipAuthRedirect?: boolean
+  }
+}
+
 // Instance axios dùng chung cho toàn app.
 // withCredentials: true -> trình duyệt tự gửi kèm httpOnly cookie (accessToken/refreshToken)
 // mà backend đã set. Frontend KHÔNG tự lưu/đính token -> chống XSS đánh cắp token.
@@ -73,7 +81,8 @@ api.interceptors.response.use(
     }
 
     // Không có/không hợp lệ phiên đăng nhập.
-    if (status === 401) {
+    // Bỏ qua nếu request chủ động tắt redirect (vd /auth/me lúc thăm dò phiên).
+    if (status === 401 && !original?.skipAuthRedirect) {
       forceLogout()
     }
 
