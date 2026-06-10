@@ -4,13 +4,17 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { motion, AnimatePresence } from 'motion/react'
 import { useGoogleLogin } from '@react-oauth/google'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, Mail } from 'lucide-react'
 
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import { cn } from '@/lib/cn'
 import { getApiErrorMessage } from '@/lib/http'
-import { useAuth } from '../hooks/useAuth'
+import {
+  useSignUp,
+  useCheckEmail,
+  useGoogleSignIn,
+} from '../hooks/useAuthMutations'
 import { registerSchema } from '../auth.schema'
 import type { RegisterFormValues } from '../auth.schema'
 import {
@@ -24,11 +28,12 @@ import {
 // Form đăng ký 2 bước: (1) Họ tên + Email, (2) Mật khẩu + Xác nhận.
 const RegisterForm = () => {
   const navigate = useNavigate()
-  const { signUp, checkEmail, googleSignIn } = useAuth()
+  const signUpMutation = useSignUp()
+  const checkEmailMutation = useCheckEmail()
+  const googleMutation = useGoogleSignIn()
 
   const [step, setStep] = useState<1 | 2>(1)
   const [serverError, setServerError] = useState('')
-  const [checkingEmail, setCheckingEmail] = useState(false)
 
   const {
     register,
@@ -36,7 +41,7 @@ const RegisterForm = () => {
     trigger,
     setError,
     getValues,
-    formState: { errors, dirtyFields, isSubmitting },
+    formState: { errors, dirtyFields },
   } = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     mode: 'onChange',
@@ -53,9 +58,10 @@ const RegisterForm = () => {
     if (!isEmailValid) return false
 
     setServerError('')
-    setCheckingEmail(true)
     try {
-      const { available } = await checkEmail(getValues('email'))
+      const { available } = await checkEmailMutation.mutateAsync(
+        getValues('email'),
+      )
       if (!available) {
         setError('email', { type: 'manual', message: 'Email đã được sử dụng.' })
         return false
@@ -66,8 +72,6 @@ const RegisterForm = () => {
         getApiErrorMessage(err, 'Không kiểm tra được email, vui lòng thử lại'),
       )
       return false
-    } finally {
-      setCheckingEmail(false)
     }
   }
 
@@ -88,7 +92,7 @@ const RegisterForm = () => {
   const onSubmit = async (data: RegisterFormValues) => {
     setServerError('')
     try {
-      await signUp({
+      await signUpMutation.mutateAsync({
         fullName: data.fullName,
         email: data.email,
         password: data.password,
@@ -104,7 +108,7 @@ const RegisterForm = () => {
     onSuccess: async (tokenResponse) => {
       setServerError('')
       try {
-        await googleSignIn(tokenResponse.access_token)
+        await googleMutation.mutateAsync(tokenResponse.access_token)
         navigate('/', { replace: true })
       } catch (err) {
         setServerError(getApiErrorMessage(err, 'Đăng nhập Google thất bại'))
@@ -115,6 +119,29 @@ const RegisterForm = () => {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="relative w-full space-y-5">
+      {/* Chỉ báo bước: cho biết đang ở part mấy trong 2 part. */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="ml-1 text-[12px] font-semibold uppercase tracking-wide text-brand">
+            Step {step} of 2
+          </span>
+          <span className="mr-1 text-[12px] font-medium text-subtle">
+            {step === 1 ? 'Your details' : 'Set a password'}
+          </span>
+        </div>
+        <div className="flex gap-2">
+          <span className="h-1.5 flex-1 rounded-full bg-gradient-to-r from-brand-light to-brand" />
+          <span
+            className={cn(
+              'h-1.5 flex-1 rounded-full transition-colors duration-300',
+              step === 2
+                ? 'bg-gradient-to-r from-brand-light to-brand'
+                : 'bg-line/50',
+            )}
+          />
+        </div>
+      </div>
+
       <AnimatePresence mode="wait">
         {step === 1 && (
           <motion.div
@@ -125,8 +152,11 @@ const RegisterForm = () => {
             className="space-y-4"
           >
             <div>
-              <label className={labelClass}>Full Name</label>
+              <label htmlFor="register-fullname" className={labelClass}>
+                Full Name
+              </label>
               <Input
+                id="register-fullname"
                 {...register('fullName')}
                 placeholder="John Doe"
                 className={cn('mt-1.5', inputClass)}
@@ -137,8 +167,11 @@ const RegisterForm = () => {
             </div>
 
             <div>
-              <label className={labelClass}>Email Address</label>
+              <label htmlFor="register-email" className={labelClass}>
+                Email Address
+              </label>
               <Input
+                id="register-email"
                 {...emailField}
                 onBlur={handleEmailBlur}
                 type="email"
@@ -160,9 +193,23 @@ const RegisterForm = () => {
             exit={{ opacity: 0, x: 20, transition: { duration: 0.2 } }}
             className="space-y-4"
           >
+            {/* Cho biết đang tạo mật khẩu cho email nào (lấy từ bước 1). */}
+            <div className="flex items-start gap-2.5 rounded-xl border border-line/60 bg-white/50 px-4 py-3 backdrop-blur-md">
+              <Mail className="mt-0.5 h-[18px] w-[18px] shrink-0 text-brand" />
+              <p className="text-[13px] leading-snug text-muted">
+                Creating a password for{' '}
+                <span className="font-semibold text-brand">
+                  {getValues('email')}
+                </span>
+              </p>
+            </div>
+
             <div>
-              <label className={labelClass}>Password</label>
+              <label htmlFor="register-password" className={labelClass}>
+                Password
+              </label>
               <Input
+                id="register-password"
                 {...register('password')}
                 type="password"
                 placeholder="••••••••"
@@ -174,8 +221,11 @@ const RegisterForm = () => {
             </div>
 
             <div>
-              <label className={labelClass}>Confirm Password</label>
+              <label htmlFor="register-confirm" className={labelClass}>
+                Confirm Password
+              </label>
               <Input
+                id="register-confirm"
                 {...register('confirmPassword')}
                 type="password"
                 placeholder="••••••••"
@@ -195,7 +245,7 @@ const RegisterForm = () => {
         type={step === 1 ? 'button' : 'submit'}
         onClick={step === 1 ? handleNextStep : undefined}
         variant="primary"
-        loading={isSubmitting || checkingEmail}
+        loading={signUpMutation.isPending || checkEmailMutation.isPending}
         className={primaryButtonClass}
       >
         {step === 1 ? (
@@ -216,11 +266,11 @@ const RegisterForm = () => {
           className="space-y-5"
         >
           <div className="relative flex items-center">
-            <div className="flex-grow border-t border-[#cbc3d7]/60" />
-            <span className="mx-3 flex-shrink text-[12px] font-medium text-[#a89db8]">
+            <div className="flex-grow border-t border-line/60" />
+            <span className="mx-3 flex-shrink text-[12px] font-medium text-subtle">
               or join with
             </span>
-            <div className="flex-grow border-t border-[#cbc3d7]/60" />
+            <div className="flex-grow border-t border-line/60" />
           </div>
 
           <Button
@@ -238,11 +288,11 @@ const RegisterForm = () => {
           </Button>
 
           <footer className="text-center">
-            <p className="text-[14px] text-[#494454]">
+            <p className="text-[14px] text-muted">
               Already have an account?{' '}
               <Link
                 to="/login"
-                className="font-semibold text-[#6b38d4] transition-colors hover:text-[#8455ef] hover:underline"
+                className="font-semibold text-brand transition-colors hover:text-brand-light hover:underline"
               >
                 Log in
               </Link>

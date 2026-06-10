@@ -1,12 +1,15 @@
-import { useState, type FormEvent } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { useGoogleLogin } from '@react-oauth/google'
 
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import { cn } from '@/lib/cn'
 import { getApiErrorMessage } from '@/lib/http'
-import { useAuth } from '../hooks/useAuth'
+import { loginSchema, type LoginFormValues } from '../auth.schema'
+import { useSignIn, useGoogleSignIn } from '../hooks/useAuthMutations'
 import {
   errorClass,
   ghostButtonClass,
@@ -15,77 +18,81 @@ import {
   primaryButtonClass,
 } from '../auth.styles'
 
-// Form đăng nhập: email + mật khẩu, kèm đăng nhập Google.
+// Form đăng nhập: email + mật khẩu (validate bằng zod), kèm đăng nhập Google.
 const LoginForm = () => {
   const navigate = useNavigate()
-  const { signIn, googleSignIn } = useAuth()
+  const signInMutation = useSignIn()
+  const googleMutation = useGoogleSignIn()
 
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [serverError, setServerError] = useState('')
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
-    try {
-      await signIn({ email, password })
-      navigate('/', { replace: true })
-    } catch (err) {
-      setError(getApiErrorMessage(err, 'Có lỗi xảy ra, vui lòng thử lại'))
-    } finally {
-      setLoading(false)
-    }
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginFormValues>({ resolver: zodResolver(loginSchema) })
+
+  const loading = signInMutation.isPending || googleMutation.isPending
+
+  const onSubmit = (data: LoginFormValues) => {
+    setServerError('')
+    signInMutation.mutate(data, {
+      onSuccess: () => navigate('/', { replace: true }),
+      onError: (err) =>
+        setServerError(getApiErrorMessage(err, 'Có lỗi xảy ra, vui lòng thử lại')),
+    })
   }
 
   // Google OAuth implicit flow -> trả access_token gửi lên backend.
   const loginWithGoogle = useGoogleLogin({
-    onSuccess: async (tokenResponse) => {
-      setError('')
-      setLoading(true)
-      try {
-        await googleSignIn(tokenResponse.access_token)
-        navigate('/', { replace: true })
-      } catch (err) {
-        setError(getApiErrorMessage(err, 'Đăng nhập Google thất bại'))
-      } finally {
-        setLoading(false)
-      }
+    onSuccess: (tokenResponse) => {
+      setServerError('')
+      googleMutation.mutate(tokenResponse.access_token, {
+        onSuccess: () => navigate('/', { replace: true }),
+        onError: (err) =>
+          setServerError(getApiErrorMessage(err, 'Đăng nhập Google thất bại')),
+      })
     },
-    onError: () => setError('Đăng nhập Google thất bại'),
+    onError: () => setServerError('Đăng nhập Google thất bại'),
   })
 
   return (
-    <form onSubmit={handleSubmit} className="relative w-full space-y-5">
+    <form
+      onSubmit={handleSubmit(onSubmit)}
+      className="relative w-full space-y-5"
+      noValidate
+    >
       <div className="space-y-4">
         <div>
-          <label className={labelClass}>Email</label>
+          <label htmlFor="login-email" className={labelClass}>
+            Email
+          </label>
           <Input
+            id="login-email"
             type="email"
-            required
             placeholder="you@example.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            error={errors.email?.message}
             className={cn('mt-1.5', inputClass)}
+            {...register('email')}
           />
         </div>
 
         <div>
-          <label className={labelClass}>Mật khẩu</label>
+          <label htmlFor="login-password" className={labelClass}>
+            Mật khẩu
+          </label>
           <Input
+            id="login-password"
             type="password"
-            required
-            minLength={6}
             placeholder="••••••••"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            error={errors.password?.message}
             className={cn('mt-1.5', inputClass)}
+            {...register('password')}
           />
         </div>
       </div>
 
-      {error && <p className={errorClass}>{error}</p>}
+      {serverError && <p className={errorClass}>{serverError}</p>}
 
       <Button
         type="submit"
@@ -97,11 +104,11 @@ const LoginForm = () => {
       </Button>
 
       <div className="relative flex items-center">
-        <div className="flex-grow border-t border-[#cbc3d7]/60" />
-        <span className="mx-3 flex-shrink text-[12px] font-medium text-[#a89db8]">
+        <div className="flex-grow border-t border-line/60" />
+        <span className="mx-3 flex-shrink text-[12px] font-medium text-subtle">
           hoặc
         </span>
-        <div className="flex-grow border-t border-[#cbc3d7]/60" />
+        <div className="flex-grow border-t border-line/60" />
       </div>
 
       <Button
@@ -120,11 +127,11 @@ const LoginForm = () => {
       </Button>
 
       <footer className="text-center">
-        <p className="text-[14px] text-[#494454]">
+        <p className="text-[14px] text-muted">
           Chưa có tài khoản?{' '}
           <Link
             to="/register"
-            className="font-semibold text-[#6b38d4] transition-colors hover:text-[#8455ef] hover:underline"
+            className="font-semibold text-brand transition-colors hover:text-brand-light hover:underline"
           >
             Đăng ký
           </Link>

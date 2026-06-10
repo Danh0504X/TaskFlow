@@ -15,3 +15,12 @@ export const registerSchema = z
 
 // Kiểu giá trị form suy ra trực tiếp từ schema -> không khai báo 2 lần.
 export type RegisterFormValues = z.infer<typeof registerSchema>
+
+// Schema validate form đăng nhập. Không ràng buộc độ dài mật khẩu ở đây
+// (server kiểm tra thông tin đăng nhập) -> chỉ cần không bỏ trống.
+export const loginSchema = z.object({
+  email: z.string().trim().email('Email không đúng định dạng.'),
+  password: z.string().min(1, 'Vui lòng nhập mật khẩu.'),
+})
+
+export type LoginFormValues = z.infer<typeof loginSchema>

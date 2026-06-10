@@ -1,5 +1,17 @@
 @import 'tailwindcss';
 
+/* Theme token màu của brand (Tailwind v4). Đặt 1 chỗ -> đổi 1 nơi là cả app theo.
+   Dùng qua class: text-brand, bg-brand, border-line, text-ink/muted/subtle... */
+@theme {
+  --color-brand: #6b38d4; /* tím chính */
+  --color-brand-light: #8455ef; /* tím nhạt (đầu gradient) */
+  --color-brand-glow: #8b5cf6; /* tím phát sáng (glow/particle) */
+  --color-ink: #0b1c30; /* chữ đậm */
+  --color-muted: #494454; /* chữ phụ */
+  --color-subtle: #a89db8; /* chữ mờ / placeholder */
+  --color-line: #cbc3d7; /* viền */
+}
+
 :root {
   color-scheme: light;
 }

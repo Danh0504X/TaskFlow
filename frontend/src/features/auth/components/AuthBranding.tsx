@@ -22,10 +22,10 @@ const AuthBranding = () => {
           className="h-20 w-20 object-contain md:h-24 md:w-24"
           src={LOGO_URL}
         />
-        <h1 className="text-[40px] font-extrabold leading-[1.1] tracking-tight text-[#0b1c30] sm:text-[48px] lg:text-[56px]">
+        <h1 className="text-[40px] font-extrabold leading-[1.1] tracking-tight text-ink sm:text-[48px] lg:text-[56px]">
           TaskFlow AI
         </h1>
-        <p className="max-w-md text-base leading-relaxed text-[#494454] sm:text-lg">
+        <p className="max-w-md text-base leading-relaxed text-muted sm:text-lg">
           Revolutionizing productivity with ethereal precision and intelligent
           automation.
         </p>
@@ -37,7 +37,7 @@ const AuthBranding = () => {
           aria-hidden
           animate={{ scale: [1, 1.15, 1], opacity: [0.5, 0.85, 0.5] }}
           transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
-          className="pointer-events-none absolute left-1/2 top-1/2 h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#8b5cf6]/25 blur-3xl md:left-[45%]"
+          className="pointer-events-none absolute left-1/2 top-1/2 h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand-glow/25 blur-3xl md:left-[45%]"
         />
 
         {/* Bóng đổ co giãn theo nhịp nhảy của robot */}
@@ -45,7 +45,7 @@ const AuthBranding = () => {
           aria-hidden
           animate={{ scaleX: [1, 0.7, 1], opacity: [0.35, 0.15, 0.35] }}
           transition={{ repeat: Infinity, duration: 1.6, ease: 'easeInOut' }}
-          className="pointer-events-none absolute bottom-2 left-1/2 h-4 w-40 -translate-x-1/2 rounded-[100%] bg-[#6b38d4]/30 blur-md md:left-[45%]"
+          className="pointer-events-none absolute bottom-2 left-1/2 h-4 w-40 -translate-x-1/2 rounded-[100%] bg-brand/30 blur-md md:left-[45%]"
         />
 
         <motion.img

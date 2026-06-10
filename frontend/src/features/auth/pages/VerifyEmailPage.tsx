@@ -14,12 +14,12 @@ const VerifyEmailPage = () => {
   return (
     <AuthLayout>
       <header className="text-center md:text-left">
-        <h2 className="text-[26px] font-bold leading-tight tracking-tight text-[#0b1c30]">
+        <h2 className="text-[26px] font-bold leading-tight tracking-tight text-ink">
           Xác thực email
         </h2>
-        <p className="mt-1.5 text-[15px] text-[#494454]">
+        <p className="mt-1.5 text-[15px] text-muted">
           Nhập mã 6 số đã gửi tới{' '}
-          <span className="font-semibold text-[#0b1c30]">{email}</span>
+          <span className="font-semibold text-ink">{email}</span>
         </p>
       </header>
 
