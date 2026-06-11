@@ -7,7 +7,7 @@ import { corsOptions } from './config/cors.js'
 import { connectDB } from './lib/db.js'
 import { errorHandlingMiddleware } from './middlewares/errorHandlingMiddleware.js'
 import apiRoutes from './routes/api.js'
-
+ 
 const START_SERVER = () => {
   const app = express()
 

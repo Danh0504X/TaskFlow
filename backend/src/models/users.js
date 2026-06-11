@@ -72,10 +72,8 @@ const userSchema = new mongoose.Schema(
     },
   },
   {
-    timestamps: {
-      createdAt: 'createdAt',
-      updatedAt: false,
-    },
+    // Bật cả createdAt + updatedAt để trang Profile theo dõi lần sửa gần nhất.
+    timestamps: true,
   },
 )
 
