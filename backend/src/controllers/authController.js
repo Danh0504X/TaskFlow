@@ -8,7 +8,7 @@ const isProduction = env.BUILD_MODE === 'production'
 
 const AUTH_COOKIE_OPTIONS = {
   httpOnly: true,
-  // Dev (http://localhost) không dùng secure + sameSite 'none' nếu không trình duyệt sẽ không lưu cookie
+
   secure: isProduction,
   sameSite: isProduction ? 'none' : 'lax',
   maxAge: ms('14 days'),
