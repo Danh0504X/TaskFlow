@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { LayoutGrid, FolderGit2, CheckSquare, Zap, LogOut } from 'lucide-react'
+import { LayoutGrid, FolderGit2, CheckSquare, LogOut } from 'lucide-react'
 import { cn } from '@/lib/cn'
+import { APP_LOGO_URL } from '@/lib/constants'
 import Avatar from '@/components/ui/Avatar'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 
@@ -32,9 +33,11 @@ const MainLayout = () => {
       <aside className="w-72 bg-white/80 border-r border-line/40 p-6 flex-col justify-between hidden md:flex sticky top-0 h-screen shrink-0">
         <div>
           <div className="flex items-center gap-3 mb-8 px-2">
-            <div className="w-10 h-10 rounded-xl bg-brand flex items-center justify-center text-white shadow-lg shadow-brand/20">
-              <Zap className="fill-white" size={20} />
-            </div>
+            <img
+              src={APP_LOGO_URL}
+              alt="TaskFlow AI Logo"
+              className="w-10 h-10 rounded-xl object-cover shadow-lg shadow-brand/20"
+            />
             <div>
               <h1 className="font-semibold text-xl text-brand tracking-tight leading-none">TaskFlow</h1>
               <p className="text-xs text-muted mt-1">AI-Powered Focus</p>

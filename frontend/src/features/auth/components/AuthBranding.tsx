@@ -1,8 +1,7 @@
 import { motion } from 'motion/react'
+import { APP_LOGO_URL } from '@/lib/constants'
 
 // Ảnh minh hoạ lấy từ thiết kế Stitch.
-const LOGO_URL =
-  'https://lh3.googleusercontent.com/aida-public/AB6AXuB1wa-JYBA_m6AVYdsZWqYTTFhoO1nQKERlYL4UalaJ4pTdqEVbUwp4hw4I0H7Ffhjb9_QHrFtrmObdbrWHlw7x-MJx2y0WqtrPBA6grn0SOWsD7dDpgBf_znfD2MMei3HOEdcpeVMOinVc1Ezgj6PJf6JLM5LZnCp1I2DGo5ciKEs81JgpI_Un7x4bWUQvT4uKpmzBswjSNZV3Adp-e1i2fe9FzC8CG7ttELln9kXCj3pXDP1IjlQcyUn6iEtCL4bVJ8bTsoXvgS0'
 const HERO_URL =
   'https://lh3.googleusercontent.com/aida-public/AB6AXuCIiPJUoT0htTf3rQlZjQSpgUswX3PtjpvydhB4N8RGZfn7vlQ_sSUl7mkSBd4pjFAjHwfjXTXeexBM99irGmmZR8Z8rr85Hs1nQ_NYPS9PUUeQhbps-LiDPRWA5UA4h_cfmztAx2tyxaD2reOPaqeRoCCNCfPmf5-ETJWoOw5p43fMRmkpy9F3dKOWFNSv--jD97qkuoizhIVpNc0WncEo7dn_dPLfwGF76Kg39aCore4nxikLXr4uLW4-Thbla6nPXVVLQdHlEz8'
 
@@ -20,7 +19,7 @@ const AuthBranding = () => {
         <img
           alt="TaskFlow AI Logo"
           className="h-20 w-20 object-contain md:h-24 md:w-24"
-          src={LOGO_URL}
+          src={APP_LOGO_URL}
         />
         <h1 className="text-[40px] font-extrabold leading-[1.1] tracking-tight text-ink sm:text-[48px] lg:text-[56px]">
           TaskFlow AI
