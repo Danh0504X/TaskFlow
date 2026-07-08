@@ -1,4 +1,4 @@
-import type { Issue, IssueStatus } from '@/features/issues/issue.types'
+import type { Issue, IssueStatus } from '../issue.types'
 import IssueCard from './IssueCard'
 
 interface BoardColumnProps {

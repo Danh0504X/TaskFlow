@@ -4,8 +4,10 @@ import { ArrowLeft } from 'lucide-react'
 import Spinner from '@/components/ui/Spinner'
 import Tabs from '@/components/ui/Tabs'
 import ProjectStatusBadge from '@/features/projects/components/ProjectStatusBadge'
+import ProjectMethodologyBadge from '@/features/projects/components/ProjectMethodologyBadge'
 import IssueDetailPanel from '@/features/issues/components/IssueDetailPanel'
 import { useProject } from '../hooks/useProject'
+import { PROJECT_METHODOLOGY, type ProjectMethodology } from '../project.types'
 import ProjectSummaryTab from '../components/ProjectSummaryTab'
 import ProjectListTab from '../components/ProjectListTab'
 import ProjectBoard from '../components/ProjectBoard'
@@ -13,11 +15,14 @@ import ProjectBacklogTab from '../components/ProjectBacklogTab'
 
 type WorkspaceTab = 'SUMMARY' | 'LIST' | 'BOARD' | 'BACKLOG'
 
-const tabItems: { value: WorkspaceTab; label: string }[] = [
+// Backlog = quản lý Sprint -> chỉ có ý nghĩa với Scrum, Kanban không có Sprint nên ẩn tab này.
+const getTabItems = (methodology: ProjectMethodology): { value: WorkspaceTab; label: string }[] => [
   { value: 'SUMMARY', label: 'Tóm tắt' },
   { value: 'LIST', label: 'Danh sách' },
   { value: 'BOARD', label: 'Bảng (Board)' },
-  { value: 'BACKLOG', label: 'Backlog' },
+  ...(methodology === PROJECT_METHODOLOGY.SCRUM
+    ? [{ value: 'BACKLOG' as const, label: 'Backlog' }]
+    : []),
 ]
 
 const ProjectWorkspacePage = () => {
@@ -60,6 +65,7 @@ const ProjectWorkspacePage = () => {
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-extrabold text-ink tracking-tight">{project.name}</h1>
+            <ProjectMethodologyBadge methodology={project.methodology} />
             <ProjectStatusBadge status={project.status} />
           </div>
           <p className="text-muted mt-1.5 text-xs font-semibold leading-relaxed max-w-2xl">
@@ -68,7 +74,7 @@ const ProjectWorkspacePage = () => {
         </div>
       </header>
 
-      <Tabs items={tabItems} value={activeTab} onChange={setActiveTab} className="w-fit" />
+      <Tabs items={getTabItems(project.methodology)} value={activeTab} onChange={setActiveTab} className="w-fit" />
 
       <div className="flex-grow">
         {activeTab === 'SUMMARY' && <ProjectSummaryTab projectId={project._id} />}

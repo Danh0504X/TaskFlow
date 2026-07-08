@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Search, Clock } from 'lucide-react'
+import { Search } from 'lucide-react'
 import Spinner from '@/components/ui/Spinner'
 import Tabs from '@/components/ui/Tabs'
 import IssueTypeIcon from '@/components/ui/IssueTypeIcon'
@@ -100,10 +100,6 @@ const MyTasksPage = () => {
               <div className="flex items-center gap-4">
                 <IssuePriorityBadge priority={task.priority} showIcon={false} />
                 <IssueStatusBadge status={task.status} />
-                <div className="flex items-center gap-1.5 text-muted text-[10px] font-bold">
-                  <Clock size={12} />
-                  <span>{task.dueDate ?? 'Không hạn'}</span>
-                </div>
               </div>
             </div>
           ))}

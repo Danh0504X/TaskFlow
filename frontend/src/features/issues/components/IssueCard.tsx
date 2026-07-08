@@ -1,7 +1,7 @@
 import Avatar from '@/components/ui/Avatar'
 import IssueTypeIcon from '@/components/ui/IssueTypeIcon'
 import IssuePriorityBadge from '@/components/ui/IssuePriorityBadge'
-import type { Issue } from '@/features/issues/issue.types'
+import type { Issue } from '../issue.types'
 
 interface IssueCardProps {
   issue: Issue
@@ -33,11 +33,6 @@ const IssueCard = ({ issue, onClick }: IssueCardProps) => {
         <IssuePriorityBadge priority={issue.priority} showIcon />
 
         <div className="flex items-center gap-2">
-          {issue.storyPoints !== undefined && (
-            <div className="w-5 h-5 rounded-full bg-slate-50 border border-line/20 flex items-center justify-center text-[9px] font-bold text-muted">
-              {issue.storyPoints}
-            </div>
-          )}
           {issue.assignee ? (
             <Avatar src={issue.assignee.avatarUrl} name={issue.assignee.fullName} size={20} />
           ) : (

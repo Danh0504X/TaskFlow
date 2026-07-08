@@ -1,7 +1,6 @@
-import { Layers, Kanban, Settings2, Sparkles, ChevronRight } from 'lucide-react'
+import { Layers, Kanban, Sparkles, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/cn'
-
-export type ProjectMethodology = 'SCRUM' | 'KANBAN' | 'CUSTOM'
+import type { ProjectMethodology } from '../../project.types'
 
 interface SelectProjectTypeProps {
   selectedType: ProjectMethodology
@@ -11,7 +10,6 @@ interface SelectProjectTypeProps {
 const options: { type: ProjectMethodology; icon: typeof Layers; title: string; desc: string; cta: string }[] = [
   { type: 'SCRUM', icon: Layers, title: 'Scrum lặp ngắn', desc: 'Quản lý qua các Sprint, ước lượng story point và theo dõi tiến độ định kỳ.', cta: 'Chọn Scrum' },
   { type: 'KANBAN', icon: Kanban, title: 'Kanban trực quan', desc: 'Quản lý công việc liên tục bằng bảng Kanban kéo thả, giới hạn WIP để tăng hiệu suất.', cta: 'Chọn Kanban' },
-  { type: 'CUSTOM', icon: Settings2, title: 'Tùy biến cao', desc: 'Thích hợp cho quy trình đặc thù, tự thiết kế cấu trúc bảng và trạng thái.', cta: 'Tùy chỉnh ngay' },
 ]
 
 const SelectProjectType = ({ selectedType, onSelect }: SelectProjectTypeProps) => {
@@ -28,7 +26,7 @@ const SelectProjectType = ({ selectedType, onSelect }: SelectProjectTypeProps) =
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mt-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mt-8">
         {options.map(({ type, icon: Icon, title, desc, cta }) => (
           <div
             key={type}

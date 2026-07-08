@@ -11,6 +11,16 @@ export const PROJECT_STATUS = {
 export type ProjectStatus =
   (typeof PROJECT_STATUS)[keyof typeof PROJECT_STATUS]
 
+// Phương pháp quản trị — quyết định workspace hiển thị tab nào (xem ProjectWorkspacePage).
+// Chọn 1 lần lúc tạo, không đổi được sau đó (đổi giữa chừng phá vỡ cấu trúc Sprint/Backlog).
+export const PROJECT_METHODOLOGY = {
+  SCRUM: 'SCRUM',
+  KANBAN: 'KANBAN',
+} as const
+
+export type ProjectMethodology =
+  (typeof PROJECT_METHODOLOGY)[keyof typeof PROJECT_METHODOLOGY]
+
 export type ProjectMemberRole = 'OWNER' | 'ADMIN' | 'MEMBER'
 export type ProjectMemberStatus = 'PENDING' | 'ACTIVE' | 'REMOVED'
 
@@ -25,6 +35,8 @@ export interface ProjectMember {
 export interface Project {
   _id: string
   name: string
+  key: string
+  methodology: ProjectMethodology
   description: string
   deadline: string | null
   status: ProjectStatus
@@ -37,9 +49,14 @@ export interface Project {
 
 // ----- Payload gửi lên -----
 
-/** Body khi tạo project (POST /projects). */
+/**
+ * Body khi tạo project (POST /projects).
+ * `key` bỏ trống -> backend tự sinh từ name. `methodology` bỏ trống -> backend mặc định KANBAN.
+ */
 export interface CreateProjectPayload {
   name: string
+  key?: string
+  methodology?: ProjectMethodology
   description?: string
   deadline?: string | null
 }
@@ -47,6 +64,7 @@ export interface CreateProjectPayload {
 /** Body khi cập nhật project (PUT /projects/:id) — mọi field đều optional. */
 export interface UpdateProjectPayload {
   name?: string
+  key?: string
   description?: string
   deadline?: string | null
   status?: ProjectStatus

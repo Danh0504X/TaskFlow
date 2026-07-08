@@ -1,8 +1,8 @@
-import { useState } from 'react'
-import { Search } from 'lucide-react'
+import SearchInput from '@/components/ui/SearchInput'
 import Spinner from '@/components/ui/Spinner'
 import { useProjectIssues } from '@/features/issues/hooks/useIssues'
-import BoardColumn from './BoardColumn'
+import { useIssueSearch } from '@/features/issues/hooks/useIssueSearch'
+import BoardColumn from '@/features/issues/components/BoardColumn'
 
 interface ProjectBoardProps {
   projectId: string
@@ -18,27 +18,17 @@ const COLUMNS = [
 
 const ProjectBoard = ({ projectId, onSelectIssue }: ProjectBoardProps) => {
   const { data: issues, isLoading } = useProjectIssues(projectId)
-  const [searchQuery, setSearchQuery] = useState('')
-
-  const filtered = (issues ?? []).filter(
-    (issue) =>
-      issue.summary.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      issue.key.toLowerCase().includes(searchQuery.toLowerCase()),
-  )
+  const { query, setQuery, filtered } = useIssueSearch(issues)
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4 py-3.5 px-5 bg-white/70 backdrop-blur-md rounded-2xl border border-line/30 shadow-sm">
-        <div className="relative w-full max-w-md">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" size={16} />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Tìm kiếm trên bảng..."
-            className="w-full bg-slate-50 border border-line/20 rounded-xl py-2 pl-10 pr-4 text-xs font-semibold focus:ring-2 focus:ring-brand/20 outline-none transition-all placeholder:text-subtle"
-          />
-        </div>
+        <SearchInput
+          containerClassName="max-w-md"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Tìm kiếm trên bảng..."
+        />
       </div>
 
       {isLoading ? (

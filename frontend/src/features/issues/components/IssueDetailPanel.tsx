@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { X, Share2, Eye, MoreHorizontal, Layers, Calendar, Send } from 'lucide-react'
+import { X, Share2, Eye, MoreHorizontal, Layers, Send } from 'lucide-react'
 import Avatar from '@/components/ui/Avatar'
 import Spinner from '@/components/ui/Spinner'
 import { useIssue } from '../hooks/useIssues'
@@ -131,18 +131,6 @@ const IssueDetailPanel = ({ issueKey, onClose }: IssueDetailPanelProps) => {
                 )}
               </div>
 
-              <div className="flex justify-between items-center text-xs font-semibold">
-                <span className="text-muted">Người báo cáo</span>
-                {issue.reporter ? (
-                  <div className="flex items-center gap-2">
-                    <Avatar src={issue.reporter.avatarUrl} name={issue.reporter.fullName} size={20} />
-                    <span className="text-ink font-bold">{issue.reporter.fullName}</span>
-                  </div>
-                ) : (
-                  <span className="text-subtle">—</span>
-                )}
-              </div>
-
               {issue.epicName && (
                 <div className="flex justify-between items-center text-xs font-semibold">
                   <span className="text-muted">Epic</span>
@@ -152,14 +140,6 @@ const IssueDetailPanel = ({ issueKey, onClose }: IssueDetailPanelProps) => {
                   </span>
                 </div>
               )}
-
-              <div className="flex justify-between items-center text-xs font-semibold">
-                <span className="text-muted">Hạn hoàn thành</span>
-                <span className="text-ink font-bold flex items-center gap-1.5">
-                  <Calendar size={12} className="text-muted" />
-                  <span>{issue.dueDate ?? '—'}</span>
-                </span>
-              </div>
             </div>
 
             <div className="space-y-2 pt-4 border-t border-line/10">

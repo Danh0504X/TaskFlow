@@ -5,8 +5,9 @@ import Sprint from '../models/sprints.js'
 import Issue from '../models/issues.js'
 import ApiError from '../utils/ApiError.js'
 
-// Các status hợp lệ của project (khớp với enum trong models/projects.js).
+// Các enum hợp lệ (khớp với models/projects.js).
 const PROJECT_STATUSES = ['ACTIVE', 'COMPLETED', 'CANCELLED']
+const PROJECT_METHODOLOGIES = ['SCRUM', 'KANBAN']
 
 const ensureValidObjectId = (id, label = 'id') => {
   if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -14,9 +15,44 @@ const ensureValidObjectId = (id, label = 'id') => {
   }
 }
 
+// Chuẩn hoá key người dùng nhập: chữ hoa, bỏ ký tự không phải chữ/số.
+const normalizeKey = (key) => key.trim().toUpperCase().replace(/[^A-Z0-9]/g, '')
+
+// Không có key -> tự sinh từ tên project (chữ đầu mỗi từ, tối đa 5 ký tự).
+const deriveKeyFromName = (name) => {
+  const initials = name
+    .trim()
+    .split(/\s+/)
+    .map((word) => word[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 5)
+
+  return initials.length >= 2 ? initials : name.slice(0, 5).toUpperCase()
+}
+
+const resolveProjectKey = (key, name) => {
+  if (!key || !key.trim()) return deriveKeyFromName(name)
+
+  const normalized = normalizeKey(key)
+  if (normalized.length < 2) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Project key phải có ít nhất 2 ký tự chữ/số')
+  }
+  return normalized
+}
+
+// Không có methodology -> mặc định KANBAN (đơn giản nhất, không cần cấu hình Sprint).
+const resolveMethodology = (methodology) => {
+  if (!methodology) return 'KANBAN'
+  if (!PROJECT_METHODOLOGIES.includes(methodology)) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid project methodology')
+  }
+  return methodology
+}
+
 // Tạo project. Người tạo trở thành OWNER và là 1 member ACTIVE.
 const createProject = async (userId, body = {}) => {
-  const { name, description, deadline } = body
+  const { name, description, deadline, key, methodology } = body
 
   if (!name || !name.trim()) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Project name is required')
@@ -24,6 +60,8 @@ const createProject = async (userId, body = {}) => {
 
   const project = await Project.create({
     name: name.trim(),
+    key: resolveProjectKey(key, name),
+    methodology: resolveMethodology(methodology),
     description: description?.trim() || '',
     deadline: deadline || null,
     createdBy: userId,
@@ -65,6 +103,10 @@ const updateProject = async (projectId, body = {}) => {
       throw new ApiError(StatusCodes.BAD_REQUEST, 'Project name cannot be empty')
     }
     payload.name = body.name.trim()
+  }
+
+  if (body.key !== undefined) {
+    payload.key = resolveProjectKey(body.key, body.name ?? '')
   }
 
   if (body.description !== undefined) {

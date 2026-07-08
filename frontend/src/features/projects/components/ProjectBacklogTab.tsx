@@ -46,11 +46,6 @@ const ProjectBacklogTab = ({ projectId, onSelectIssue }: ProjectBacklogTabProps)
       </div>
 
       <div className="flex items-center gap-3.5">
-        {issue.storyPoints !== undefined && (
-          <div className="w-6 h-6 rounded-full bg-slate-100 border border-line/20 flex items-center justify-center text-[10px] font-extrabold text-muted">
-            {issue.storyPoints}
-          </div>
-        )}
         <IssuePriorityBadge priority={issue.priority} showIcon={false} />
         {issue.assignee ? (
           <Avatar src={issue.assignee.avatarUrl} name={issue.assignee.fullName} size={24} />

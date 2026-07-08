@@ -27,7 +27,7 @@ export const ISSUE_PRIORITY = {
 } as const
 export type IssuePriority = (typeof ISSUE_PRIORITY)[keyof typeof ISSUE_PRIORITY]
 
-/** Thông tin rút gọn của user gắn trên issue (assignee/reporter). */
+/** Thông tin rút gọn của user gắn trên issue (assignee). */
 export interface IssueMember {
   _id: string
   fullName: string
@@ -45,10 +45,7 @@ export interface Issue {
   projectId: string
   projectName?: string
   epicName?: string
-  storyPoints?: number
   assignee?: IssueMember
-  reporter?: IssueMember
-  dueDate?: string | null
   createdAt: string
   updatedAt: string
 }
