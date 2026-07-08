@@ -32,6 +32,17 @@ export interface VerifyEmailPayload {
   code: string
 }
 
+export interface ForgotPasswordPayload {
+  email: string
+}
+
+export interface ResetPasswordPayload {
+  email: string
+  token: string
+  newPassword: string
+  confirmPassword: string
+}
+
 // ----- Response nhận về -----
 
 /** Trả về từ /auth/sign-in và /auth/google. Token được set qua httpOnly cookie. */
@@ -55,3 +66,10 @@ export interface SignUpResponse {
 
 /** Trả về từ /auth/verify-email: giống sign-in (set cookie + userInfo). */
 export type VerifyEmailResponse = SignInResponse
+
+/** Trả về từ /email/forgot-password và /email/reset-password: message chung. */
+export interface ForgotPasswordResponse {
+  message: string
+}
+
+export type ResetPasswordResponse = ForgotPasswordResponse

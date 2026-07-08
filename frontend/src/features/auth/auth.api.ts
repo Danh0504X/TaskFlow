@@ -1,6 +1,10 @@
 import api from '@/lib/api'
 import type { ApiResponse } from '@/lib/http'
 import type {
+  ForgotPasswordPayload,
+  ForgotPasswordResponse,
+  ResetPasswordPayload,
+  ResetPasswordResponse,
   SignInPayload,
   SignInResponse,
   SignUpPayload,
@@ -44,6 +48,28 @@ export const authApi = {
     const res = await api.post<{ message: string }>(
       '/email/send-verify-code',
       { email },
+    )
+    return res.data
+  },
+
+  /** Gửi email quên mật khẩu (backend luôn trả message chung, không lộ email có tồn tại hay không). */
+  forgotPassword: async (
+    payload: ForgotPasswordPayload,
+  ): Promise<ForgotPasswordResponse> => {
+    const res = await api.post<ForgotPasswordResponse>(
+      '/email/forgot-password',
+      payload,
+    )
+    return res.data
+  },
+
+  /** Đặt lại mật khẩu bằng token lấy từ link trong email. */
+  resetPassword: async (
+    payload: ResetPasswordPayload,
+  ): Promise<ResetPasswordResponse> => {
+    const res = await api.post<ResetPasswordResponse>(
+      '/email/reset-password',
+      payload,
     )
     return res.data
   },

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useGoogleLogin } from '@react-oauth/google'
@@ -21,10 +21,13 @@ import {
 // Form đăng nhập: email + mật khẩu (validate bằng zod), kèm đăng nhập Google.
 const LoginForm = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const signInMutation = useSignIn()
   const googleMutation = useGoogleSignIn()
 
   const [serverError, setServerError] = useState('')
+  // Thông báo truyền từ trang đặt lại mật khẩu (vd "Đặt lại mật khẩu thành công").
+  const infoMessage = (location.state as { info?: string } | null)?.info
 
   const {
     register,
@@ -62,6 +65,10 @@ const LoginForm = () => {
       className="relative w-full space-y-5"
       noValidate
     >
+      {infoMessage && (
+        <p className="ml-1 text-[13px] text-green-600">{infoMessage}</p>
+      )}
+
       <div className="space-y-4">
         <div>
           <label htmlFor="login-email" className={labelClass}>
@@ -78,9 +85,17 @@ const LoginForm = () => {
         </div>
 
         <div>
-          <label htmlFor="login-password" className={labelClass}>
-            Mật khẩu
-          </label>
+          <div className="flex items-center justify-between">
+            <label htmlFor="login-password" className={labelClass}>
+              Mật khẩu
+            </label>
+            <Link
+              to="/forgot-password"
+              className="text-[13px] font-medium text-brand transition-colors hover:text-brand-light hover:underline"
+            >
+              Quên mật khẩu?
+            </Link>
+          </div>
           <Input
             id="login-password"
             type="password"

@@ -50,7 +50,6 @@ export const verifyEmail = asyncHandler(async (req, res) => {
 })
 
 export const signOut = asyncHandler(async (req, res) => {
-  console.log('Call: ⛳authController.js -> signOut()')
   const refreshToken = req.cookies?.refreshToken
   await authService.signOut(refreshToken)
 

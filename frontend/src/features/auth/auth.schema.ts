@@ -24,3 +24,24 @@ export const loginSchema = z.object({
 })
 
 export type LoginFormValues = z.infer<typeof loginSchema>
+
+// Schema validate form quên mật khẩu.
+export const forgotPasswordSchema = z.object({
+  email: z.string().trim().email('Email không đúng định dạng.'),
+})
+
+export type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>
+
+// Schema validate form đặt lại mật khẩu. Độ dài tối thiểu 6 ký tự khớp
+// ràng buộc backend (emailAccountService.resetPassword).
+export const resetPasswordSchema = z
+  .object({
+    newPassword: z.string().min(6, 'Mật khẩu phải có ít nhất 6 ký tự.'),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: 'Mật khẩu xác nhận không khớp.',
+    path: ['confirmPassword'],
+  })
+
+export type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>

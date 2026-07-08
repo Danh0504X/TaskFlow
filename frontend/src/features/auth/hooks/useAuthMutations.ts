@@ -43,3 +43,11 @@ export const useCheckEmail = () =>
 /** Gửi lại mã xác thực email. */
 export const useResendCode = () =>
   useMutation({ mutationFn: (email: string) => authApi.resendVerifyCode(email) })
+
+/** Gửi email quên mật khẩu (bước 1 của luồng reset). */
+export const useForgotPassword = () =>
+  useMutation({ mutationFn: authApi.forgotPassword })
+
+/** Đặt lại mật khẩu bằng token từ link trong email (bước 2 của luồng reset). */
+export const useResetPassword = () =>
+  useMutation({ mutationFn: authApi.resetPassword })
