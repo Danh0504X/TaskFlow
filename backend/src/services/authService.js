@@ -5,7 +5,7 @@ import { JwtProvider } from '../providers/JwtProvider.js'
 import { sessionService } from './sessionService.js'
 import { env } from '../config/environment.js'
 import ApiError from '../utils/ApiError.js'
-import { EMAIL_REGEX, EMAIL_PURPOSE } from '../utils/constants.js'
+import { EMAIL_PURPOSE } from '../utils/constants.js'
 import { emailAccountService } from './email/emailAccountService.js'
 import { emailTokenService } from './email/emailTokenService.js'
 
@@ -58,17 +58,6 @@ const generateTokens = async (userInfo) => {
 const signUp = async (body) => {
   const { email, password, fullName } = body
 
-  if (!email || !password || !fullName) {
-    throw new ApiError(
-      StatusCodes.BAD_REQUEST,
-      'Email, password and full name are required!',
-    )
-  }
-
-  if (!EMAIL_REGEX.test(email)) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid email format')
-  }
-
   const normalizedEmail = email.toLowerCase().trim()
   const existingUser = await User.findOne({ email: normalizedEmail })
 
@@ -109,14 +98,6 @@ const signUp = async (body) => {
 // Mirror đúng điều kiện ở signUp: chỉ coi là "đã dùng" khi tài khoản ĐÃ xác thực.
 // Tài khoản tồn tại nhưng chưa xác thực -> vẫn cho đăng ký lại nên xem là còn trống.
 const checkEmailAvailability = async (email) => {
-  if (!email) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'Email is required')
-  }
-
-  if (!EMAIL_REGEX.test(email)) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid email format')
-  }
-
   const normalizedEmail = email.toLowerCase().trim()
   const existingUser = await User.findOne({ email: normalizedEmail })
   const taken = Boolean(existingUser && existingUser.isEmailVerified)
@@ -127,13 +108,6 @@ const checkEmailAvailability = async (email) => {
 // Xác thực mã email sau khi đăng ký -> set isEmailVerified, gửi welcome, đăng nhập luôn.
 const verifyEmailAndLogin = async (body) => {
   const { email, code } = body
-
-  if (!email || !code) {
-    throw new ApiError(
-      StatusCodes.BAD_REQUEST,
-      'Email and verification code are required',
-    )
-  }
 
   const tokenDoc = await emailTokenService.verifyEmailToken({
     email,
@@ -186,13 +160,6 @@ const verifyEmailAndLogin = async (body) => {
 
 const signIn = async (body) => {
   const { email, password } = body
-
-  if (!email || !password) {
-    throw new ApiError(
-      StatusCodes.BAD_REQUEST,
-      'Email and password are required',
-    )
-  }
 
   const login = email.toLowerCase().trim()
   const user = await User.findOne({ email: login })
@@ -271,17 +238,6 @@ const refreshToken = async (refreshToken) => {
 }
 
 const changePassword = async (userId, { currentPassword, newPassword }) => {
-  if (!currentPassword || !newPassword) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'Current and new password are required')
-  }
-
-  if (newPassword.length < 6) {
-    throw new ApiError(
-      StatusCodes.BAD_REQUEST,
-      'New password must be at least 6 characters long',
-    )
-  }
-
   const user = await User.findById(userId)
   if (!user) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found')
@@ -306,10 +262,6 @@ const changePassword = async (userId, { currentPassword, newPassword }) => {
 }
 
 const signInWithGoogle = async ({ accessToken }) => {
-  if (!accessToken) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'Google access token is required')
-  }
-
   let googlePayload
   try {
     const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {

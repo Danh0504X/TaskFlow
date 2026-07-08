@@ -6,6 +6,7 @@ export const errorHandlingMiddleware = (err, req, res, next) => {
   const responseError = {
     statusCode: err.statusCode,
     message: err.message || 'Internal Server Error',
+    errors: err.errors || [],
     stack: process.env.NODE_ENV === 'production' ? null : err.stack,
   }
 

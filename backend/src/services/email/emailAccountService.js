@@ -35,8 +35,6 @@ const sendWelcomeEmail = async ({ to, name }) => {
 
 // 1. Gửi mã xác thực email
 const sendVerifyCode = async ({ email }) => {
-  assertValidEmail(email)
-
   const user = await User.findOne({ email: email.toLowerCase().trim() })
 
   // Không tiết lộ email có tồn tại hay không
@@ -72,11 +70,6 @@ const sendVerifyCode = async ({ email }) => {
 
 // 2. Xác thực mã email
 const verifyEmail = async ({ email, code }) => {
-  assertValidEmail(email)
-  if (!code) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'Vui lòng nhập mã xác thực')
-  }
-
   const tokenDoc = await emailTokenService.verifyEmailToken({
     email,
     purpose: EMAIL_PURPOSE.VERIFY_EMAIL,
@@ -103,8 +96,6 @@ const verifyEmail = async ({ email, code }) => {
 
 // 3. Gửi email quên mật khẩu
 const forgotPassword = async ({ email }) => {
-  assertValidEmail(email)
-
   const user = await User.findOne({ email: email.toLowerCase().trim() })
 
   // Luôn trả response chung để không lộ email tồn tại hay không
@@ -139,31 +130,7 @@ const forgotPassword = async ({ email }) => {
 }
 
 // 4. Reset password bằng token
-const resetPassword = async ({ email, token, newPassword, confirmPassword }) => {
-  assertValidEmail(email)
-
-  if (!token) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'Token không hợp lệ')
-  }
-
-  if (!newPassword || !confirmPassword) {
-    throw new ApiError(
-      StatusCodes.BAD_REQUEST,
-      'Vui lòng nhập đầy đủ mật khẩu mới và xác nhận mật khẩu',
-    )
-  }
-
-  if (newPassword !== confirmPassword) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'Mật khẩu xác nhận không khớp')
-  }
-
-  if (newPassword.length < 6) {
-    throw new ApiError(
-      StatusCodes.BAD_REQUEST,
-      'Mật khẩu phải có ít nhất 6 ký tự',
-    )
-  }
-
+const resetPassword = async ({ email, token, newPassword }) => {
   const tokenDoc = await emailTokenService.verifyEmailToken({
     email,
     purpose: EMAIL_PURPOSE.RESET_PASSWORD,
