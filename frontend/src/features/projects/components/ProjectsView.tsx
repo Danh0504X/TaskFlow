@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Button from '@/components/ui/Button'
 import Spinner from '@/components/ui/Spinner'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
@@ -15,6 +16,7 @@ import ProjectFormModal from './ProjectFormModal'
  * Đây là "khuôn mẫu" để team copy cho các domain khác (sprints, issues...).
  */
 const ProjectsView = () => {
+  const navigate = useNavigate()
   const { data: projects, isLoading, isError, refetch, isFetching } = useProjects()
   const deleteMutation = useDeleteProject()
 
@@ -50,7 +52,12 @@ const ProjectsView = () => {
             Quản lý các project của bạn
           </p>
         </div>
-        <Button onClick={openCreate}>+ Tạo project</Button>
+        <div className="flex gap-2">
+          <Button variant="secondary" onClick={() => navigate('/projects/new')}>
+            Trình hướng dẫn
+          </Button>
+          <Button onClick={openCreate}>+ Tạo project</Button>
+        </div>
       </div>
 
       {/* Trạng thái tải */}

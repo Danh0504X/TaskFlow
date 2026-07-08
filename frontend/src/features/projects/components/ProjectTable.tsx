@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import Button from '@/components/ui/Button'
 import { formatDate } from '@/lib/format'
 import type { Project } from '../project.types'
@@ -29,7 +30,9 @@ const ProjectTable = ({ projects, onEdit, onDelete }: ProjectTableProps) => {
             {projects.map((project) => (
               <tr key={project._id} className="transition hover:bg-slate-50">
                 <td className="px-4 py-3 font-medium text-slate-800">
-                  {project.name}
+                  <Link to={`/projects/${project._id}`} className="hover:text-blue-600 hover:underline">
+                    {project.name}
+                  </Link>
                 </td>
                 <td className="max-w-xs truncate px-4 py-3 text-slate-500">
                   {project.description || '—'}

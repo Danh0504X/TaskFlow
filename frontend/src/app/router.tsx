@@ -11,6 +11,10 @@ import RegisterPage from '@/features/auth/pages/RegisterPage'
 import VerifyEmailPage from '@/features/auth/pages/VerifyEmailPage'
 import ForgotPasswordPage from '@/features/auth/pages/ForgotPasswordPage'
 import ResetPasswordPage from '@/features/auth/pages/ResetPasswordPage'
+import ProjectsPage from '@/features/projects/pages/ProjectsPage'
+import ProjectWorkspacePage from '@/features/projects/pages/ProjectWorkspacePage'
+import ProjectSetupWizard from '@/features/projects/pages/ProjectSetupWizard'
+import MyTasksPage from '@/features/tasks/pages/MyTasksPage'
 import { useAuthStore } from '@/features/auth/authStore'
 
 // Chặn truy cập trang cần đăng nhập.
@@ -35,7 +39,13 @@ const router = createBrowserRouter([
         <MainLayout />
       </ProtectedRoute>
     ),
-    children: [{ index: true, element: <DashboardPage /> }],
+    children: [
+      { index: true, element: <DashboardPage /> },
+      { path: 'projects', element: <ProjectsPage /> },
+      { path: 'projects/new', element: <ProjectSetupWizard /> },
+      { path: 'projects/:projectId', element: <ProjectWorkspacePage /> },
+      { path: 'tasks', element: <MyTasksPage /> },
+    ],
   },
   {
     path: '/login',
