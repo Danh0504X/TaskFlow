@@ -8,7 +8,7 @@ const isProduction = env.BUILD_MODE === 'production'
 
 const AUTH_COOKIE_OPTIONS = {
   httpOnly: true,
-  // Dev (http://localhost) không dùng secure + sameSite 'none' nếu không trình duyệt sẽ không lưu cookie
+
   secure: isProduction,
   sameSite: isProduction ? 'none' : 'lax',
   maxAge: ms('14 days'),
@@ -32,8 +32,24 @@ export const signUp = asyncHandler(async (req, res) => {
   res.status(StatusCodes.CREATED).json(result)
 })
 
+export const checkEmail = asyncHandler(async (req, res) => {
+  const result = await authService.checkEmailAvailability(req.body?.email)
+  res.status(StatusCodes.OK).json(result)
+})
+
+export const verifyEmail = asyncHandler(async (req, res) => {
+  const result = await authService.verifyEmailAndLogin(req.body)
+  const { accessToken, refreshToken } = result.data
+
+  setAuthCookies(res, { accessToken, refreshToken })
+
+  res.status(StatusCodes.OK).json({
+    message: 'Email verified successfully',
+    ...result,
+  })
+})
+
 export const signOut = asyncHandler(async (req, res) => {
-  console.log('Call: ⛳authController.js -> signOut()')
   const refreshToken = req.cookies?.refreshToken
   await authService.signOut(refreshToken)
 
@@ -64,24 +80,19 @@ export const refreshToken = asyncHandler(async (req, res) => {
   })
 })
 
-export const forgotPassword = asyncHandler(async (req, res) => {
-  const result = await authService.forgotPassword(req.body)
-  res.status(StatusCodes.OK).json(result)
-})
-
-export const verifyResetToken = asyncHandler(async (req, res) => {
-  const result = await authService.verifyResetToken(req.body)
-  res.status(StatusCodes.OK).json(result)
-})
-
-export const resetPassword = asyncHandler(async (req, res) => {
-  const result = await authService.resetPassword(req.body)
-  res.status(StatusCodes.OK).json(result)
-})
-
 export const changePassword = asyncHandler(async (req, res) => {
   const result = await authService.changePassword(req.user._id, req.body)
   res.status(StatusCodes.OK).json(result)
+})
+
+// Trả thông tin user đang đăng nhập (dựa vào accessToken trong cookie).
+// protectedRoute đã xác thực token & gắn req.user trước khi vào đây.
+export const getMe = asyncHandler(async (req, res) => {
+  const userInfo = authService.getMe(req.user)
+  res.status(StatusCodes.OK).json({
+    message: 'Get current user successfully',
+    data: { userInfo },
+  })
 })
 
 export const googleSignIn = asyncHandler(async (req, res) => {

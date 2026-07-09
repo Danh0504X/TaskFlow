@@ -7,14 +7,14 @@ import { corsOptions } from './config/cors.js'
 import { connectDB } from './lib/db.js'
 import { errorHandlingMiddleware } from './middlewares/errorHandlingMiddleware.js'
 import apiRoutes from './routes/api.js'
-
+ 
 const START_SERVER = () => {
   const app = express()
 
   // Core middlewares
   app.use(cors(corsOptions))
-  app.use(express.json())
-  app.use(express.urlencoded({ extended: true }))
+  app.use(express.json({ limit: '100kb' }))
+  app.use(express.urlencoded({ extended: true, limit: '100kb' }))
   app.use(cookieParser())
 
   // Routes

@@ -39,6 +39,26 @@ const projectSchema = new mongoose.Schema(
       maxlength: 150,
     },
 
+    // Mã ngắn của project (vd "WEB"), dùng làm tiền tố hiển thị issue (WEB-12).
+    // Không bắt buộc phía client gửi lên -> service tự sinh từ name nếu thiếu.
+    key: {
+      type: String,
+      required: true,
+      trim: true,
+      uppercase: true,
+      minlength: 2,
+      maxlength: 10,
+    },
+
+    // Phương pháp quản trị, chọn 1 lần lúc tạo, không đổi được sau đó
+    // (đổi giữa chừng phá vỡ cấu trúc Sprint/Backlog đã có của project).
+    methodology: {
+      type: String,
+      enum: ['SCRUM', 'KANBAN'],
+      required: true,
+      default: 'KANBAN',
+    },
+
     description: {
       type: String,
       trim: true,
