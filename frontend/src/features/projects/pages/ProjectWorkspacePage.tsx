@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Plus } from 'lucide-react'
 import Spinner from '@/components/ui/Spinner'
 import Tabs from '@/components/ui/Tabs'
 import ProjectStatusBadge from '@/features/projects/components/ProjectStatusBadge'
 import ProjectMethodologyBadge from '@/features/projects/components/ProjectMethodologyBadge'
 import IssueDetailPanel from '@/features/issues/components/IssueDetailPanel'
+import IssueCreateModal from '@/features/issues/components/IssueCreateModal'
 import { useProjectIssues } from '@/features/issues/hooks/useIssues'
 import { useProject } from '../hooks/useProject'
 import { PROJECT_METHODOLOGY, type ProjectMethodology } from '../project.types'
@@ -32,6 +33,7 @@ const ProjectWorkspacePage = () => {
   const { data: project, isLoading } = useProject(projectId)
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('SUMMARY')
   const [selectedIssueKey, setSelectedIssueKey] = useState<string | null>(null)
+  const [isCreateIssueOpen, setIsCreateIssueOpen] = useState(false)
 
   // Dùng chung cache với các tab Summary/List/Board/Backlog (cùng queryKey) -> không
   // tốn thêm request, chỉ để tra ra issue đầy đủ cho panel chi tiết theo key đã chọn.
@@ -78,6 +80,14 @@ const ProjectWorkspacePage = () => {
             {project.description || 'Chưa có mô tả cho dự án này.'}
           </p>
         </div>
+
+        <button
+          onClick={() => setIsCreateIssueOpen(true)}
+          className="flex items-center gap-2 px-4 py-2.5 bg-brand text-white rounded-xl text-xs font-bold shadow-lg shadow-brand/20 hover:bg-brand-light transition-all active:scale-95 self-start"
+        >
+          <Plus size={15} />
+          <span>Thêm issue</span>
+        </button>
       </header>
 
       <Tabs items={getTabItems(project.methodology)} value={activeTab} onChange={setActiveTab} className="w-fit" />
@@ -90,14 +100,20 @@ const ProjectWorkspacePage = () => {
       </div>
 
       {selectedIssueKey && (
-        <>
-          <div
-            onClick={() => setSelectedIssueKey(null)}
-            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 animate-in fade-in duration-200"
-          />
-          <IssueDetailPanel issue={selectedIssue} isLoading={issuesLoading} onClose={() => setSelectedIssueKey(null)} />
-        </>
+        <IssueDetailPanel
+          issue={selectedIssue}
+          projectId={project._id}
+          isLoading={issuesLoading}
+          onClose={() => setSelectedIssueKey(null)}
+        />
       )}
+
+      <IssueCreateModal
+        open={isCreateIssueOpen}
+        onClose={() => setIsCreateIssueOpen(false)}
+        projectId={project._id}
+        issues={issues ?? []}
+      />
     </div>
   )
 }

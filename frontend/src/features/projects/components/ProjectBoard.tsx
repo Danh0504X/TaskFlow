@@ -17,7 +17,8 @@ const COLUMNS = [
 ] as const
 
 const ProjectBoard = ({ projectId, onSelectIssue }: ProjectBoardProps) => {
-  const { data: issues, isLoading } = useProjectIssues(projectId)
+  // Board chỉ vận hành trên Task -> Epic chỉ là container tổ chức, hiển thị ở tab Danh sách.
+  const { data: issues, isLoading } = useProjectIssues(projectId, { type: 'TASK' })
   const { query, setQuery, filtered } = useIssueSearch(issues)
 
   return (

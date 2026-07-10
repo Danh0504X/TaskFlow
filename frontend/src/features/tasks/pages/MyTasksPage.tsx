@@ -114,13 +114,12 @@ const MyTasksPage = () => {
       </section>
 
       {selectedTaskKey && (
-        <>
-          <div
-            onClick={() => setSelectedTaskKey(null)}
-            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 animate-in fade-in duration-200"
-          />
-          <IssueDetailPanel issue={selectedTask} isLoading={isLoading} onClose={() => setSelectedTaskKey(null)} />
-        </>
+        <IssueDetailPanel
+          issue={selectedTask}
+          projectId={selectedTask?.projectId ?? ''}
+          isLoading={isLoading}
+          onClose={() => setSelectedTaskKey(null)}
+        />
       )}
     </div>
   )

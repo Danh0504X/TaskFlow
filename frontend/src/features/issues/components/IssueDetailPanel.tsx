@@ -1,7 +1,8 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { X, Share2, Eye, MoreHorizontal, Layers, Send } from 'lucide-react'
 import Avatar from '@/components/ui/Avatar'
 import Spinner from '@/components/ui/Spinner'
+import { useUpdateIssue } from '../hooks/useIssueMutations'
 import type { Issue, IssueStatus, IssuePriority } from '../issue.types'
 
 interface Comment {
@@ -15,12 +16,18 @@ interface Comment {
 interface IssueDetailPanelProps {
   /** Issue đã được resolve sẵn từ danh sách đang có trong cache (Board/List/Backlog/MyTasks). */
   issue: Issue | null | undefined
+  projectId: string
   isLoading?: boolean
   onClose: () => void
 }
 
-/** Panel chi tiết issue dạng slide-over. Trạng thái/mô tả/bình luận chỉnh sửa cục bộ (chưa có API cập nhật). */
-const IssueDetailPanel = ({ issue, isLoading, onClose }: IssueDetailPanelProps) => {
+/**
+ * Panel chi tiết issue dạng slide-over. Trạng thái/độ ưu tiên/mô tả chỉnh sửa cục bộ trong lúc mở,
+ * lưu thật (PUT /issues/:id) khi đóng panel — không lưu theo từng phím gõ để tránh spam API.
+ * Bình luận vẫn là mock cục bộ, chưa có API bình luận ở backend.
+ */
+const IssueDetailPanel = ({ issue, projectId, isLoading, onClose }: IssueDetailPanelProps) => {
+  const updateMutation = useUpdateIssue(projectId)
 
   // Nạp lại state chỉnh sửa cục bộ mỗi khi issue đổi (panel không unmount khi chuyển
   // từ issue này sang issue khác) — theo mẫu "Adjusting state on render" của React,
@@ -39,6 +46,34 @@ const IssueDetailPanel = ({ issue, isLoading, onClose }: IssueDetailPanelProps) 
     setDescription(issue.description ?? '')
   }
 
+  // Đóng panel (nút X, bấm ra ngoài, phím Escape) đều đi qua đây: chỉ gọi API nếu có
+  // thay đổi thật so với issue gốc, rồi đóng ngay — không chặn UI chờ request xong.
+  const handleClose = () => {
+    if (issue) {
+      const hasChanges =
+        status !== issue.status ||
+        priority !== issue.priority ||
+        description !== (issue.description ?? '')
+
+      if (hasChanges) {
+        updateMutation.mutate({
+          issueId: issue._id,
+          payload: { status, priority, description },
+        })
+      }
+    }
+    onClose()
+  }
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') handleClose()
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [issue, status, priority, description])
+
   const handleAddComment = (e: FormEvent) => {
     e.preventDefault()
     if (!commentText.trim()) return
@@ -50,7 +85,12 @@ const IssueDetailPanel = ({ issue, isLoading, onClose }: IssueDetailPanelProps) 
   }
 
   return (
-    <div className="fixed inset-y-0 right-0 w-full sm:w-[480px] md:w-[580px] bg-white border-l border-line/30 shadow-2xl z-50 flex flex-col animate-in slide-in-from-right duration-300">
+    <>
+      <div
+        onClick={handleClose}
+        className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 animate-in fade-in duration-200"
+      />
+      <div className="fixed inset-y-0 right-0 w-full sm:w-[480px] md:w-[580px] bg-white border-l border-line/30 shadow-2xl z-50 flex flex-col animate-in slide-in-from-right duration-300">
       <div className="px-6 py-4 border-b border-line/20 flex justify-between items-center bg-slate-50/50 shrink-0">
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold text-muted">Issue</span>
@@ -68,7 +108,7 @@ const IssueDetailPanel = ({ issue, isLoading, onClose }: IssueDetailPanelProps) 
             <MoreHorizontal size={15} />
           </button>
           <div className="w-px h-5 bg-line/20 mx-1" />
-          <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-lg text-muted hover:text-ink transition-all">
+          <button onClick={handleClose} className="p-1.5 hover:bg-slate-100 rounded-lg text-muted hover:text-ink transition-all">
             <X size={16} />
           </button>
         </div>
@@ -191,7 +231,8 @@ const IssueDetailPanel = ({ issue, isLoading, onClose }: IssueDetailPanelProps) 
           </form>
         </>
       )}
-    </div>
+      </div>
+    </>
   )
 }
 

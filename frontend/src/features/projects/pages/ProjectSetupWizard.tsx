@@ -23,13 +23,6 @@ const getStepLabel = (step: StepId, methodology: ProjectMethodology): string => 
   }
 }
 
-/**
- * Wizard khởi tạo project nhiều bước (giao diện đã gen từ Stitch).
- * { name, key, description } gửi thật lên backend (POST /projects).
- * Sau khi tạo project thành công, danh sách mời (nếu có) được gửi tiếp qua
- * POST /projects/:id/members/invite — lỗi mời (email không tồn tại, đã là thành
- * viên...) không chặn việc điều hướng vào project vừa tạo.
- */
 const ProjectSetupWizard = () => {
   const navigate = useNavigate()
   const createMutation = useCreateProject()
@@ -82,7 +75,7 @@ const ProjectSetupWizard = () => {
     createMutation.isPending
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col justify-between py-10 px-6 max-w-4xl mx-auto">
+    <div className="min-h-screen flex flex-col justify-between py-10 px-6 max-w-4xl mx-auto">
       <div>
         <div className="flex justify-between items-center mb-6">
           <span className="text-xs font-bold text-muted uppercase tracking-wider">Khởi tạo không gian dự án</span>
@@ -99,9 +92,8 @@ const ProjectSetupWizard = () => {
             return (
               <div key={step} className="flex items-center gap-2 flex-grow min-w-[100px]">
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-extrabold ${
-                    isCompleted ? 'bg-green-600 text-white' : isActive ? 'bg-brand text-white shadow-md' : 'bg-slate-100 text-muted border border-line/20'
-                  }`}
+                  className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-extrabold ${isCompleted ? 'bg-green-600 text-white' : isActive ? 'bg-brand text-white shadow-md' : 'bg-slate-100 text-muted border border-line/20'
+                    }`}
                 >
                   {isCompleted ? <CheckCircle2 size={12} /> : idx + 1}
                 </div>
