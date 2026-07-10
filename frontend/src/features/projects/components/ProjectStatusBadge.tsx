@@ -12,7 +12,8 @@ const statusConfig: Record<
 }
 
 const ProjectStatusBadge = ({ status }: { status: ProjectStatus }) => {
-  const config = statusConfig[status]
+  // Dữ liệu cũ có thể thiếu/không khớp enum -> fallback ACTIVE thay vì crash cả trang.
+  const config = statusConfig[status] ?? statusConfig[PROJECT_STATUS.ACTIVE]
   return <Badge color={config.color}>{config.label}</Badge>
 }
 

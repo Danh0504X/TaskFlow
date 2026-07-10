@@ -21,7 +21,16 @@ const deriveKey = (name: string): string =>
     .toUpperCase()
     .slice(0, 5)
 
+/** Chuẩn hoá key: chỉ giữ chữ/số viết hoa — khớp quy tắc backend (projectService.js). */
+export const normalizeProjectKey = (key: string): string =>
+  key.toUpperCase().replace(/[^A-Z0-9]/g, '')
+
+/** Key rỗng thì hợp lệ (backend tự sinh từ tên); có nhập thì phải còn ≥ 2 ký tự chữ/số. */
+export const isProjectKeyValid = (key: string): boolean =>
+  key.trim() === '' || normalizeProjectKey(key).length >= 2
+
 const SetupBasicInfo = ({ data, onChange }: SetupBasicInfoProps) => {
+  const showKeyError = data.key.trim() !== '' && !isProjectKeyValid(data.key)
   const handleNameChange = (e: ChangeEvent<HTMLInputElement>) => {
     const name = e.target.value
     onChange({ ...data, name, key: data.key || deriveKey(name) })
@@ -65,9 +74,20 @@ const SetupBasicInfo = ({ data, onChange }: SetupBasicInfoProps) => {
             value={data.key}
             onChange={handleKeyChange}
             placeholder="Ví dụ: WEB, TFC, OPS (tối đa 5 ký tự)"
-            className="w-full bg-slate-50 border border-line/20 rounded-2xl px-4 py-3 text-xs font-semibold focus:ring-2 focus:ring-brand/20 outline-none transition-all placeholder:text-subtle"
+            aria-invalid={showKeyError}
+            className={`w-full bg-slate-50 border rounded-2xl px-4 py-3 text-xs font-semibold outline-none transition-all placeholder:text-subtle ${
+              showKeyError
+                ? 'border-red-400 focus:ring-2 focus:ring-red-400/30'
+                : 'border-line/20 focus:ring-2 focus:ring-brand/20'
+            }`}
           />
-          <p className="text-[10px] text-muted font-semibold">Dùng làm tiền tố đánh số công việc (vd: WEB-1, WEB-2...).</p>
+          {showKeyError ? (
+            <p className="text-[10px] text-red-500 font-semibold">
+              Mã khoá phải còn ít nhất 2 ký tự chữ/số sau khi bỏ ký tự đặc biệt.
+            </p>
+          ) : (
+            <p className="text-[10px] text-muted font-semibold">Dùng làm tiền tố đánh số công việc (vd: WEB-1, WEB-2...).</p>
+          )}
         </div>
 
         <div className="space-y-1.5">

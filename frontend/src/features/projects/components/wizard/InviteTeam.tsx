@@ -1,5 +1,8 @@
 import { useState, type FormEvent } from 'react'
 import { Mail, UserPlus, X } from 'lucide-react'
+import { toast } from '@/components/ui/toast/toastStore'
+import { getApiErrorMessage } from '@/lib/http'
+import { useCheckEmail } from '@/features/auth/hooks/useAuthMutations'
 
 export interface TeamInvite {
   email: string
@@ -13,13 +16,25 @@ interface InviteTeamProps {
 /** Danh sách lời mời thành viên trong wizard — mọi lời mời đều được thêm với vai trò MEMBER. */
 const InviteTeam = ({ invites, onChange }: InviteTeamProps) => {
   const [email, setEmail] = useState('')
+  const checkEmailMutation = useCheckEmail()
 
-  const handleAddInvite = (e: FormEvent) => {
+  const handleAddInvite = async (e: FormEvent) => {
     e.preventDefault()
     const trimmed = email.trim()
     if (!trimmed || invites.some((inv) => inv.email === trimmed)) return
-    onChange([...invites, { email: trimmed }])
-    setEmail('')
+
+    try {
+      // available: true -> chưa có tài khoản nào dùng email này -> không cho mời.
+      const { available } = await checkEmailMutation.mutateAsync(trimmed)
+      if (available) {
+        toast.error(`Email ${trimmed} chưa có tài khoản trong hệ thống, không thể mời.`)
+        return
+      }
+      onChange([...invites, { email: trimmed }])
+      setEmail('')
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Không kiểm tra được email, vui lòng thử lại.'))
+    }
   }
 
   const handleRemoveInvite = (index: number) => {
@@ -50,10 +65,11 @@ const InviteTeam = ({ invites, onChange }: InviteTeamProps) => {
 
         <button
           type="submit"
-          className="bg-brand text-white hover:bg-brand-light px-5 py-3 rounded-2xl font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-brand/15 h-[46px]"
+          disabled={checkEmailMutation.isPending}
+          className="bg-brand text-white hover:bg-brand-light px-5 py-3 rounded-2xl font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-brand/15 h-[46px] disabled:opacity-45 disabled:pointer-events-none"
         >
           <UserPlus size={14} />
-          <span>Thêm</span>
+          <span>{checkEmailMutation.isPending ? 'Đang kiểm tra...' : 'Thêm'}</span>
         </button>
       </form>
 
