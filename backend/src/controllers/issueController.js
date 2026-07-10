@@ -16,7 +16,7 @@ export const createIssue = asyncHandler(async (req, res) => {
 // Lấy danh sách issue theo project (có thể lọc qua query: ?sprintId=&status=&type=).
 export const getIssuesByProject = asyncHandler(async (req, res) => {
   const { projectId } = req.params
-  const result = await issueService.getIssuesByProject(projectId, req.query)
+  const result = await issueService.getIssuesByProject(projectId, req.query, req.project.key)
 
   res.status(StatusCodes.OK).json({
     message: 'Get issues successfully',
@@ -27,7 +27,7 @@ export const getIssuesByProject = asyncHandler(async (req, res) => {
 // Lấy danh sách issue theo sprint.
 export const getIssuesBySprint = asyncHandler(async (req, res) => {
   const { projectId, sprintId } = req.params
-  const result = await issueService.getIssuesBySprint(projectId, sprintId)
+  const result = await issueService.getIssuesBySprint(projectId, sprintId, req.project.key)
 
   res.status(StatusCodes.OK).json({
     message: 'Get issues by sprint successfully',
@@ -38,7 +38,7 @@ export const getIssuesBySprint = asyncHandler(async (req, res) => {
 // Lấy chi tiết 1 issue.
 export const getIssueById = asyncHandler(async (req, res) => {
   const { projectId, issueId } = req.params
-  const result = await issueService.getIssueById(projectId, issueId)
+  const result = await issueService.getIssueById(projectId, issueId, req.project.key)
 
   res.status(StatusCodes.OK).json({
     message: 'Get issue detail successfully',
@@ -49,7 +49,7 @@ export const getIssueById = asyncHandler(async (req, res) => {
 // Cập nhật toàn bộ issue.
 export const updateIssue = asyncHandler(async (req, res) => {
   const { projectId, issueId } = req.params
-  const result = await issueService.updateIssue(projectId, issueId, req.body)
+  const result = await issueService.updateIssue(projectId, issueId, req.body, req.project.key)
 
   res.status(StatusCodes.OK).json({
     message: 'Issue updated successfully',
@@ -60,7 +60,7 @@ export const updateIssue = asyncHandler(async (req, res) => {
 // Cập nhật riêng status của issue.
 export const updateIssueStatus = asyncHandler(async (req, res) => {
   const { projectId, issueId } = req.params
-  const result = await issueService.updateIssueStatus(projectId, issueId, req.body)
+  const result = await issueService.updateIssueStatus(projectId, issueId, req.body, req.project.key)
 
   res.status(StatusCodes.OK).json({
     message: 'Issue status updated successfully',

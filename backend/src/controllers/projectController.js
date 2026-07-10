@@ -12,6 +12,17 @@ export const createProject = asyncHandler(async (req, res) => {
   })
 })
 
+// Mời (thêm) thành viên vào project bằng email.
+export const inviteMembers = asyncHandler(async (req, res) => {
+  const { projectId } = req.params
+  const result = await projectService.inviteMembers(projectId, req.user._id, req.body.invites)
+
+  res.status(StatusCodes.OK).json({
+    message: 'Invite members processed',
+    data: result,
+  })
+})
+
 // Lấy danh sách project mà user hiện tại tham gia.
 export const getMyProjects = asyncHandler(async (req, res) => {
   const result = await projectService.getMyProjects(req.user._id)

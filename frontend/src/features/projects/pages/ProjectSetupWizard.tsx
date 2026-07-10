@@ -7,7 +7,7 @@ import KanbanIntro from '../components/wizard/KanbanIntro'
 import SetupBasicInfo, { type BasicInfoData } from '../components/wizard/SetupBasicInfo'
 import SetupConfiguration, { type ConfigurationData } from '../components/wizard/SetupConfiguration'
 import InviteTeam, { type TeamInvite } from '../components/wizard/InviteTeam'
-import { useCreateProject } from '../hooks/useProjectMutations'
+import { useCreateProject, useInviteMembers } from '../hooks/useProjectMutations'
 import { PROJECT_METHODOLOGY, type ProjectMethodology } from '../project.types'
 
 type StepId = 'TYPE' | 'INTRO' | 'BASIC_INFO' | 'SPRINT_CONFIG' | 'INVITE'
@@ -31,11 +31,14 @@ const getStepLabel = (step: StepId, methodology: ProjectMethodology): string => 
 /**
  * Wizard khởi tạo project nhiều bước (giao diện đã gen từ Stitch).
  * { name, key, description } gửi thật lên backend (POST /projects).
- * Mời thành viên chỉ tồn tại trong trải nghiệm wizard — backend chưa có API mời qua email.
+ * Sau khi tạo project thành công, danh sách mời (nếu có) được gửi tiếp qua
+ * POST /projects/:id/members/invite — lỗi mời (email không tồn tại, đã là thành
+ * viên...) không chặn việc điều hướng vào project vừa tạo.
  */
 const ProjectSetupWizard = () => {
   const navigate = useNavigate()
   const createMutation = useCreateProject()
+  const inviteMutation = useInviteMembers()
 
   const [methodology, setMethodology] = useState<ProjectMethodology>(PROJECT_METHODOLOGY.SCRUM)
   const [stepIndex, setStepIndex] = useState(0)
@@ -52,7 +55,14 @@ const ProjectSetupWizard = () => {
   const handleFinish = () => {
     createMutation.mutate(
       { name: basicInfo.name, key: basicInfo.key, methodology, description: basicInfo.description },
-      { onSuccess: (project) => navigate(`/projects/${project._id}`) },
+      {
+        onSuccess: (project) => {
+          if (invites.length > 0) {
+            inviteMutation.mutate({ projectId: project._id, invites })
+          }
+          navigate(`/projects/${project._id}`)
+        },
+      },
     )
   }
 

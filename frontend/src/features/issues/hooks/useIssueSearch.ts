@@ -8,7 +8,7 @@ export const useIssueSearch = (issues: Issue[] | undefined) => {
   const normalized = query.trim().toLowerCase()
   const filtered = (issues ?? []).filter(
     (issue) =>
-      issue.summary.toLowerCase().includes(normalized) ||
+      issue.title.toLowerCase().includes(normalized) ||
       issue.key.toLowerCase().includes(normalized),
   )
 

@@ -1,7 +1,7 @@
 // Kiểu dữ liệu cho domain Issue (công việc trong project: epic/task/subtask/bug).
-// CHƯA có backend cho domain này -> dữ liệu lấy từ issue.mock.ts (xem hooks/useIssues.ts).
-// Khi backend bổ sung endpoint issues, chỉ cần đổi phần queryFn trong hook, giữ nguyên type này
-// nếu khớp response, hoặc chỉnh theo DTO thật lúc đó.
+// Khớp với response thật từ GET /projects/:projectId/issues (xem backend/src/services/issueService.js).
+// `key` (vd "PROJ-12") và `assignee`/`epicName` (object đã populate) do backend tự sinh,
+// không tồn tại trực tiếp trong models/issues.js.
 
 export const ISSUE_TYPE = {
   EPIC: 'EPIC',
@@ -37,7 +37,7 @@ export interface IssueMember {
 export interface Issue {
   _id: string
   key: string
-  summary: string
+  title: string
   description?: string
   type: IssueType
   status: IssueStatus

@@ -27,10 +27,12 @@ const MyTasksPage = () => {
   const filteredTasks = (tasks ?? []).filter((task) => {
     if (activeTab !== 'ALL' && task.status !== activeTab) return false
     return (
-      task.summary.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       task.key.toLowerCase().includes(searchQuery.toLowerCase())
     )
   })
+
+  const selectedTask = tasks?.find((task) => task.key === selectedTaskKey) ?? null
 
   const assignedCount = tasks?.length ?? 0
   const inProgressCount = tasks?.filter((t) => t.status === 'IN_PROGRESS').length ?? 0
@@ -90,7 +92,7 @@ const MyTasksPage = () => {
                 <IssueTypeIcon type={task.type} size={15} />
                 <span className="text-xs font-bold text-brand flex-shrink-0">{task.key}</span>
                 <div className="min-w-0">
-                  <h4 className="text-xs font-bold text-ink truncate max-w-md">{task.summary}</h4>
+                  <h4 className="text-xs font-bold text-ink truncate max-w-md">{task.title}</h4>
                   <p className="text-[10px] text-muted font-semibold mt-1">
                     Dự án: <span className="font-bold">{task.projectName}</span>
                   </p>
@@ -117,7 +119,7 @@ const MyTasksPage = () => {
             onClick={() => setSelectedTaskKey(null)}
             className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 animate-in fade-in duration-200"
           />
-          <IssueDetailPanel issueKey={selectedTaskKey} onClose={() => setSelectedTaskKey(null)} />
+          <IssueDetailPanel issue={selectedTask} isLoading={isLoading} onClose={() => setSelectedTaskKey(null)} />
         </>
       )}
     </div>

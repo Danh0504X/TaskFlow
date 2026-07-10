@@ -8,12 +8,13 @@ export const USER_ROLE = {
 }
 
 // Mục đích của email/token. VERIFY_EMAIL & RESET_PASSWORD khớp enum trong
-// model EmailToken/EmailRateLimit; WELCOME chỉ là template gửi trực tiếp
-// (không lưu token, không qua rate limit).
+// model EmailToken/EmailRateLimit; WELCOME và PROJECT_INVITE chỉ là template
+// gửi trực tiếp (không lưu token, không qua rate limit).
 export const EMAIL_PURPOSE = {
   VERIFY_EMAIL: 'VERIFY_EMAIL',
   RESET_PASSWORD: 'RESET_PASSWORD',
   WELCOME: 'WELCOME',
+  PROJECT_INVITE: 'PROJECT_INVITE',
 }
 
 // Token/mã xác thực chỉ có hiệu lực trong 10 phút

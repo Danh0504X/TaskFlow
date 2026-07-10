@@ -16,42 +16,42 @@ const router = express.Router({ mergeParams: true })
 
 router.use(protectedRoute)
 
-// Xem danh sách / chi tiết: OWNER, ADMIN, MEMBER.
+// Xem danh sách / chi tiết: OWNER, MEMBER.
 router.get(
   '/',
-  authorizeProjectRole('OWNER', 'ADMIN', 'MEMBER'),
+  authorizeProjectRole('OWNER', 'MEMBER'),
   getIssuesByProject,
 )
 
 router.get(
   '/sprint/:sprintId',
-  authorizeProjectRole('OWNER', 'ADMIN', 'MEMBER'),
+  authorizeProjectRole('OWNER', 'MEMBER'),
   getIssuesBySprint,
 )
 
 router.get(
   '/:issueId',
-  authorizeProjectRole('OWNER', 'ADMIN', 'MEMBER'),
+  authorizeProjectRole('OWNER', 'MEMBER'),
   getIssueById,
 )
 
-// Tạo / cập nhật toàn bộ: OWNER, ADMIN.
+// Tạo / cập nhật toàn bộ: chỉ OWNER.
 router.post(
   '/',
-  authorizeProjectRole('OWNER', 'ADMIN'),
+  authorizeProjectRole('OWNER'),
   createIssue,
 )
 
 router.put(
   '/:issueId',
-  authorizeProjectRole('OWNER', 'ADMIN'),
+  authorizeProjectRole('OWNER'),
   updateIssue,
 )
 
-// Cập nhật riêng status: OWNER, ADMIN, MEMBER.
+// Cập nhật riêng status: OWNER, MEMBER.
 router.patch(
   '/:issueId/status',
-  authorizeProjectRole('OWNER', 'ADMIN', 'MEMBER'),
+  authorizeProjectRole('OWNER', 'MEMBER'),
   updateIssueStatus,
 )
 

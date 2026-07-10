@@ -1,9 +1,8 @@
 import { useState, type FormEvent } from 'react'
-import { Mail, UserPlus, X, ChevronDown } from 'lucide-react'
+import { Mail, UserPlus, X } from 'lucide-react'
 
 export interface TeamInvite {
   email: string
-  role: 'ADMIN' | 'MEMBER'
 }
 
 interface InviteTeamProps {
@@ -11,16 +10,15 @@ interface InviteTeamProps {
   onChange: (invites: TeamInvite[]) => void
 }
 
-/** Danh sách lời mời thành viên — chỉ lưu cục bộ trong wizard (backend chưa hỗ trợ mời qua email). */
+/** Danh sách lời mời thành viên trong wizard — mọi lời mời đều được thêm với vai trò MEMBER. */
 const InviteTeam = ({ invites, onChange }: InviteTeamProps) => {
   const [email, setEmail] = useState('')
-  const [role, setRole] = useState<'ADMIN' | 'MEMBER'>('MEMBER')
 
   const handleAddInvite = (e: FormEvent) => {
     e.preventDefault()
     const trimmed = email.trim()
     if (!trimmed || invites.some((inv) => inv.email === trimmed)) return
-    onChange([...invites, { email: trimmed, role }])
+    onChange([...invites, { email: trimmed }])
     setEmail('')
   }
 
@@ -50,21 +48,6 @@ const InviteTeam = ({ invites, onChange }: InviteTeamProps) => {
           </div>
         </div>
 
-        <div className="w-32 space-y-1.5">
-          <label className="text-xs font-extrabold text-ink uppercase tracking-wider">Vai trò</label>
-          <div className="relative">
-            <select
-              value={role}
-              onChange={(e) => setRole(e.target.value as 'ADMIN' | 'MEMBER')}
-              className="w-full bg-slate-50 border border-line/20 rounded-2xl px-3 py-3 text-xs font-bold text-ink focus:ring-2 focus:ring-brand/20 outline-none appearance-none cursor-pointer"
-            >
-              <option value="MEMBER">Member</option>
-              <option value="ADMIN">Admin</option>
-            </select>
-            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-muted" size={14} />
-          </div>
-        </div>
-
         <button
           type="submit"
           className="bg-brand text-white hover:bg-brand-light px-5 py-3 rounded-2xl font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-brand/15 h-[46px]"
@@ -86,7 +69,7 @@ const InviteTeam = ({ invites, onChange }: InviteTeamProps) => {
                 <div>
                   <p className="text-xs font-bold text-ink leading-none">{member.email}</p>
                   <p className="text-[10px] text-muted font-semibold mt-1">
-                    Vai trò: <span className="font-extrabold text-brand">{member.role}</span>
+                    Vai trò: <span className="font-extrabold text-brand">Member</span>
                   </p>
                 </div>
               </div>

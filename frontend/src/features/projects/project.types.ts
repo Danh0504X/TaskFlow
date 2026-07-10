@@ -21,7 +21,7 @@ export const PROJECT_METHODOLOGY = {
 export type ProjectMethodology =
   (typeof PROJECT_METHODOLOGY)[keyof typeof PROJECT_METHODOLOGY]
 
-export type ProjectMemberRole = 'OWNER' | 'ADMIN' | 'MEMBER'
+export type ProjectMemberRole = 'OWNER' | 'MEMBER'
 export type ProjectMemberStatus = 'PENDING' | 'ACTIVE' | 'REMOVED'
 
 export interface ProjectMember {
@@ -68,4 +68,24 @@ export interface UpdateProjectPayload {
   description?: string
   deadline?: string | null
   status?: ProjectStatus
+}
+
+/** 1 lời mời gửi lên khi mời thành viên (POST /projects/:id/members/invite) — luôn thêm với vai trò MEMBER. */
+export interface InviteMemberInput {
+  email: string
+}
+
+/** Kết quả xử lý 1 email mời — thành công hoặc lý do thất bại (email không tồn tại, đã là thành viên...). */
+export interface InviteMemberResult {
+  email: string
+  status: 'ADDED' | 'FAILED'
+  reason?: string
+  userId?: string
+  fullName?: string
+}
+
+/** Response từ POST /projects/:id/members/invite. */
+export interface InviteMembersResponse {
+  added: InviteMemberResult[]
+  skipped: InviteMemberResult[]
 }

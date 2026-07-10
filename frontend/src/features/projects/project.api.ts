@@ -2,6 +2,8 @@ import api from '@/lib/api'
 import type { ApiResponse } from '@/lib/http'
 import type {
   CreateProjectPayload,
+  InviteMemberInput,
+  InviteMembersResponse,
   Project,
   UpdateProjectPayload,
 } from './project.types'
@@ -42,6 +44,18 @@ export const projectApi = {
   /** DELETE /projects/:id — xoá mềm project. */
   remove: async (projectId: string): Promise<Project> => {
     const res = await api.delete<ApiResponse<Project>>(`/projects/${projectId}`)
+    return res.data.data
+  },
+
+  /** POST /projects/:id/members/invite — mời thành viên bằng email. */
+  inviteMembers: async (
+    projectId: string,
+    invites: InviteMemberInput[],
+  ): Promise<InviteMembersResponse> => {
+    const res = await api.post<ApiResponse<InviteMembersResponse>>(
+      `/projects/${projectId}/members/invite`,
+      { invites },
+    )
     return res.data.data
   },
 }

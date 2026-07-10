@@ -37,7 +37,7 @@ const ProjectBacklogTab = ({ projectId, onSelectIssue }: ProjectBacklogTabProps)
       <div className="flex items-center gap-3 flex-1 min-w-0">
         <IssueTypeIcon type={issue.type} size={14} />
         <span className="text-xs font-bold text-brand flex-shrink-0">{issue.key}</span>
-        <p className="text-xs font-semibold text-ink truncate flex-grow max-w-lg">{issue.summary}</p>
+        <p className="text-xs font-semibold text-ink truncate flex-grow max-w-lg">{issue.title}</p>
         {issue.epicName && (
           <span className="px-2 py-0.5 bg-brand/5 border border-brand/10 text-brand rounded text-[9px] font-bold uppercase tracking-wider flex-shrink-0">
             {issue.epicName}

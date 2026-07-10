@@ -3,7 +3,7 @@ import { toast } from '@/components/ui/toast/toastStore'
 import { getApiErrorMessage } from '@/lib/http'
 import { projectApi } from '../project.api'
 import { projectKeys } from '../project.keys'
-import type { CreateProjectPayload, UpdateProjectPayload } from '../project.types'
+import type { CreateProjectPayload, InviteMemberInput, UpdateProjectPayload } from '../project.types'
 
 /**
  * Mỗi mutation sau khi thành công sẽ:
@@ -38,6 +38,27 @@ export const useUpdateProject = () => {
       qc.invalidateQueries({ queryKey: projectKeys.lists() })
       qc.invalidateQueries({ queryKey: projectKeys.detail(updated._id) })
       toast.success('Cập nhật project thành công')
+    },
+    onError: (error) => toast.error(getApiErrorMessage(error)),
+  })
+}
+
+export const useInviteMembers = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      invites,
+    }: {
+      projectId: string
+      invites: InviteMemberInput[]
+    }) => projectApi.inviteMembers(projectId, invites),
+    onSuccess: (result, { projectId }) => {
+      qc.invalidateQueries({ queryKey: projectKeys.detail(projectId) })
+      if (result.added.length > 0) {
+        toast.success(`Đã mời ${result.added.length} thành viên vào project`)
+      }
+      result.skipped.forEach((item) => toast.error(`${item.email}: ${item.reason}`))
     },
     onError: (error) => toast.error(getApiErrorMessage(error)),
   })

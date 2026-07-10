@@ -2,8 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { X, Share2, Eye, MoreHorizontal, Layers, Send } from 'lucide-react'
 import Avatar from '@/components/ui/Avatar'
 import Spinner from '@/components/ui/Spinner'
-import { useIssue } from '../hooks/useIssues'
-import type { IssueStatus, IssuePriority } from '../issue.types'
+import type { Issue, IssueStatus, IssuePriority } from '../issue.types'
 
 interface Comment {
   id: string
@@ -14,13 +13,14 @@ interface Comment {
 }
 
 interface IssueDetailPanelProps {
-  issueKey: string
+  /** Issue đã được resolve sẵn từ danh sách đang có trong cache (Board/List/Backlog/MyTasks). */
+  issue: Issue | null | undefined
+  isLoading?: boolean
   onClose: () => void
 }
 
-/** Panel chi tiết issue dạng slide-over. Trạng thái/mô tả/bình luận chỉnh sửa cục bộ (mock, chưa lưu backend). */
-const IssueDetailPanel = ({ issueKey, onClose }: IssueDetailPanelProps) => {
-  const { data: issue, isLoading } = useIssue(issueKey)
+/** Panel chi tiết issue dạng slide-over. Trạng thái/mô tả/bình luận chỉnh sửa cục bộ (chưa có API cập nhật). */
+const IssueDetailPanel = ({ issue, isLoading, onClose }: IssueDetailPanelProps) => {
 
   // Nạp lại state chỉnh sửa cục bộ mỗi khi issue đổi (panel không unmount khi chuyển
   // từ issue này sang issue khác) — theo mẫu "Adjusting state on render" của React,
@@ -55,7 +55,7 @@ const IssueDetailPanel = ({ issueKey, onClose }: IssueDetailPanelProps) => {
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold text-muted">Issue</span>
           <span className="text-xs text-muted">/</span>
-          <span className="text-xs font-extrabold text-brand tracking-wider">{issueKey}</span>
+          <span className="text-xs font-extrabold text-brand tracking-wider">{issue?.key}</span>
         </div>
         <div className="flex items-center gap-2">
           <button className="p-1.5 hover:bg-slate-100 rounded-lg text-muted transition-all">
@@ -85,7 +85,7 @@ const IssueDetailPanel = ({ issueKey, onClose }: IssueDetailPanelProps) => {
               <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-brand/5 text-brand rounded text-[9px] font-bold uppercase tracking-wider mb-2">
                 {issue.type}
               </span>
-              <h2 className="text-lg font-extrabold text-ink leading-snug">{issue.summary}</h2>
+              <h2 className="text-lg font-extrabold text-ink leading-snug">{issue.title}</h2>
             </div>
 
             <div className="grid grid-cols-2 gap-4 p-4 border border-line/15 rounded-2xl bg-slate-50/50">

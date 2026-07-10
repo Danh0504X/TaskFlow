@@ -21,7 +21,7 @@ const IssueCard = ({ issue, onClick }: IssueCardProps) => {
         </div>
       </div>
 
-      <h4 className="text-xs font-bold text-ink leading-relaxed mb-3.5 line-clamp-2">{issue.summary}</h4>
+      <h4 className="text-xs font-bold text-ink leading-relaxed mb-3.5 line-clamp-2">{issue.title}</h4>
 
       {issue.epicName && (
         <span className="inline-block px-2 py-0.5 bg-brand/5 border border-brand/10 text-brand rounded text-[9px] font-bold uppercase tracking-wider mb-4">

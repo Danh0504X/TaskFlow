@@ -1,10 +1,10 @@
 import { z } from 'zod'
-import { emailSchema, passwordSchema } from './common.validation.js'
+import { emailSchema, passwordSchema, fullNameSchema } from './common.validation.js'
 
 // POST /auth/sign-up
 export const signUpSchema = z
   .object({
-    fullName: z.string().trim().min(2, 'Full name must be at least 2 characters'),
+    fullName: fullNameSchema,
     email: emailSchema,
     password: passwordSchema,
   })

@@ -65,7 +65,7 @@ const ProjectListTab = ({ projectId, onSelectIssue }: ProjectListTabProps) => {
                       <div className="flex items-center gap-2">
                         <IssueTypeIcon type={issue.type} size={14} />
                         <span className={issue.status === 'DONE' ? 'line-through text-subtle font-medium' : ''}>
-                          {issue.summary}
+                          {issue.title}
                         </span>
                       </div>
                     </td>

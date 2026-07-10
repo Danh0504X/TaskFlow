@@ -6,6 +6,7 @@ import Tabs from '@/components/ui/Tabs'
 import ProjectStatusBadge from '@/features/projects/components/ProjectStatusBadge'
 import ProjectMethodologyBadge from '@/features/projects/components/ProjectMethodologyBadge'
 import IssueDetailPanel from '@/features/issues/components/IssueDetailPanel'
+import { useProjectIssues } from '@/features/issues/hooks/useIssues'
 import { useProject } from '../hooks/useProject'
 import { PROJECT_METHODOLOGY, type ProjectMethodology } from '../project.types'
 import ProjectSummaryTab from '../components/ProjectSummaryTab'
@@ -31,6 +32,11 @@ const ProjectWorkspacePage = () => {
   const { data: project, isLoading } = useProject(projectId)
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('SUMMARY')
   const [selectedIssueKey, setSelectedIssueKey] = useState<string | null>(null)
+
+  // Dùng chung cache với các tab Summary/List/Board/Backlog (cùng queryKey) -> không
+  // tốn thêm request, chỉ để tra ra issue đầy đủ cho panel chi tiết theo key đã chọn.
+  const { data: issues, isLoading: issuesLoading } = useProjectIssues(project?._id)
+  const selectedIssue = issues?.find((issue) => issue.key === selectedIssueKey) ?? null
 
   if (isLoading) {
     return (
@@ -89,7 +95,7 @@ const ProjectWorkspacePage = () => {
             onClick={() => setSelectedIssueKey(null)}
             className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 animate-in fade-in duration-200"
           />
-          <IssueDetailPanel issueKey={selectedIssueKey} onClose={() => setSelectedIssueKey(null)} />
+          <IssueDetailPanel issue={selectedIssue} isLoading={issuesLoading} onClose={() => setSelectedIssueKey(null)} />
         </>
       )}
     </div>

@@ -2,6 +2,7 @@ import { StatusCodes } from 'http-status-codes'
 import mongoose from 'mongoose'
 import Issue from '../models/issues.js'
 import Sprint from '../models/sprints.js'
+import Project from '../models/projects.js'
 import ApiError from '../utils/ApiError.js'
 
 // Các enum hợp lệ (khớp với models/issues.js).
@@ -9,9 +10,40 @@ const ISSUE_TYPES = ['EPIC', 'TASK', 'SUBTASK', 'BUG']
 const ISSUE_STATUSES = ['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE']
 const ISSUE_PRIORITIES = ['LOW', 'MEDIUM', 'HIGH', 'URGENT']
 
+// Field populate dùng chung để trả assignee/epic dạng object thay vì ObjectId thô.
+const ASSIGNEE_POPULATE = { path: 'assigneeId', select: 'fullName avatarUrl' }
+const PARENT_ISSUE_POPULATE = { path: 'parentIssueId', select: 'title type' }
+
 const ensureValidObjectId = (id, label = 'id') => {
   if (!mongoose.Types.ObjectId.isValid(id)) {
     throw new ApiError(StatusCodes.BAD_REQUEST, `Invalid ${label}`)
+  }
+}
+
+// Chuẩn hoá issue trả về cho client: sinh mã "key" (PROJ-12) từ project.key +
+// issueNumber, và quy các ObjectId đã populate (assigneeId/parentIssueId) về
+// dạng object gọn (assignee/epicName) mà frontend cần.
+const toIssueDTO = (issue, projectKey) => {
+  const obj = typeof issue.toObject === 'function' ? issue.toObject() : issue
+
+  const assignee = obj.assigneeId && typeof obj.assigneeId === 'object'
+    ? {
+        _id: obj.assigneeId._id,
+        fullName: obj.assigneeId.fullName,
+        avatarUrl: obj.assigneeId.avatarUrl ?? null,
+      }
+    : undefined
+
+  const epicName = obj.parentIssueId && typeof obj.parentIssueId === 'object'
+    ? obj.parentIssueId.title
+    : undefined
+
+  return {
+    ...obj,
+    key: `${projectKey}-${obj.issueNumber}`,
+    assigneeId: assignee ? assignee._id : obj.assigneeId,
+    assignee,
+    epicName,
   }
 }
 
@@ -92,9 +124,21 @@ const createIssue = async (projectId, userId, body = {}) => {
     ensureValidObjectId(assigneeId, 'assignee id')
   }
 
+  // Tăng nguyên tử bộ đếm issue của project -> dùng làm issueNumber, tránh đụng
+  // số thứ tự khi nhiều issue được tạo đồng thời.
+  const project = await Project.findOneAndUpdate(
+    { _id: projectId, isDeleted: false },
+    { $inc: { issueSeq: 1 } },
+    { new: true },
+  )
+  if (!project) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Project not found')
+  }
+
   const issue = await Issue.create({
     projectId,
     createdBy: userId,
+    issueNumber: project.issueSeq,
     title: title.trim(),
     description: description?.trim() || '',
     type: type || undefined,
@@ -106,11 +150,13 @@ const createIssue = async (projectId, userId, body = {}) => {
     orderIndex: orderIndex ?? 0,
   })
 
-  return issue
+  await issue.populate([ASSIGNEE_POPULATE, PARENT_ISSUE_POPULATE])
+
+  return toIssueDTO(issue, project.key)
 }
 
 // Lấy danh sách issue theo project, hỗ trợ filter qua query.
-const getIssuesByProject = async (projectId, query = {}) => {
+const getIssuesByProject = async (projectId, query = {}, projectKey) => {
   ensureValidObjectId(projectId, 'project id')
 
   const filter = { projectId, isDeleted: false }
@@ -146,37 +192,49 @@ const getIssuesByProject = async (projectId, query = {}) => {
     filter.assigneeId = query.assigneeId
   }
 
-  return Issue.find(filter).sort({ orderIndex: 1 }).lean()
+  const issues = await Issue.find(filter)
+    .sort({ orderIndex: 1 })
+    .populate(ASSIGNEE_POPULATE)
+    .populate(PARENT_ISSUE_POPULATE)
+    .lean()
+
+  return issues.map((issue) => toIssueDTO(issue, projectKey))
 }
 
 // Lấy danh sách issue theo sprint (đảm bảo sprint thuộc project).
-const getIssuesBySprint = async (projectId, sprintId) => {
+const getIssuesBySprint = async (projectId, sprintId, projectKey) => {
   ensureValidObjectId(projectId, 'project id')
   ensureValidObjectId(sprintId, 'sprint id')
 
   await ensureSprintInProject(projectId, sprintId)
 
-  return Issue.find({ projectId, sprintId, isDeleted: false })
+  const issues = await Issue.find({ projectId, sprintId, isDeleted: false })
     .sort({ orderIndex: 1 })
+    .populate(ASSIGNEE_POPULATE)
+    .populate(PARENT_ISSUE_POPULATE)
     .lean()
+
+  return issues.map((issue) => toIssueDTO(issue, projectKey))
 }
 
 // Lấy chi tiết issue, đảm bảo thuộc đúng project.
-const getIssueById = async (projectId, issueId) => {
+const getIssueById = async (projectId, issueId, projectKey) => {
   ensureValidObjectId(projectId, 'project id')
   ensureValidObjectId(issueId, 'issue id')
 
   const issue = await Issue.findOne({ _id: issueId, projectId, isDeleted: false })
+    .populate(ASSIGNEE_POPULATE)
+    .populate(PARENT_ISSUE_POPULATE)
 
   if (!issue) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Issue not found')
   }
 
-  return issue
+  return toIssueDTO(issue, projectKey)
 }
 
 // Cập nhật toàn bộ issue.
-const updateIssue = async (projectId, issueId, body = {}) => {
+const updateIssue = async (projectId, issueId, body = {}, projectKey) => {
   ensureValidObjectId(projectId, 'project id')
   ensureValidObjectId(issueId, 'issue id')
 
@@ -256,12 +314,13 @@ const updateIssue = async (projectId, issueId, body = {}) => {
 
   Object.assign(issue, payload)
   await issue.save()
+  await issue.populate([ASSIGNEE_POPULATE, PARENT_ISSUE_POPULATE])
 
-  return issue
+  return toIssueDTO(issue, projectKey)
 }
 
 // Cập nhật riêng status của issue (dành cho cả MEMBER).
-const updateIssueStatus = async (projectId, issueId, body = {}) => {
+const updateIssueStatus = async (projectId, issueId, body = {}, projectKey) => {
   ensureValidObjectId(projectId, 'project id')
   ensureValidObjectId(issueId, 'issue id')
 
@@ -275,12 +334,14 @@ const updateIssueStatus = async (projectId, issueId, body = {}) => {
     { status },
     { new: true, runValidators: true },
   )
+    .populate(ASSIGNEE_POPULATE)
+    .populate(PARENT_ISSUE_POPULATE)
 
   if (!issue) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Issue not found')
   }
 
-  return issue
+  return toIssueDTO(issue, projectKey)
 }
 
 // Xóa mềm issue (đồng thời xóa mềm các subtask con).

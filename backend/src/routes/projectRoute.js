@@ -1,6 +1,7 @@
 import express from 'express'
 import {
   createProject,
+  inviteMembers,
   getMyProjects,
   getProjectById,
   updateProject,
@@ -22,18 +23,25 @@ router.post('/', createProject)
 // Lấy danh sách project mà user tham gia.
 router.get('/', getMyProjects)
 
-// Xem chi tiết: OWNER / ADMIN / MEMBER.
+// Xem chi tiết: OWNER / MEMBER.
 router.get(
   '/:projectId',
-  authorizeProjectRole('OWNER', 'ADMIN', 'MEMBER'),
+  authorizeProjectRole('OWNER', 'MEMBER'),
   getProjectById,
 )
 
-// Cập nhật: OWNER / ADMIN.
+// Cập nhật: chỉ OWNER.
 router.put(
   '/:projectId',
-  authorizeProjectRole('OWNER', 'ADMIN'),
+  authorizeProjectRole('OWNER'),
   updateProject,
+)
+
+// Mời thành viên qua email: chỉ OWNER.
+router.post(
+  '/:projectId/members/invite',
+  authorizeProjectRole('OWNER'),
+  inviteMembers,
 )
 
 // Xóa mềm: chỉ OWNER.
