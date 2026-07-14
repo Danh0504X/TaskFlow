@@ -16,6 +16,14 @@ frontend/.env.*
 
 
 # =========================
+# Claude Code skills (cai qua `npx skills`, chi dung local)
+# =========================
+.agents/skills/
+.claude/skills/
+skills-lock.json
+
+
+# =========================
 # Node modules
 # =========================
 node_modules/

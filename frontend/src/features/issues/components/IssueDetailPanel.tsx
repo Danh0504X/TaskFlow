@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { motion, useReducedMotion } from 'motion/react'
 import { X, Share2, Eye, MoreHorizontal, Layers, Send } from 'lucide-react'
 import Avatar from '@/components/ui/Avatar'
 import Spinner from '@/components/ui/Spinner'
@@ -28,6 +29,7 @@ interface IssueDetailPanelProps {
  */
 const IssueDetailPanel = ({ issue, projectId, isLoading, onClose }: IssueDetailPanelProps) => {
   const updateMutation = useUpdateIssue(projectId)
+  const reduceMotion = useReducedMotion()
 
   // Nạp lại state chỉnh sửa cục bộ mỗi khi issue đổi (panel không unmount khi chuyển
   // từ issue này sang issue khác) — theo mẫu "Adjusting state on render" của React,
@@ -86,11 +88,21 @@ const IssueDetailPanel = ({ issue, projectId, isLoading, onClose }: IssueDetailP
 
   return (
     <>
-      <div
+      <motion.div
         onClick={handleClose}
-        className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 animate-in fade-in duration-200"
+        className="fixed inset-0 bg-ink/25 backdrop-blur-sm z-40"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.18 }}
       />
-      <div className="fixed inset-y-0 right-0 w-full sm:w-[480px] md:w-[580px] bg-white border-l border-line/30 shadow-2xl z-50 flex flex-col animate-in slide-in-from-right duration-300">
+      <motion.div
+        className="fixed inset-y-0 right-0 w-full sm:w-[480px] md:w-[580px] bg-white border-l border-line/30 shadow-[-24px_0_70px_-20px_rgba(11,28,48,0.35)] z-50 flex flex-col"
+        initial={reduceMotion ? false : { x: '100%' }}
+        animate={{ x: 0 }}
+        exit={reduceMotion ? undefined : { x: '100%' }}
+        transition={{ type: 'spring', stiffness: 320, damping: 32 }}
+      >
       <div className="px-6 py-4 border-b border-line/20 flex justify-between items-center bg-slate-50/50 shrink-0">
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold text-muted">Issue</span>
@@ -231,7 +243,7 @@ const IssueDetailPanel = ({ issue, projectId, isLoading, onClose }: IssueDetailP
           </form>
         </>
       )}
-      </div>
+      </motion.div>
     </>
   )
 }

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { AnimatePresence } from 'motion/react'
 import { Search } from 'lucide-react'
 import Spinner from '@/components/ui/Spinner'
 import Tabs from '@/components/ui/Tabs'
@@ -89,7 +90,9 @@ const MyTasksPage = () => {
               className="flex flex-wrap items-center justify-between gap-4 p-4 bg-white hover:bg-slate-50/50 border border-line/15 rounded-2xl hover:border-brand/30 transition-all shadow-sm cursor-pointer group"
             >
               <div className="flex items-center gap-3.5 flex-1 min-w-0">
-                <IssueTypeIcon type={task.type} size={15} />
+                <div className="w-9 h-9 rounded-xl bg-brand/5 flex items-center justify-center shrink-0">
+                  <IssueTypeIcon type={task.type} size={16} />
+                </div>
                 <span className="text-xs font-bold text-brand flex-shrink-0">{task.key}</span>
                 <div className="min-w-0">
                   <h4 className="text-xs font-bold text-ink truncate max-w-md">{task.title}</h4>
@@ -113,14 +116,16 @@ const MyTasksPage = () => {
         )}
       </section>
 
-      {selectedTaskKey && (
-        <IssueDetailPanel
-          issue={selectedTask}
-          projectId={selectedTask?.projectId ?? ''}
-          isLoading={isLoading}
-          onClose={() => setSelectedTaskKey(null)}
-        />
-      )}
+      <AnimatePresence>
+        {selectedTaskKey && (
+          <IssueDetailPanel
+            issue={selectedTask}
+            projectId={selectedTask?.projectId ?? ''}
+            isLoading={isLoading}
+            onClose={() => setSelectedTaskKey(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   )
 }

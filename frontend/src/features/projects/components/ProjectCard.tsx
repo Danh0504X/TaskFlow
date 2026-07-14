@@ -16,19 +16,22 @@ const ProjectCard = ({ project, onEdit, onDelete }: ProjectCardProps) => {
   return (
     <div className="group bg-white border border-line/30 rounded-3xl p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:border-brand/30 transition-all flex flex-col gap-4">
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="px-2 py-0.5 bg-brand/5 border border-brand/10 text-brand rounded text-[10px] font-extrabold uppercase tracking-wider">
-              {project.key || '—'}
-            </span>
-            <ProjectMethodologyBadge methodology={project.methodology} />
+        <div className="flex items-start gap-3 min-w-0">
+          <div className="w-11 h-11 rounded-2xl bg-brand/8 border border-brand/10 flex items-center justify-center text-brand font-extrabold text-sm shrink-0">
+            {(project.key || project.name).slice(0, 2).toUpperCase()}
           </div>
-          <Link
-            to={`/projects/${project._id}`}
-            className="text-base font-extrabold text-ink tracking-tight hover:text-brand transition-colors line-clamp-1"
-          >
-            {project.name}
-          </Link>
+          <div className="min-w-0">
+            <Link
+              to={`/projects/${project._id}`}
+              className="text-base font-extrabold text-ink tracking-tight hover:text-brand transition-colors line-clamp-1"
+            >
+              {project.name}
+            </Link>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-[10px] font-bold text-subtle uppercase tracking-wider">{project.key || '—'}</span>
+              <ProjectMethodologyBadge methodology={project.methodology} />
+            </div>
+          </div>
         </div>
         <ProjectStatusBadge status={project.status} />
       </div>

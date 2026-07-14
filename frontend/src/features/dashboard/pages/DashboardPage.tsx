@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronRight, Plus, SlidersHorizontal, AlertTriangle, Clock, Sparkles } from 'lucide-react'
+import { ChevronRight, Plus, SlidersHorizontal, AlertTriangle, Clock, Sparkles, ListChecks, Activity, CheckCircle2 } from 'lucide-react'
 import Spinner from '@/components/ui/Spinner'
 import IssuePriorityBadge from '@/components/ui/IssuePriorityBadge'
 import { useAuth } from '@/features/auth/hooks/useAuth'
@@ -50,34 +50,47 @@ const DashboardPage = () => {
       </header>
 
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white border border-line/20 rounded-2xl p-6 relative overflow-hidden shadow-sm flex flex-col justify-between min-h-36">
-          <div className="absolute top-0 left-0 bottom-0 w-1 bg-brand" />
-          <span className="text-xs font-semibold text-muted tracking-wider uppercase">Cần thực hiện</span>
-          <span className="text-4xl font-extrabold text-brand leading-none mt-4">{stats.todo}</span>
+        <div className="bg-white border border-line/20 rounded-2xl p-6 shadow-sm flex flex-col gap-5 min-h-36">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-muted tracking-wider uppercase">Cần thực hiện</span>
+            <div className="w-9 h-9 rounded-xl bg-brand/8 flex items-center justify-center text-brand shrink-0">
+              <ListChecks size={16} />
+            </div>
+          </div>
+          <span className="text-4xl font-extrabold text-brand leading-none">{stats.todo}</span>
         </div>
 
-        <div className="bg-white border border-line/20 rounded-2xl p-6 relative overflow-hidden shadow-sm flex flex-col justify-between min-h-36">
-          <div className="absolute top-0 left-0 bottom-0 w-1 bg-indigo-500" />
-          <span className="text-xs font-semibold text-muted tracking-wider uppercase">Đang tiến hành</span>
-          <span className="text-4xl font-extrabold text-ink leading-none mt-4">{stats.inProgress}</span>
+        <div className="bg-white border border-line/20 rounded-2xl p-6 shadow-sm flex flex-col gap-5 min-h-36">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-muted tracking-wider uppercase">Đang tiến hành</span>
+            <div className="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
+              <Activity size={16} />
+            </div>
+          </div>
+          <span className="text-4xl font-extrabold text-ink leading-none">{stats.inProgress}</span>
         </div>
 
-        <div className="bg-white border border-line/20 rounded-2xl p-6 relative overflow-hidden shadow-sm flex flex-col justify-between min-h-36">
-          <div className="absolute top-0 left-0 bottom-0 w-1 bg-green-500" />
-          <span className="text-xs font-semibold text-muted tracking-wider uppercase">Đã hoàn thành</span>
-          <div className="flex items-baseline gap-2 mt-4">
-            <span className="text-4xl font-extrabold text-green-600 leading-none">{stats.completedThisMonth}</span>
+        <div className="bg-white border border-line/20 rounded-2xl p-6 shadow-sm flex flex-col gap-5 min-h-36">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-muted tracking-wider uppercase">Đã hoàn thành</span>
+            <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 shrink-0">
+              <CheckCircle2 size={16} />
+            </div>
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="text-4xl font-extrabold text-emerald-600 leading-none">{stats.completedThisMonth}</span>
             <span className="text-[10px] font-bold text-muted">Tháng này</span>
           </div>
         </div>
 
-        <div className="bg-white border border-line/20 rounded-2xl p-6 relative overflow-hidden shadow-sm flex flex-col justify-between min-h-36">
-          <div className="absolute top-0 left-0 bottom-0 w-1 bg-red-500" />
-          <span className="text-xs font-semibold text-muted tracking-wider uppercase">Quá hạn</span>
-          <div className="flex items-baseline gap-2 mt-4">
-            <span className="text-4xl font-extrabold text-red-600 leading-none">{stats.overdue}</span>
-            {stats.overdue > 0 && <AlertTriangle size={14} className="text-red-600" />}
+        <div className="bg-white border border-line/20 rounded-2xl p-6 shadow-sm flex flex-col gap-5 min-h-36">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-muted tracking-wider uppercase">Quá hạn</span>
+            <div className="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center text-red-600 shrink-0">
+              <AlertTriangle size={16} />
+            </div>
           </div>
+          <span className="text-4xl font-extrabold text-red-600 leading-none">{stats.overdue}</span>
         </div>
       </section>
 

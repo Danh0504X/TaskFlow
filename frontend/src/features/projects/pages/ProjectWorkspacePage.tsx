@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { ArrowLeft, Plus } from 'lucide-react'
 import Spinner from '@/components/ui/Spinner'
 import Tabs from '@/components/ui/Tabs'
@@ -31,6 +32,7 @@ const ProjectWorkspacePage = () => {
   const { projectId } = useParams<{ projectId: string }>()
   const navigate = useNavigate()
   const { data: project, isLoading } = useProject(projectId)
+  const reduceMotion = useReducedMotion()
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('SUMMARY')
   const [selectedIssueKey, setSelectedIssueKey] = useState<string | null>(null)
   const [isCreateIssueOpen, setIsCreateIssueOpen] = useState(false)
@@ -70,15 +72,20 @@ const ProjectWorkspacePage = () => {
       </button>
 
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-line/20">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-extrabold text-ink tracking-tight">{project.name}</h1>
-            <ProjectMethodologyBadge methodology={project.methodology} />
-            <ProjectStatusBadge status={project.status} />
+        <div className="flex items-start gap-4 min-w-0">
+          <div className="w-14 h-14 rounded-2xl bg-brand/8 border border-brand/10 flex items-center justify-center text-brand font-extrabold text-lg shrink-0">
+            {(project.key || project.name).slice(0, 2).toUpperCase()}
           </div>
-          <p className="text-muted mt-1.5 text-xs font-semibold leading-relaxed max-w-2xl">
-            {project.description || 'Chưa có mô tả cho dự án này.'}
-          </p>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <h1 className="text-3xl font-extrabold text-ink tracking-tight">{project.name}</h1>
+              <ProjectMethodologyBadge methodology={project.methodology} />
+              <ProjectStatusBadge status={project.status} />
+            </div>
+            <p className="text-muted mt-1.5 text-xs font-semibold leading-relaxed max-w-2xl">
+              {project.description || 'Chưa có mô tả cho dự án này.'}
+            </p>
+          </div>
         </div>
 
         <button
@@ -92,21 +99,33 @@ const ProjectWorkspacePage = () => {
 
       <Tabs items={getTabItems(project.methodology)} value={activeTab} onChange={setActiveTab} className="w-fit" />
 
-      <div className="flex-grow">
-        {activeTab === 'SUMMARY' && <ProjectSummaryTab projectId={project._id} />}
-        {activeTab === 'LIST' && <ProjectListTab projectId={project._id} onSelectIssue={setSelectedIssueKey} />}
-        {activeTab === 'BOARD' && <ProjectBoard projectId={project._id} onSelectIssue={setSelectedIssueKey} />}
-        {activeTab === 'BACKLOG' && <ProjectBacklogTab projectId={project._id} onSelectIssue={setSelectedIssueKey} />}
+      <div className="flex-grow relative">
+        <AnimatePresence mode="popLayout" initial={false}>
+          <motion.div
+            key={activeTab}
+            initial={reduceMotion ? false : { opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={reduceMotion ? undefined : { opacity: 0 }}
+            transition={{ duration: 0.15, ease: 'easeOut' }}
+          >
+            {activeTab === 'SUMMARY' && <ProjectSummaryTab projectId={project._id} />}
+            {activeTab === 'LIST' && <ProjectListTab projectId={project._id} onSelectIssue={setSelectedIssueKey} />}
+            {activeTab === 'BOARD' && <ProjectBoard projectId={project._id} onSelectIssue={setSelectedIssueKey} />}
+            {activeTab === 'BACKLOG' && <ProjectBacklogTab projectId={project._id} onSelectIssue={setSelectedIssueKey} />}
+          </motion.div>
+        </AnimatePresence>
       </div>
 
-      {selectedIssueKey && (
-        <IssueDetailPanel
-          issue={selectedIssue}
-          projectId={project._id}
-          isLoading={issuesLoading}
-          onClose={() => setSelectedIssueKey(null)}
-        />
-      )}
+      <AnimatePresence>
+        {selectedIssueKey && (
+          <IssueDetailPanel
+            issue={selectedIssue}
+            projectId={project._id}
+            isLoading={issuesLoading}
+            onClose={() => setSelectedIssueKey(null)}
+          />
+        )}
+      </AnimatePresence>
 
       <IssueCreateModal
         open={isCreateIssueOpen}

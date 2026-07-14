@@ -16,6 +16,13 @@
   color-scheme: light;
 }
 
+/* Luôn dành sẵn chỗ cho thanh cuộn dọc, kể cả khi nội dung chưa đủ dài để cuộn.
+   Không có dòng này: đổi tab (vd Board 640px cố định <-> các tab thấp hơn) làm
+   thanh cuộn ẩn/hiện liên tục -> cả trang bị đẩy ngang trái/phải mỗi lần đổi tab. */
+html {
+  scrollbar-gutter: stable;
+}
+
 html,
 body,
 #root {
