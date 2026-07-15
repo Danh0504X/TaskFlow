@@ -58,4 +58,11 @@ export const projectApi = {
     )
     return res.data.data
   },
+
+  /** POST /projects/:id/leave — rời dự án. */
+  leave: async (projectId: string): Promise<{ message: string }> => {
+    const res = await api.post<{ message: string }>(`/projects/${projectId}/leave`)
+    return res.data
+  },
 }
+

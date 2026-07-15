@@ -1,9 +1,13 @@
+import { useState } from 'react'
 import { ArrowRight, Calendar, Clock, Layers, CheckCircle2 } from 'lucide-react'
 import Avatar from '@/components/ui/Avatar'
 import Spinner from '@/components/ui/Spinner'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { useProjectIssues } from '@/features/issues/hooks/useIssues'
 import { useProject } from '../hooks/useProject'
+import { useLeaveProject } from '../hooks/useProjectMutations'
 import { formatDate } from '@/lib/format'
+import { useAuthStore } from '@/features/auth/authStore'
 
 interface ProjectSummaryTabProps {
   projectId: string
@@ -30,6 +34,20 @@ const activities = [
 const ProjectSummaryTab = ({ projectId }: ProjectSummaryTabProps) => {
   const { data: project, isLoading: isProjectLoading } = useProject(projectId)
   const { data: issues, isLoading: isIssuesLoading } = useProjectIssues(projectId)
+  const [isLeaveConfirmOpen, setIsLeaveConfirmOpen] = useState(false)
+  const leaveMutation = useLeaveProject()
+  const currentUser = useAuthStore((state) => state.user)
+
+  const userMemberRecord = project?.members?.find((m) => m.userId === currentUser?._id)
+  const isOwner = userMemberRecord?.role === 'OWNER'
+
+  const handleLeaveConfirm = () => {
+    leaveMutation.mutate(projectId, {
+      onSuccess: () => {
+        setIsLeaveConfirmOpen(false)
+      },
+    })
+  }
 
   if (isProjectLoading || isIssuesLoading) {
     return (
@@ -264,6 +282,14 @@ const ProjectSummaryTab = ({ projectId }: ProjectSummaryTabProps) => {
                 </div>
               )}
             </div>
+
+            {/* Nút Rời dự án */}
+            <button
+              onClick={() => setIsLeaveConfirmOpen(true)}
+              className="mt-3 w-full py-2 bg-red-50 border border-red-200 text-red-600 rounded-2xl text-xs font-bold hover:bg-red-100 transition-all flex items-center justify-center gap-1.5 active:scale-95 shrink-0"
+            >
+              Rời dự án
+            </button>
           </div>
         </div>
 
@@ -400,6 +426,22 @@ const ProjectSummaryTab = ({ projectId }: ProjectSummaryTabProps) => {
           )}
         </div>
       </div>
+
+      {/* Modal xác nhận rời dự án */}
+      <ConfirmDialog
+        open={isLeaveConfirmOpen}
+        title={isOwner ? "Xóa dự án & rời đi" : "Rời khỏi dự án"}
+        message={
+          isOwner
+            ? `Bạn đang là Trưởng nhóm (Owner) của dự án "${project.name}". Nếu bạn rời đi, toàn bộ dự án cùng với tất cả công việc (tasks) và phân đoạn (sprints) liên quan sẽ bị xóa vĩnh viễn. Bạn có chắc chắn muốn tiếp tục?`
+            : `Bạn có chắc chắn muốn rời khỏi dự án "${project.name}"? Sau khi rời đi, tất cả các công việc đang được gán cho bạn sẽ được chuyển về trạng thái 'Chưa phân công'.`
+        }
+        confirmText={isOwner ? "Xóa & Rời đi" : "Rời dự án"}
+        danger
+        loading={leaveMutation.isPending}
+        onConfirm={handleLeaveConfirm}
+        onClose={() => setIsLeaveConfirmOpen(false)}
+      />
     </div>
   )
 }

@@ -6,6 +6,7 @@ import {
   getProjectById,
   updateProject,
   deleteProject,
+  leaveProject,
 } from '../controllers/projectController.js'
 import { protectedRoute } from '../middlewares/authMiddleware.js'
 import { authorizeProjectRole } from '../middlewares/projectAuthMiddleware.js'
@@ -51,8 +52,16 @@ router.delete(
   deleteProject,
 )
 
+// Rời dự án: OWNER / MEMBER.
+router.post(
+  '/:projectId/leave',
+  authorizeProjectRole('OWNER', 'MEMBER'),
+  leaveProject,
+)
+
 // Nested routes: sprint & issue luôn nằm trong 1 project.
 router.use('/:projectId/sprints', sprintRoute)
 router.use('/:projectId/issues', issueRoute)
 
 export default router
+
