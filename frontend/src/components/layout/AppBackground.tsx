@@ -13,8 +13,8 @@ const AppBackground = ({ children }: { children: ReactNode }) => {
       <div
         className="pointer-events-none fixed inset-0 overflow-hidden"
         style={{
-          background: `radial-gradient(circle at 0% 0%, #f3effc 0%, transparent 55%),
-                      radial-gradient(circle at 100% 100%, #fdf2f8 0%, transparent 55%),
+          background: `radial-gradient(circle at 0% 0%, #ebdffd 0%, transparent 55%),
+                      radial-gradient(circle at 100% 100%, #fce7f3 0%, transparent 55%),
                       #fafafa`,
         }}
       />
