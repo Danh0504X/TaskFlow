@@ -1,19 +1,23 @@
+import { useState, useEffect, useRef } from 'react'
 import {
   DndContext,
   MouseSensor,
   TouchSensor,
   useSensor,
   useSensors,
+  DragOverlay,
+  pointerWithin,
 } from '@dnd-kit/core'
-import type { DragEndEvent } from '@dnd-kit/core'
+import type { DragStartEvent, DragEndEvent, DragOverEvent } from '@dnd-kit/core'
 import SearchInput from '@/components/ui/SearchInput'
 import Spinner from '@/components/ui/Spinner'
 import { useProjectIssues } from '@/features/issues/hooks/useIssues'
 import { useIssueSearch } from '@/features/issues/hooks/useIssueSearch'
 import { useUpdateIssue } from '@/features/issues/hooks/useIssueMutations'
 import BoardColumn from '@/features/issues/components/BoardColumn'
+import IssueCard from '@/features/issues/components/IssueCard'
 import { calculateNewOrderIndex } from '@/lib/dndHelpers'
-import type { IssueStatus } from '@/features/issues/issue.types'
+import type { IssueStatus, Issue } from '@/features/issues/issue.types'
 
 interface ProjectBoardProps {
   projectId: string
@@ -32,40 +36,65 @@ const ProjectBoard = ({ projectId, onSelectIssue }: ProjectBoardProps) => {
   const { data: issues, isLoading } = useProjectIssues(projectId)
   const updateIssueMutation = useUpdateIssue(projectId)
 
-  const taskIssues = (issues ?? [])
+  // State local để quản lý vị trí các issues mượt mà lúc đang kéo (DragOver)
+  const [localIssues, setLocalIssues] = useState<Issue[]>([])
+  const [activeId, setActiveId] = useState<string | null>(null)
+  const lastOverId = useRef<string | null>(null)
+
+  // Đồng bộ local issues khi query data từ server thay đổi
+  useEffect(() => {
+    if (issues) {
+      setLocalIssues(issues)
+    }
+  }, [issues])
+
+  const taskIssues = localIssues
     .filter((issue) => issue.type !== 'EPIC' && issue.type !== 'SUBTASK')
     .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0))
 
   const { query, setQuery, filtered } = useIssueSearch(taskIssues)
 
-  const mouseSensor = useSensor(MouseSensor)
-  const touchSensor = useSensor(TouchSensor)
+  const mouseSensor = useSensor(MouseSensor, {
+    activationConstraint: {
+      distance: 5, // Chỉ kéo khi di chuyển chuột 5px -> tránh click nhầm bị hiểu là kéo
+    },
+  })
+  const touchSensor = useSensor(TouchSensor, {
+    activationConstraint: {
+      delay: 250, // Nhấn giữ 250ms trên mobile để bắt đầu kéo -> cuộn trang bình thường
+      tolerance: 5,
+    },
+  })
   const sensors = useSensors(mouseSensor, touchSensor)
 
-  const handleDragStart = (event: any) => {
-    console.log('🚀 Drag Started! Active ID:', event.active.id)
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string)
+    lastOverId.current = null
   }
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragOver = (event: DragOverEvent) => {
     const { active, over } = event
-    console.log('🚀 Drag Ended! Active ID:', active.id, 'Over ID:', over?.id)
     if (!over) return
 
-    const issueId = active.id as string
-    const activeIssue = taskIssues.find((i) => i._id === issueId)
+    const activeId = active.id as string
+    const overId = over.id as string
+
+    if (activeId === overId) return
+
+    // Tối ưu hóa: Tránh re-render liên tục nếu chuột di chuyển nhanh trong phạm vi cùng một card
+    if (lastOverId.current === overId) return
+    lastOverId.current = overId
+
+    const activeIssue = localIssues.find((i) => i._id === activeId)
     if (!activeIssue) return
 
-    // ID của container over có thể là tên cột (TODO, IN_PROGRESS...) hoặc ID của một card cụ thể.
-    // Dnd-kit trả về over.id. Ta cần xác định cột đích (status).
+    // Xác định status của container đích
     let targetStatus: IssueStatus | null = null
-
-    // 1. Kiểm tra xem over.id có phải là một trong các cột (TODO, IN_PROGRESS, IN_REVIEW, DONE)
-    const isColumnId = COLUMNS.some((col) => col.status === over.id)
+    const isColumnId = COLUMNS.some((col) => col.status === overId)
     if (isColumnId) {
-      targetStatus = over.id as IssueStatus
+      targetStatus = overId as IssueStatus
     } else {
-      // 2. Nếu over.id là ID của một card, ta lấy status của card đó
-      const overIssue = taskIssues.find((i) => i._id === over.id)
+      const overIssue = localIssues.find((i) => i._id === overId)
       if (overIssue) {
         targetStatus = overIssue.status
       }
@@ -73,37 +102,92 @@ const ProjectBoard = ({ projectId, onSelectIssue }: ProjectBoardProps) => {
 
     if (!targetStatus) return
 
-    // Lấy danh sách các issue đang ở cột đích (loại trừ issue đang kéo) đã sort theo orderIndex
-    const destIssues = taskIssues
-      .filter((i) => i.status === targetStatus && i._id !== issueId)
-      .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0))
+    const currentStatus = activeIssue.status
 
-    let targetIndex = destIssues.length
+    // Trường hợp 1: Kéo sang cột khác
+    if (currentStatus !== targetStatus) {
+      setLocalIssues((prev) => {
+        return prev.map((item) => {
+          if (item._id === activeId) {
+            // Tìm các issue đang có ở cột đích (không gồm chính nó) để tính index mới
+            const destIssues = prev
+              .filter((i) => i.status === targetStatus && i._id !== activeId)
+              .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0))
 
-    // Nếu thả đè lên một card khác trong cột
-    if (!isColumnId) {
-      const overId = over.id as string
-      const overIndex = destIssues.findIndex((i) => i._id === overId)
-      if (overIndex !== -1) {
-        // Nếu kéo trong cùng cột và kéo từ trên xuống dưới, ta cần chèn sau vị trí overIndex một chút
-        // Để đơn giản, ta cứ lấy vị trí của card bị đè lên làm targetIndex.
-        targetIndex = overIndex
+            let targetIndex = destIssues.length
+            if (!isColumnId) {
+              const overIndexInCol = destIssues.findIndex((i) => i._id === overId)
+              if (overIndexInCol !== -1) {
+                targetIndex = overIndexInCol
+              }
+            }
+
+            const newOrder = calculateNewOrderIndex(destIssues, targetIndex)
+            return { ...item, status: targetStatus, orderIndex: newOrder }
+          }
+          return item
+        })
+      })
+    } else {
+      // Trường hợp 2: Kéo trong cùng một cột nhưng đổi vị trí
+      setLocalIssues((prev) => {
+        const destIssues = prev
+          .filter((i) => i.status === targetStatus && i._id !== activeId)
+          .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0))
+
+        const overIndexInCol = destIssues.findIndex((i) => i._id === overId)
+        if (overIndexInCol === -1) return prev
+
+        const newOrder = calculateNewOrderIndex(destIssues, overIndexInCol)
+
+        return prev.map((item) => {
+          if (item._id === activeId) {
+            return { ...item, orderIndex: newOrder }
+          }
+          return item
+        })
+      })
+    }
+  }
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active } = event
+    const issueId = active.id as string
+
+    // Tìm trạng thái sau khi kéo thả của issue để cập nhật API
+    const finalIssue = localIssues.find((i) => i._id === issueId)
+    if (finalIssue) {
+      const activeOriginal = issues?.find((i) => i._id === issueId)
+      
+      // Chỉ gọi API nếu thực sự có sự thay đổi về cột hoặc vị trí
+      if (
+        activeOriginal?.status !== finalIssue.status ||
+        activeOriginal?.orderIndex !== finalIssue.orderIndex
+      ) {
+        updateIssueMutation.mutate({
+          issueId,
+          payload: {
+            status: finalIssue.status,
+            orderIndex: finalIssue.orderIndex,
+          },
+        })
       }
     }
 
-    const newOrderIndex = calculateNewOrderIndex(destIssues, targetIndex)
-
-    const payload: any = { orderIndex: newOrderIndex }
-    if (activeIssue.status !== targetStatus) {
-      payload.status = targetStatus
-    }
-
-    // Gửi API cập nhật lên server
-    updateIssueMutation.mutate({
-      issueId,
-      payload,
-    })
+    setActiveId(null)
+    lastOverId.current = null
   }
+
+  const handleDragCancel = () => {
+    // Reset lại mảng localIssues nếu kéo bị hủy bỏ
+    if (issues) {
+      setLocalIssues(issues)
+    }
+    setActiveId(null)
+    lastOverId.current = null
+  }
+
+  const activeIssue = localIssues.find((i) => i._id === activeId)
 
   return (
     <div className="space-y-6">
@@ -121,7 +205,14 @@ const ProjectBoard = ({ projectId, onSelectIssue }: ProjectBoardProps) => {
           <Spinner />
         </div>
       ) : (
-        <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={pointerWithin}
+          onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
+          onDragEnd={handleDragEnd}
+          onDragCancel={handleDragCancel}
+        >
           <div className="flex gap-6 overflow-x-auto pb-4 scrollbar-thin">
             {COLUMNS.map((col) => (
               <BoardColumn
@@ -133,6 +224,14 @@ const ProjectBoard = ({ projectId, onSelectIssue }: ProjectBoardProps) => {
               />
             ))}
           </div>
+
+          <DragOverlay adjustScale={false}>
+            {activeId && activeIssue ? (
+              <div className="w-[256px] opacity-95 shadow-xl cursor-grabbing select-none pointer-events-none">
+                <IssueCard issue={activeIssue} />
+              </div>
+            ) : null}
+          </DragOverlay>
         </DndContext>
       )}
     </div>
