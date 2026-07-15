@@ -41,13 +41,25 @@ const ProjectBacklogTab = ({ projectId, onSelectIssue }: ProjectBacklogTabProps)
   const sprintIssues = taskIssues.filter((i) => i.status !== 'TODO')
   const backlogIssues = taskIssues.filter((i) => i.status === 'TODO')
 
-  const mouseSensor = useSensor(MouseSensor)
-  const touchSensor = useSensor(TouchSensor)
+  const mouseSensor = useSensor(MouseSensor, {
+    activationConstraint: {
+      distance: 5, // Chỉ nhận diện kéo thả khi di chuyển chuột > 5px -> click chọn task hoạt động bình thường
+    },
+  })
+  const touchSensor = useSensor(TouchSensor, {
+    activationConstraint: {
+      delay: 250, // Nhấn giữ 250ms trên điện thoại mới kéo thả
+      tolerance: 5,
+    },
+  })
   const sensors = useSensors(mouseSensor, touchSensor)
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
     if (!over) return
+
+    // Tối ưu hóa: Nếu click chuột hoặc thả ngay tại chỗ cũ thì không gọi API cập nhật
+    if (active.id === over.id) return
 
     const issueId = active.id as string
     const activeIssue = taskIssues.find((i) => i._id === issueId)
@@ -93,7 +105,13 @@ const ProjectBacklogTab = ({ projectId, onSelectIssue }: ProjectBacklogTabProps)
       payload.status = isTargetSprint ? 'IN_PROGRESS' : 'TODO'
     }
 
-    updateIssueMutation.mutate({ issueId, payload })
+    // Chỉ gọi API cập nhật nếu thực sự có sự thay đổi (đổi cột hoặc đổi orderIndex)
+    const isPositionChanged = activeIssue.orderIndex !== newOrder
+    const isStatusChanged = currentIsSprint !== isTargetSprint
+
+    if (isPositionChanged || isStatusChanged) {
+      updateIssueMutation.mutate({ issueId, payload })
+    }
   }
 
   if (isLoading) {
