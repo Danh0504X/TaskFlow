@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import { toast } from '@/components/ui/toast/toastStore'
 import { getApiErrorMessage } from '@/lib/http'
 import { projectApi } from '../project.api'
@@ -75,3 +76,18 @@ export const useDeleteProject = () => {
     onError: (error) => toast.error(getApiErrorMessage(error)),
   })
 }
+
+export const useLeaveProject = () => {
+  const qc = useQueryClient()
+  const navigate = useNavigate()
+  return useMutation({
+    mutationFn: (projectId: string) => projectApi.leave(projectId),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: projectKeys.lists() })
+      toast.success(data.message || 'Rời dự án thành công')
+      navigate('/projects')
+    },
+    onError: (error) => toast.error(getApiErrorMessage(error)),
+  })
+}
+

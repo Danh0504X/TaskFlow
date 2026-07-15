@@ -160,9 +160,17 @@ const inviteMembers = async (projectId, inviterId, invites = []) => {
   }
 }
 
-// Lấy danh sách project mà user là member (chưa bị xóa mềm).
+// Lấy danh sách project mà user là member (chưa bị xóa mềm và chưa rời đi).
 const getMyProjects = async (userId) => {
-  return Project.find({ 'members.userId': userId, isDeleted: false })
+  return Project.find({
+    members: {
+      $elemMatch: {
+        userId,
+        status: { $ne: 'REMOVED' },
+      },
+    },
+    isDeleted: false,
+  })
     .sort({ updatedAt: -1 })
     .lean()
 }
@@ -253,6 +261,47 @@ const deleteProject = async (projectId) => {
   return project
 }
 
+const leaveProject = async (projectId, userId) => {
+  ensureValidObjectId(projectId, 'project id')
+  ensureValidObjectId(userId, 'user id')
+
+  const project = await Project.findOne({ _id: projectId, isDeleted: false })
+  if (!project) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Project not found')
+  }
+
+  const member = project.members.find(
+    (m) => m.userId.toString() === userId.toString()
+  )
+
+  if (!member || member.status === 'REMOVED') {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'User is not an active member of this project')
+  }
+
+  if (member.role === 'OWNER') {
+    // Owner rời dự án -> xóa dự án
+    await deleteProject(projectId)
+    return {
+      message: 'Project deleted because the Owner left.',
+      role: 'OWNER',
+    }
+  } else {
+    // Member rời dự án -> set assignee của các task của họ thành null
+    member.status = 'REMOVED'
+    await project.save()
+
+    await Issue.updateMany(
+      { projectId, assigneeId: userId, isDeleted: false },
+      { $set: { assigneeId: null } }
+    )
+
+    return {
+      message: 'Left project successfully. Your assigned tasks are now unassigned.',
+      role: 'MEMBER',
+    }
+  }
+}
+
 export const projectService = {
   createProject,
   inviteMembers,
@@ -260,4 +309,6 @@ export const projectService = {
   getProjectById,
   updateProject,
   deleteProject,
+  leaveProject,
 }
+

@@ -65,3 +65,15 @@ export const deleteProject = asyncHandler(async (req, res) => {
     data: result,
   })
 })
+
+// Rời khỏi dự án.
+export const leaveProject = asyncHandler(async (req, res) => {
+  const { projectId } = req.params
+  const result = await projectService.leaveProject(projectId, req.user._id)
+
+  res.status(StatusCodes.OK).json({
+    message: result.message,
+    data: result,
+  })
+})
+
