@@ -6,12 +6,21 @@ import { env } from '../config/environment.js'
 
 const isProduction = env.BUILD_MODE === 'production'
 
-const AUTH_COOKIE_OPTIONS = {
+const BASE_COOKIE_OPTIONS = {
   httpOnly: true,
-
   secure: isProduction,
   sameSite: isProduction ? 'none' : 'lax',
-  maxAge: ms('14 days'),
+}
+
+// Cả 2 cookie đều phải sống theo thời gian của REFRESH token (cả phiên đăng nhập),
+// KHÔNG phải theo TTL riêng của từng token. Cơ chế silent-refresh dựa vào việc
+// cookie accessToken vẫn còn tồn tại sau khi JWT bên trong hết hạn -> server đọc
+// được, phát hiện hết hạn, trả 410 -> client mới có cơ hội tự refresh. Nếu cookie
+// bị trình duyệt xoá cùng lúc JWT hết hạn, server sẽ thấy "không có cookie" -> 401
+// -> mất tín hiệu 410 -> không bao giờ gọi được refresh-token.
+const AUTH_COOKIE_OPTIONS = {
+  ...BASE_COOKIE_OPTIONS,
+  maxAge: ms(env.REFRESH_TOKEN_TTL),
 }
 
 // Gắn access/refresh token vào cookie (chỉ set token nào được truyền vào)

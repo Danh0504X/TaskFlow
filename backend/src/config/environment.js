@@ -9,6 +9,8 @@ export const env = {
   MONGODB_CONNECTION_STRING: process.env.MONGODB_CONNECTION_STRING,
   ACCESS_TOKEN_SECRET: process.env.ACCESS_TOKEN_SECRET,
   REFRESH_TOKEN_SECRET: process.env.REFRESH_TOKEN_SECRET,
+  ACCESS_TOKEN_TTL: process.env.ACCESS_TOKEN_TTL || '15m',
+  REFRESH_TOKEN_TTL: process.env.REFRESH_TOKEN_TTL || '14d',
   EMAIL_HOST: process.env.EMAIL_HOST || 'smtp.gmail.com',
   EMAIL_PORT: process.env.EMAIL_PORT || 587,
   EMAIL_USER: process.env.EMAIL_USER,

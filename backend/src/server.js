@@ -17,6 +17,14 @@ const START_SERVER = () => {
   app.use(express.urlencoded({ extended: true, limit: '100kb' }))
   app.use(cookieParser())
 
+  // API trả dữ liệu động (đặc biệt là /auth/me) -> cấm trình duyệt cache.
+  // Thiếu header này khiến browser tự phục vụ lại response cũ (vd 410 đã hết hạn)
+  // từ disk cache cho request GET giống hệt ngay sau đó, dù cookie đã được refresh.
+  app.use('/api', (req, res, next) => {
+    res.set('Cache-Control', 'no-store')
+    next()
+  })
+
   // Routes
   app.use('/api', apiRoutes)
 

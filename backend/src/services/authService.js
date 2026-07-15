@@ -9,8 +9,8 @@ import { EMAIL_PURPOSE } from '../utils/constants.js'
 import { emailAccountService } from './email/emailAccountService.js'
 import { emailTokenService } from './email/emailTokenService.js'
 
-const ACCESS_TOKEN_TTL = '15m'
-const REFRESH_TOKEN_TTL = '14d'
+const ACCESS_TOKEN_TTL = env.ACCESS_TOKEN_TTL
+const REFRESH_TOKEN_TTL = env.REFRESH_TOKEN_TTL
 
 const buildUserInfo = (user) => ({
   _id: user._id,
