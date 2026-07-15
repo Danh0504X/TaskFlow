@@ -268,9 +268,14 @@ const signInWithGoogle = async ({ accessToken }) => {
       headers: { Authorization: `Bearer ${accessToken}` },
     })
 
-    if (!response.ok) throw new Error('Google token invalid')
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('🔥 Google userinfo fetch failed status:', response.status, 'body:', errorText)
+      throw new Error('Google token invalid')
+    }
     googlePayload = await response.json()
-  } catch {
+  } catch (error) {
+    console.error('🔥 Error during signInWithGoogle fetch:', error)
     throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid Google access token')
   }
 
