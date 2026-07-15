@@ -21,13 +21,16 @@ export const SortableItem = ({ id, children, disabled = false }: SortableItemPro
   const style = {
     transform: CSS.Transform.toString(transform),
     transition: transition || undefined,
-    opacity: isDragging ? 0.4 : undefined,
     cursor: disabled ? 'default' : 'grab',
   }
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      {children}
+      {isDragging ? (
+        <div className="border-2 border-dashed border-brand/20 bg-brand/5 rounded-2xl h-[126px]" />
+      ) : (
+        children
+      )}
     </div>
   )
 }
