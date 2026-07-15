@@ -4,14 +4,14 @@ const sessionSchema = new mongoose.Schema(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: 'user',
       required: true,
       index: true,
     },
     refreshToken: { type: String, required: true, unique: true },
     expiresAt: { type: Date, required: true },
   },
-  { timestamps: { createdAt: 'create_at', updatedAt: false } },
+  { timestamps: { createdAt: 'createdAt', updatedAt: false } },
 )
 
 sessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 })

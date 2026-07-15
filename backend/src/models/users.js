@@ -1,4 +1,5 @@
 import mongoose from 'mongoose'
+import { USER_ROLE } from '../utils/constants.js'
 
 const userSchema = new mongoose.Schema(
   {
@@ -48,9 +49,8 @@ const userSchema = new mongoose.Schema(
 
     googleId: {
       type: String,
-      default: null,
-      unique: true,
-      sparse: true,
+      // KHÔNG dùng default:null + unique ở đây. Tài khoản local không có googleId;
+      // ràng buộc unique chỉ áp khi googleId là chuỗi (xem partial index bên dưới).
     },
 
     isEmailVerified: {
@@ -63,13 +63,25 @@ const userSchema = new mongoose.Schema(
       enum: ['active', 'inactive', 'banned'],
       default: 'active',
     },
-  },
-  {
-    timestamps: {
-      createdAt: 'createdAt',
-      updatedAt: false,
+
+    // Vai trò: 'user' (mặc định khi đăng ký) hoặc 'admin'
+    role: {
+      type: String,
+      enum: Object.values(USER_ROLE),
+      default: USER_ROLE.USER,
     },
   },
+  {
+    // Bật cả createdAt + updatedAt để trang Profile theo dõi lần sửa gần nhất.
+    timestamps: true,
+  },
+)
+
+// Chỉ áp ràng buộc unique cho googleId khi nó là chuỗi (tài khoản Google).
+// Tài khoản local không có googleId -> không bị tính vào index -> không đụng nhau.
+userSchema.index(
+  { googleId: 1 },
+  { unique: true, partialFilterExpression: { googleId: { $type: 'string' } } },
 )
 
 // Không trả passwordHash ra ngoài API

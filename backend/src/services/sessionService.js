@@ -1,7 +1,9 @@
+import ms from 'ms'
 import Session from '../models/sessions.js'
+import { env } from '../config/environment.js'
 
-// Thời gian sống của session / refresh token (14 ngày)
-const REFRESH_TOKEN_TTL_MS = 14 * 24 * 60 * 60 * 1000
+// Thời gian sống của session phải khớp với thời gian sống của refresh token (JWT)
+const REFRESH_TOKEN_TTL_MS = ms(env.REFRESH_TOKEN_TTL)
 
 /**
  * Tạo session mới gắn với refresh token khi người dùng đăng nhập.
