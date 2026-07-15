@@ -32,13 +32,13 @@ const MainLayout = () => {
   return (
     <AppBackground>
       <div className="min-h-screen flex">
-        <aside className="w-72 bg-white/80 border-r border-line/40 p-6 flex-col justify-between hidden md:flex sticky top-0 h-screen shrink-0">
+        <aside className="w-72 bg-white/30 backdrop-blur-xl border-r border-white/25 p-6 flex-col justify-between hidden md:flex sticky top-0 h-screen shrink-0 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
           <div>
             <div className="flex items-center gap-3 mb-8 px-2">
               <img
                 src={APP_LOGO_URL}
                 alt="TaskFlow AI Logo"
-                className="w-10 h-10 rounded-xl object-cover shadow-lg shadow-brand/20"
+                className="w-12 h-12 object-contain drop-shadow-[0_2px_8px_rgba(139,92,246,0.12)]"
               />
               <div>
                 <h1 className="font-semibold text-xl text-brand tracking-tight leading-none">TaskFlow</h1>
@@ -54,8 +54,10 @@ const MainLayout = () => {
                   end={end}
                   className={({ isActive }) =>
                     cn(
-                      'w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-sm font-medium',
-                      isActive ? 'bg-brand text-white shadow-md shadow-brand/10' : 'text-muted hover:bg-slate-100 hover:text-brand',
+                      'w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-sm font-medium border',
+                      isActive
+                        ? 'bg-white/30 backdrop-blur-md border-white/60 text-brand shadow-sm'
+                        : 'text-slate-400 border-transparent hover:bg-white/30 hover:text-brand hover:shadow-sm',
                     )
                   }
                 >
@@ -66,7 +68,7 @@ const MainLayout = () => {
             </nav>
           </div>
 
-          <div className="space-y-3 pt-4 border-t border-line/20">
+          <div className="space-y-3 pt-4 border-t border-white/20">
             <div className="flex items-center gap-3 px-2 py-1">
               <Avatar src={user?.avatarUrl} name={user?.fullName ?? '?'} size={36} />
               <div className="text-left min-w-0">
@@ -78,7 +80,7 @@ const MainLayout = () => {
             <button
               onClick={handleLogout}
               disabled={loading}
-              className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-100 rounded-xl text-muted hover:text-red-600 transition-all text-sm font-semibold disabled:opacity-60"
+              className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-white/35 rounded-xl text-muted hover:text-red-600 transition-all text-sm font-semibold disabled:opacity-60 hover:shadow-sm"
             >
               <LogOut size={16} />
               <span>{loading ? 'Đang đăng xuất...' : 'Đăng xuất'}</span>
