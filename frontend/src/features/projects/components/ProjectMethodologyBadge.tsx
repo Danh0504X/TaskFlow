@@ -7,7 +7,9 @@ const config: Record<ProjectMethodology, { label: string; icon: typeof Layers }>
 }
 
 const ProjectMethodologyBadge = ({ methodology }: { methodology: ProjectMethodology }) => {
-  const { label, icon: Icon } = config[methodology]
+  // Dữ liệu cũ trước khi field methodology tồn tại có thể thiếu/không khớp enum -> fallback Kanban
+  // thay vì crash cả trang khi destructure config[methodology] undefined.
+  const { label, icon: Icon } = config[methodology] ?? config[PROJECT_METHODOLOGY.KANBAN]
   return (
     <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-brand/5 text-brand border border-brand/10 rounded-full text-[10px] font-bold uppercase tracking-wider">
       <Icon size={12} />

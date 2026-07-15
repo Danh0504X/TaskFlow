@@ -9,6 +9,13 @@ const issueSchema = new mongoose.Schema(
       index: true,
     },
 
+    // Số thứ tự issue trong project (tự tăng, xem Project.issueSeq) -> ghép với
+    // project.key để hiển thị mã issue dạng "PROJ-12".
+    issueNumber: {
+      type: Number,
+      required: true,
+    },
+
     parentIssueId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'issue',
@@ -106,6 +113,7 @@ issueSchema.pre('validate', function (next) {
 })
 
 // Index hỗ trợ query trong project
+issueSchema.index({ projectId: 1, issueNumber: 1 }, { unique: true })
 issueSchema.index({ projectId: 1, sprintId: 1 })
 issueSchema.index({ projectId: 1, status: 1 })
 issueSchema.index({ projectId: 1, type: 1 })

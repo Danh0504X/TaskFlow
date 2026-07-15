@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { AnimatePresence } from 'motion/react'
 import { Search } from 'lucide-react'
 import Spinner from '@/components/ui/Spinner'
 import Tabs from '@/components/ui/Tabs'
@@ -27,10 +28,12 @@ const MyTasksPage = () => {
   const filteredTasks = (tasks ?? []).filter((task) => {
     if (activeTab !== 'ALL' && task.status !== activeTab) return false
     return (
-      task.summary.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       task.key.toLowerCase().includes(searchQuery.toLowerCase())
     )
   })
+
+  const selectedTask = tasks?.find((task) => task.key === selectedTaskKey) ?? null
 
   const assignedCount = tasks?.length ?? 0
   const inProgressCount = tasks?.filter((t) => t.status === 'IN_PROGRESS').length ?? 0
@@ -87,10 +90,12 @@ const MyTasksPage = () => {
               className="flex flex-wrap items-center justify-between gap-4 p-4 bg-white hover:bg-slate-50/50 border border-line/15 rounded-2xl hover:border-brand/30 transition-all shadow-sm cursor-pointer group"
             >
               <div className="flex items-center gap-3.5 flex-1 min-w-0">
-                <IssueTypeIcon type={task.type} size={15} />
+                <div className="w-9 h-9 rounded-xl bg-brand/5 flex items-center justify-center shrink-0">
+                  <IssueTypeIcon type={task.type} size={16} />
+                </div>
                 <span className="text-xs font-bold text-brand flex-shrink-0">{task.key}</span>
                 <div className="min-w-0">
-                  <h4 className="text-xs font-bold text-ink truncate max-w-md">{task.summary}</h4>
+                  <h4 className="text-xs font-bold text-ink truncate max-w-md">{task.title}</h4>
                   <p className="text-[10px] text-muted font-semibold mt-1">
                     Dự án: <span className="font-bold">{task.projectName}</span>
                   </p>
@@ -111,15 +116,16 @@ const MyTasksPage = () => {
         )}
       </section>
 
-      {selectedTaskKey && (
-        <>
-          <div
-            onClick={() => setSelectedTaskKey(null)}
-            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 animate-in fade-in duration-200"
+      <AnimatePresence>
+        {selectedTaskKey && (
+          <IssueDetailPanel
+            issue={selectedTask}
+            projectId={selectedTask?.projectId ?? ''}
+            isLoading={isLoading}
+            onClose={() => setSelectedTaskKey(null)}
           />
-          <IssueDetailPanel issueKey={selectedTaskKey} onClose={() => setSelectedTaskKey(null)} />
-        </>
-      )}
+        )}
+      </AnimatePresence>
     </div>
   )
 }

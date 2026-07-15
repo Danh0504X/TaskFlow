@@ -3,7 +3,11 @@ import mongoose from 'mongoose'
 import Project from '../models/projects.js'
 import Sprint from '../models/sprints.js'
 import Issue from '../models/issues.js'
+import User from '../models/users.js'
 import ApiError from '../utils/ApiError.js'
+import { env } from '../config/environment.js'
+import { EMAIL_PURPOSE, EMAIL_REGEX } from '../utils/constants.js'
+import { emailService } from './email/emailService.js'
 
 // Các enum hợp lệ (khớp với models/projects.js).
 const PROJECT_STATUSES = ['ACTIVE', 'COMPLETED', 'CANCELLED']
@@ -69,6 +73,91 @@ const createProject = async (userId, body = {}) => {
   })
 
   return project
+}
+
+// Mời (thêm) nhiều thành viên vào project bằng email. Chỉ chấp nhận email đã có
+// tài khoản trong hệ thống; thành viên được thêm ACTIVE ngay (không qua bước
+// chấp nhận lời mời riêng) và nhận email thông báo. Mỗi invite xử lý độc lập ->
+// 1 email lỗi (không tồn tại/đã là thành viên) không làm hỏng các invite còn lại.
+const inviteMembers = async (projectId, inviterId, invites = []) => {
+  ensureValidObjectId(projectId, 'project id')
+
+  if (!Array.isArray(invites) || invites.length === 0) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Danh sách mời không được để trống')
+  }
+
+  const project = await Project.findOne({ _id: projectId, isDeleted: false })
+  if (!project) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Project not found')
+  }
+
+  const inviter = await User.findById(inviterId).select('fullName').lean()
+
+  const results = []
+
+  for (const invite of invites) {
+    const email = invite?.email?.trim().toLowerCase()
+
+    if (!email || !EMAIL_REGEX.test(email)) {
+      results.push({ email: invite?.email ?? '', status: 'FAILED', reason: 'Email không hợp lệ' })
+      continue
+    }
+
+    const user = await User.findOne({ email }).select('fullName').lean()
+    if (!user) {
+      results.push({ email, status: 'FAILED', reason: 'Không tìm thấy tài khoản với email này' })
+      continue
+    }
+
+    const existingMember = project.members.find(
+      (member) => member.userId.toString() === user._id.toString(),
+    )
+
+    if (existingMember && existingMember.status !== 'REMOVED') {
+      results.push({ email, status: 'FAILED', reason: 'Người dùng đã là thành viên của project' })
+      continue
+    }
+
+    if (existingMember) {
+      // Từng bị xóa khỏi project -> thêm lại làm MEMBER.
+      existingMember.role = 'MEMBER'
+      existingMember.status = 'ACTIVE'
+      existingMember.joinedAt = new Date()
+    } else {
+      project.members.push({ userId: user._id, role: 'MEMBER', status: 'ACTIVE' })
+    }
+
+    results.push({ email, status: 'ADDED', userId: user._id.toString(), fullName: user.fullName })
+  }
+
+  await project.save()
+
+  // Gửi email thông báo cho các thành viên vừa thêm thành công — không chặn
+  // response nếu gửi email lỗi (member đã được thêm vào DB thành công rồi).
+  await Promise.all(
+    results
+      .filter((result) => result.status === 'ADDED')
+      .map((result) =>
+        emailService
+          .sendEmailByTemplate({
+            to: result.email,
+            template: EMAIL_PURPOSE.PROJECT_INVITE,
+            data: {
+              inviterName: inviter?.fullName,
+              projectName: project.name,
+              projectUrl: `${env.FRONTEND_URL}/projects/${project._id}`,
+            },
+          })
+          .catch((error) => {
+            console.error('🔥 Gửi email mời thành viên thất bại:', error.message)
+          }),
+      ),
+  )
+
+  return {
+    added: results.filter((result) => result.status === 'ADDED'),
+    skipped: results.filter((result) => result.status === 'FAILED'),
+  }
 }
 
 // Lấy danh sách project mà user là member (chưa bị xóa mềm).
@@ -166,6 +255,7 @@ const deleteProject = async (projectId) => {
 
 export const projectService = {
   createProject,
+  inviteMembers,
   getMyProjects,
   getProjectById,
   updateProject,

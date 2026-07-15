@@ -1,7 +1,8 @@
 import { z } from 'zod'
 import { PROJECT_STATUS } from './project.types'
 
-// Schema validate form project (dùng chung cho cả Thêm và Sửa).
+// Schema validate form sửa project (ProjectEditModal). Tạo project mới dùng
+// trình hướng dẫn ở /projects/new (xem ProjectSetupWizard), không dùng schema này.
 // Quy tắc khớp với ràng buộc ở backend (models/projects.js + projectService.js).
 export const projectFormSchema = z.object({
   name: z

@@ -10,7 +10,7 @@ const projectMemberSchema = new mongoose.Schema(
 
     role: {
       type: String,
-      enum: ['OWNER', 'ADMIN', 'MEMBER'],
+      enum: ['OWNER', 'MEMBER'],
       default: 'MEMBER',
     },
 
@@ -88,6 +88,13 @@ const projectSchema = new mongoose.Schema(
     members: {
       type: [projectMemberSchema],
       default: [],
+    },
+
+    // Bộ đếm issue đã tạo trong project, tăng nguyên tử mỗi lần tạo issue mới ->
+    // dùng làm issueNumber để ghép mã issue "key" dạng "PROJ-12".
+    issueSeq: {
+      type: Number,
+      default: 0,
     },
 
     isDeleted: {

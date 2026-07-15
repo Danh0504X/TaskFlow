@@ -1,9 +1,18 @@
 import { z } from 'zod'
 
+// Họ tên: chỉ cho phép chữ cái (kể cả có dấu tiếng Việt) và khoảng trắng.
+// \p{L} = mọi chữ cái Unicode, cần flag "u" — khớp quy tắc backend (common.validation.js).
+const fullNameSchema = z
+  .string()
+  .trim()
+  .min(2, 'Tên phải có ít nhất 2 ký tự.')
+  .max(100, 'Tên tối đa 100 ký tự.')
+  .regex(/^[\p{L}\s]+$/u, 'Tên chỉ được chứa chữ cái và khoảng trắng, không chứa số hoặc ký tự đặc biệt.')
+
 // Schema validate form đăng ký. Quy tắc khớp ràng buộc backend (/auth/sign-up).
 export const registerSchema = z
   .object({
-    fullName: z.string().trim().min(2, 'Tên phải có ít nhất 2 ký tự.'),
+    fullName: fullNameSchema,
     email: z.string().trim().email('Email không đúng định dạng.'),
     password: z.string().min(8, 'Mật khẩu phải có ít nhất 8 ký tự.'),
     confirmPassword: z.string(),

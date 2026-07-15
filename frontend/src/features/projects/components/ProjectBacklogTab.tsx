@@ -25,7 +25,8 @@ interface ProjectBacklogTabProps {
   onSelectIssue: (issueKey: string) => void
 }
 
-/** Backlog gộp: issue DONE/IN_REVIEW/IN_PROGRESS xem như "Sprint đang chạy", còn lại là bể Backlog. */
+/** Backlog gộp: issue DONE/IN_REVIEW/IN_PROGRESS xem như "Sprint đang chạy", còn lại là bể Backlog.
+ * Chỉ vận hành trên Task -> Epic chỉ là container tổ chức, hiển thị ở tab Danh sách. */
 const ProjectBacklogTab = ({ projectId, onSelectIssue }: ProjectBacklogTabProps) => {
   const { data: issues, isLoading } = useProjectIssues(projectId)
   const updateIssueMutation = useUpdateIssue(projectId)

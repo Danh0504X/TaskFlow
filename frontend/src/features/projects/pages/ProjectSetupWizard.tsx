@@ -4,46 +4,36 @@ import { ChevronLeft, ArrowRight, CheckCircle2, X } from 'lucide-react'
 import SelectProjectType from '../components/wizard/SelectProjectType'
 import ScrumIntro from '../components/wizard/ScrumIntro'
 import KanbanIntro from '../components/wizard/KanbanIntro'
-import SetupBasicInfo, { type BasicInfoData } from '../components/wizard/SetupBasicInfo'
-import SetupConfiguration, { type ConfigurationData } from '../components/wizard/SetupConfiguration'
+import SetupBasicInfo, { type BasicInfoData, isProjectKeyValid } from '../components/wizard/SetupBasicInfo'
 import InviteTeam, { type TeamInvite } from '../components/wizard/InviteTeam'
-import { useCreateProject } from '../hooks/useProjectMutations'
+import { useCreateProject, useInviteMembers } from '../hooks/useProjectMutations'
 import { PROJECT_METHODOLOGY, type ProjectMethodology } from '../project.types'
 
-type StepId = 'TYPE' | 'INTRO' | 'BASIC_INFO' | 'SPRINT_CONFIG' | 'INVITE'
+type StepId = 'TYPE' | 'INTRO' | 'BASIC_INFO' | 'INVITE'
 
-// Bước "Cấu hình Sprint" chỉ có ý nghĩa với Scrum — Kanban không có Sprint nên bỏ qua.
-const getSteps = (methodology: ProjectMethodology): StepId[] =>
-  methodology === PROJECT_METHODOLOGY.SCRUM
-    ? ['TYPE', 'INTRO', 'BASIC_INFO', 'SPRINT_CONFIG', 'INVITE']
-    : ['TYPE', 'INTRO', 'BASIC_INFO', 'INVITE']
+// Sprint được cấu hình sau khi vào trong dự án (không cấu hình trước ở wizard nữa).
+const getSteps = (): StepId[] => ['TYPE', 'INTRO', 'BASIC_INFO', 'INVITE']
 
 const getStepLabel = (step: StepId, methodology: ProjectMethodology): string => {
   switch (step) {
     case 'TYPE': return 'Lựa chọn mô hình'
     case 'INTRO': return methodology === PROJECT_METHODOLOGY.SCRUM ? 'Giới thiệu Scrum' : 'Giới thiệu Kanban'
     case 'BASIC_INFO': return 'Thông tin cơ bản'
-    case 'SPRINT_CONFIG': return 'Cấu hình Sprint'
     case 'INVITE': return 'Mời thành viên'
   }
 }
 
-/**
- * Wizard khởi tạo project nhiều bước (giao diện đã gen từ Stitch).
- * { name, key, description } gửi thật lên backend (POST /projects).
- * Mời thành viên chỉ tồn tại trong trải nghiệm wizard — backend chưa có API mời qua email.
- */
 const ProjectSetupWizard = () => {
   const navigate = useNavigate()
   const createMutation = useCreateProject()
+  const inviteMutation = useInviteMembers()
 
   const [methodology, setMethodology] = useState<ProjectMethodology>(PROJECT_METHODOLOGY.SCRUM)
   const [stepIndex, setStepIndex] = useState(0)
   const [basicInfo, setBasicInfo] = useState<BasicInfoData>({ name: '', key: '', description: '' })
-  const [configuration, setConfiguration] = useState<ConfigurationData>({ sprintDuration: '2_WEEKS' })
   const [invites, setInvites] = useState<TeamInvite[]>([])
 
-  const steps = useMemo(() => getSteps(methodology), [methodology])
+  const steps = useMemo(() => getSteps(), [])
   const currentStepId = steps[stepIndex]
   const isLastStep = stepIndex === steps.length - 1
 
@@ -52,7 +42,14 @@ const ProjectSetupWizard = () => {
   const handleFinish = () => {
     createMutation.mutate(
       { name: basicInfo.name, key: basicInfo.key, methodology, description: basicInfo.description },
-      { onSuccess: (project) => navigate(`/projects/${project._id}`) },
+      {
+        onSuccess: (project) => {
+          if (invites.length > 0) {
+            inviteMutation.mutate({ projectId: project._id, invites })
+          }
+          navigate(`/projects/${project._id}`)
+        },
+      },
     )
   }
 
@@ -73,10 +70,12 @@ const ProjectSetupWizard = () => {
   }
 
   const isNextDisabled =
-    (currentStepId === 'BASIC_INFO' && (!basicInfo.name || !basicInfo.key)) || createMutation.isPending
+    (currentStepId === 'BASIC_INFO' &&
+      (!basicInfo.name || !basicInfo.key || !isProjectKeyValid(basicInfo.key))) ||
+    createMutation.isPending
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col justify-between py-10 px-6 max-w-4xl mx-auto">
+    <div className="min-h-screen flex flex-col justify-between py-10 px-6 max-w-4xl mx-auto">
       <div>
         <div className="flex justify-between items-center mb-6">
           <span className="text-xs font-bold text-muted uppercase tracking-wider">Khởi tạo không gian dự án</span>
@@ -93,9 +92,8 @@ const ProjectSetupWizard = () => {
             return (
               <div key={step} className="flex items-center gap-2 flex-grow min-w-[100px]">
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-extrabold ${
-                    isCompleted ? 'bg-green-600 text-white' : isActive ? 'bg-brand text-white shadow-md' : 'bg-slate-100 text-muted border border-line/20'
-                  }`}
+                  className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-extrabold ${isCompleted ? 'bg-green-600 text-white' : isActive ? 'bg-brand text-white shadow-md' : 'bg-slate-100 text-muted border border-line/20'
+                    }`}
                 >
                   {isCompleted ? <CheckCircle2 size={12} /> : idx + 1}
                 </div>
@@ -114,7 +112,6 @@ const ProjectSetupWizard = () => {
           {currentStepId === 'TYPE' && <SelectProjectType selectedType={methodology} onSelect={setMethodology} />}
           {currentStepId === 'INTRO' && (methodology === PROJECT_METHODOLOGY.SCRUM ? <ScrumIntro /> : <KanbanIntro />)}
           {currentStepId === 'BASIC_INFO' && <SetupBasicInfo data={basicInfo} onChange={setBasicInfo} />}
-          {currentStepId === 'SPRINT_CONFIG' && <SetupConfiguration data={configuration} onChange={setConfiguration} />}
           {currentStepId === 'INVITE' && <InviteTeam invites={invites} onChange={setInvites} />}
         </div>
       </div>

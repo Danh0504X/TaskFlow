@@ -1,9 +1,10 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
+import { motion, useReducedMotion } from 'motion/react'
 import { X, Share2, Eye, MoreHorizontal, Layers, Send } from 'lucide-react'
 import Avatar from '@/components/ui/Avatar'
 import Spinner from '@/components/ui/Spinner'
-import { useIssue } from '../hooks/useIssues'
-import type { IssueStatus, IssuePriority } from '../issue.types'
+import { useUpdateIssue } from '../hooks/useIssueMutations'
+import type { Issue, IssueStatus, IssuePriority } from '../issue.types'
 
 interface Comment {
   id: string
@@ -14,13 +15,21 @@ interface Comment {
 }
 
 interface IssueDetailPanelProps {
-  issueKey: string
+  /** Issue đã được resolve sẵn từ danh sách đang có trong cache (Board/List/Backlog/MyTasks). */
+  issue: Issue | null | undefined
+  projectId: string
+  isLoading?: boolean
   onClose: () => void
 }
 
-/** Panel chi tiết issue dạng slide-over. Trạng thái/mô tả/bình luận chỉnh sửa cục bộ (mock, chưa lưu backend). */
-const IssueDetailPanel = ({ issueKey, onClose }: IssueDetailPanelProps) => {
-  const { data: issue, isLoading } = useIssue(issueKey)
+/**
+ * Panel chi tiết issue dạng slide-over. Trạng thái/độ ưu tiên/mô tả chỉnh sửa cục bộ trong lúc mở,
+ * lưu thật (PUT /issues/:id) khi đóng panel — không lưu theo từng phím gõ để tránh spam API.
+ * Bình luận vẫn là mock cục bộ, chưa có API bình luận ở backend.
+ */
+const IssueDetailPanel = ({ issue, projectId, isLoading, onClose }: IssueDetailPanelProps) => {
+  const updateMutation = useUpdateIssue(projectId)
+  const reduceMotion = useReducedMotion()
 
   // Nạp lại state chỉnh sửa cục bộ mỗi khi issue đổi (panel không unmount khi chuyển
   // từ issue này sang issue khác) — theo mẫu "Adjusting state on render" của React,
@@ -39,6 +48,34 @@ const IssueDetailPanel = ({ issueKey, onClose }: IssueDetailPanelProps) => {
     setDescription(issue.description ?? '')
   }
 
+  // Đóng panel (nút X, bấm ra ngoài, phím Escape) đều đi qua đây: chỉ gọi API nếu có
+  // thay đổi thật so với issue gốc, rồi đóng ngay — không chặn UI chờ request xong.
+  const handleClose = () => {
+    if (issue) {
+      const hasChanges =
+        status !== issue.status ||
+        priority !== issue.priority ||
+        description !== (issue.description ?? '')
+
+      if (hasChanges) {
+        updateMutation.mutate({
+          issueId: issue._id,
+          payload: { status, priority, description },
+        })
+      }
+    }
+    onClose()
+  }
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') handleClose()
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [issue, status, priority, description])
+
   const handleAddComment = (e: FormEvent) => {
     e.preventDefault()
     if (!commentText.trim()) return
@@ -50,12 +87,27 @@ const IssueDetailPanel = ({ issueKey, onClose }: IssueDetailPanelProps) => {
   }
 
   return (
-    <div className="fixed inset-y-0 right-0 w-full sm:w-[480px] md:w-[580px] bg-white border-l border-line/30 shadow-2xl z-50 flex flex-col animate-in slide-in-from-right duration-300">
+    <>
+      <motion.div
+        onClick={handleClose}
+        className="fixed inset-0 bg-ink/25 backdrop-blur-sm z-40"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.18 }}
+      />
+      <motion.div
+        className="fixed inset-y-0 right-0 w-full sm:w-[480px] md:w-[580px] bg-white border-l border-line/30 shadow-[-24px_0_70px_-20px_rgba(11,28,48,0.35)] z-50 flex flex-col"
+        initial={reduceMotion ? false : { x: '100%' }}
+        animate={{ x: 0 }}
+        exit={reduceMotion ? undefined : { x: '100%' }}
+        transition={{ type: 'spring', stiffness: 320, damping: 32 }}
+      >
       <div className="px-6 py-4 border-b border-line/20 flex justify-between items-center bg-slate-50/50 shrink-0">
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold text-muted">Issue</span>
           <span className="text-xs text-muted">/</span>
-          <span className="text-xs font-extrabold text-brand tracking-wider">{issueKey}</span>
+          <span className="text-xs font-extrabold text-brand tracking-wider">{issue?.key}</span>
         </div>
         <div className="flex items-center gap-2">
           <button className="p-1.5 hover:bg-slate-100 rounded-lg text-muted transition-all">
@@ -68,7 +120,7 @@ const IssueDetailPanel = ({ issueKey, onClose }: IssueDetailPanelProps) => {
             <MoreHorizontal size={15} />
           </button>
           <div className="w-px h-5 bg-line/20 mx-1" />
-          <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-lg text-muted hover:text-ink transition-all">
+          <button onClick={handleClose} className="p-1.5 hover:bg-slate-100 rounded-lg text-muted hover:text-ink transition-all">
             <X size={16} />
           </button>
         </div>
@@ -85,7 +137,7 @@ const IssueDetailPanel = ({ issueKey, onClose }: IssueDetailPanelProps) => {
               <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-brand/5 text-brand rounded text-[9px] font-bold uppercase tracking-wider mb-2">
                 {issue.type}
               </span>
-              <h2 className="text-lg font-extrabold text-ink leading-snug">{issue.summary}</h2>
+              <h2 className="text-lg font-extrabold text-ink leading-snug">{issue.title}</h2>
             </div>
 
             <div className="grid grid-cols-2 gap-4 p-4 border border-line/15 rounded-2xl bg-slate-50/50">
@@ -191,7 +243,8 @@ const IssueDetailPanel = ({ issueKey, onClose }: IssueDetailPanelProps) => {
           </form>
         </>
       )}
-    </div>
+      </motion.div>
+    </>
   )
 }
 

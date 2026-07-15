@@ -1,23 +1,43 @@
 import { useQuery } from '@tanstack/react-query'
-import { getIssuesForProject, findMockIssueByKey } from '../issue.mock'
+import { issueApi } from '../issue.api'
+import { issueKeys } from '../issue.keys'
+import type { GetIssuesFilter } from '../issue.types'
 
-// TODO: thay bằng gọi API thật khi backend có endpoint /projects/:id/issues.
-// Giữ dạng useQuery ngay từ đầu để sau này chỉ cần đổi queryFn, không đổi chỗ dùng.
-
-/** Danh sách issue của 1 project (dùng cho tab Board/List/Backlog). */
-export const useProjectIssues = (projectId: string | undefined) => {
+/**
+ * Danh sách issue của 1 project (dùng cho tab Summary/List/Board/Backlog).
+ * Truyền `filter` để lọc phía server (vd Board của Scrum chỉ lấy issue thuộc sprint active).
+ */
+export const useProjectIssues = (
+  projectId: string | undefined,
+  filter?: GetIssuesFilter,
+) => {
   return useQuery({
-    queryKey: ['issues', 'project', projectId],
-    queryFn: () => getIssuesForProject(projectId as string),
+    queryKey: issueKeys.list(projectId ?? '', filter),
+    queryFn: () => issueApi.getByProject(projectId as string, filter),
     enabled: !!projectId,
   })
 }
 
-/** Chi tiết 1 issue theo key (dùng cho IssueDetailPanel). */
-export const useIssue = (issueKey: string | undefined) => {
+/** Danh sách issue thuộc 1 sprint cụ thể (Board của Scrum khi đã có sprint active). */
+export const useSprintIssues = (
+  projectId: string | undefined,
+  sprintId: string | undefined,
+) => {
   return useQuery({
-    queryKey: ['issues', 'detail', issueKey],
-    queryFn: () => findMockIssueByKey(issueKey as string) ?? null,
-    enabled: !!issueKey,
+    queryKey: issueKeys.bySprint(projectId ?? '', sprintId ?? ''),
+    queryFn: () => issueApi.getBySprint(projectId as string, sprintId as string),
+    enabled: !!projectId && !!sprintId,
+  })
+}
+
+/** Chi tiết 1 issue theo id. */
+export const useIssue = (
+  projectId: string | undefined,
+  issueId: string | undefined,
+) => {
+  return useQuery({
+    queryKey: issueKeys.detail(projectId ?? '', issueId ?? ''),
+    queryFn: () => issueApi.getById(projectId as string, issueId as string),
+    enabled: !!projectId && !!issueId,
   })
 }

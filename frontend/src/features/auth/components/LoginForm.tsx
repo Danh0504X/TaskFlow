@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useGoogleLogin } from '@react-oauth/google'
@@ -22,12 +22,16 @@ import {
 const LoginForm = () => {
   const navigate = useNavigate()
   const location = useLocation()
+  const [searchParams] = useSearchParams()
   const signInMutation = useSignIn()
   const googleMutation = useGoogleSignIn()
 
   const [serverError, setServerError] = useState('')
   // Thông báo truyền từ trang đặt lại mật khẩu (vd "Đặt lại mật khẩu thành công").
   const infoMessage = (location.state as { info?: string } | null)?.info
+  // JWT hết hạn (refresh token cũng hết) -> interceptor tự đá về đây kèm query param
+  // này (xem forceLogout ở lib/api.ts) -> báo rõ lý do thay vì im lặng mất phiên.
+  const sessionExpired = searchParams.get('reason') === 'session_expired'
 
   const {
     register,
@@ -65,8 +69,14 @@ const LoginForm = () => {
       className="relative w-full space-y-5"
       noValidate
     >
-      {infoMessage && (
+      {infoMessage ? (
         <p className="ml-1 text-[13px] text-green-600">{infoMessage}</p>
+      ) : (
+        sessionExpired && (
+          <p className="ml-1 text-[13px] font-medium text-amber-600">
+            Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.
+          </p>
+        )
       )}
 
       <div className="space-y-4">

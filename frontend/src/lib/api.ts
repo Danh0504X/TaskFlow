@@ -25,11 +25,14 @@ const api = axios.create({
   },
 })
 
-// Đưa user về trang login khi phiên không còn hợp lệ.
+// Đưa user về trang login khi phiên không còn hợp lệ (JWT hết hạn không refresh được nữa,
+// hoặc không có phiên). Gắn query param để LoginForm hiển thị lý do bị đăng xuất thay vì
+// im lặng đá về — dùng query param (không phải navigate state) vì đây là window.location.replace
+// (tải lại toàn trang), state của react-router sẽ mất theo.
 const forceLogout = () => {
   useAuthStore.getState().clearUser()
   if (window.location.pathname !== '/login') {
-    window.location.replace('/login')
+    window.location.replace('/login?reason=session_expired')
   }
 }
 
