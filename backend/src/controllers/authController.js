@@ -12,12 +12,6 @@ const BASE_COOKIE_OPTIONS = {
   sameSite: isProduction ? 'none' : 'lax',
 }
 
-// Cả 2 cookie đều phải sống theo thời gian của REFRESH token (cả phiên đăng nhập),
-// KHÔNG phải theo TTL riêng của từng token. Cơ chế silent-refresh dựa vào việc
-// cookie accessToken vẫn còn tồn tại sau khi JWT bên trong hết hạn -> server đọc
-// được, phát hiện hết hạn, trả 410 -> client mới có cơ hội tự refresh. Nếu cookie
-// bị trình duyệt xoá cùng lúc JWT hết hạn, server sẽ thấy "không có cookie" -> 401
-// -> mất tín hiệu 410 -> không bao giờ gọi được refresh-token.
 const AUTH_COOKIE_OPTIONS = {
   ...BASE_COOKIE_OPTIONS,
   maxAge: ms(env.REFRESH_TOKEN_TTL),

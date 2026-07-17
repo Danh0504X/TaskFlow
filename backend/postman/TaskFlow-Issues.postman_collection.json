@@ -1,0 +1,307 @@
+{
+  "info": {
+    "name": "TaskFlow - Project & Issues API",
+    "description": "CRUD API cho Project và Issue trong TaskFlow.\n\nCách dùng:\n1. Chạy request \"Sign In\" trong folder Auth để đăng nhập (server set cookie accessToken/refreshToken, Postman tự lưu và gửi lại ở các request sau).\n2. Chạy \"Create Project\" trong folder Projects — response sẽ tự lưu `projectId` vào biến collection.\n3. Set thêm `sprintId`, `assigneeId`, `parentIssueId`, `inviteEmail` nếu cần.\n4. Request \"Create Issue\" sẽ tự lưu `issueId` vào biến collection để dùng cho các request Get/Update/Delete phía sau.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5001/api", "type": "string" },
+    { "key": "email", "value": "user@example.com", "type": "string" },
+    { "key": "password", "value": "123456", "type": "string" },
+    { "key": "projectId", "value": "", "type": "string" },
+    { "key": "issueId", "value": "", "type": "string" },
+    { "key": "sprintId", "value": "", "type": "string" },
+    { "key": "assigneeId", "value": "", "type": "string" },
+    { "key": "parentIssueId", "value": "", "type": "string" },
+    { "key": "inviteEmail", "value": "member@example.com", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Sign In",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/sign-in",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "sign-in"]
+            },
+            "description": "Đăng nhập. Server trả về cookie accessToken/refreshToken (httpOnly) — Postman tự lưu cookie theo domain và gửi kèm ở các request Issue phía sau, không cần copy token thủ công."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Projects",
+      "item": [
+        {
+          "name": "Create Project",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const data = pm.response.json().data;",
+                  "    pm.collectionVariables.set('projectId', data._id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Website Redesign\",\n  \"key\": \"WEB\",\n  \"methodology\": \"SCRUM\",\n  \"description\": \"Dự án làm lại giao diện website\",\n  \"deadline\": \"2026-12-31\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/projects",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects"]
+            },
+            "description": "Tạo project mới. Người tạo tự động thành OWNER (member ACTIVE đầu tiên).\n\nBắt buộc: `name`.\nTùy chọn: `key` (2-10 ký tự chữ/số, tự sinh từ `name` nếu bỏ trống), `methodology` (SCRUM|KANBAN, mặc định KANBAN, không đổi được sau khi tạo), `description`, `deadline`."
+          }
+        },
+        {
+          "name": "Get My Projects",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects"]
+            },
+            "description": "Lấy danh sách project mà user hiện tại đang là member (status khác REMOVED, chưa xóa mềm)."
+          }
+        },
+        {
+          "name": "Get Project By Id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectId}}"]
+            },
+            "description": "Lấy chi tiết 1 project. OWNER, MEMBER."
+          }
+        },
+        {
+          "name": "Update Project",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Website Redesign (v2)\",\n  \"description\": \"Mô tả đã cập nhật\",\n  \"deadline\": \"2027-03-31\",\n  \"status\": \"ACTIVE\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectId}}"]
+            },
+            "description": "Cập nhật project (chỉ những field truyền lên mới bị thay đổi). Chỉ OWNER.\n\nCó thể cập nhật: `name`, `key`, `description`, `deadline`, `status` (ACTIVE|COMPLETED|CANCELLED).\n\nLưu ý: `methodology` không nằm trong danh sách cho phép cập nhật (cố định lúc tạo)."
+          }
+        },
+        {
+          "name": "Invite Members",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"invites\": [\n    { \"email\": \"{{inviteEmail}}\" }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectId}}/members/invite",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectId}}", "members", "invite"]
+            },
+            "description": "Mời thành viên vào project bằng email (chỉ chấp nhận email đã có tài khoản trong hệ thống, được thêm ACTIVE ngay, không qua bước chấp nhận lời mời). Chỉ OWNER.\n\n`invites` là mảng, có thể mời nhiều email cùng lúc; mỗi email xử lý độc lập nên 1 email lỗi không làm hỏng các email còn lại."
+          }
+        },
+        {
+          "name": "Leave Project",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectId}}/leave",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectId}}", "leave"]
+            },
+            "description": "Rời khỏi project. OWNER, MEMBER.\n\nNếu người rời là OWNER -> project bị xóa mềm luôn (cascade sprint/issue). Nếu là MEMBER -> chỉ đánh dấu REMOVED và gỡ assignee khỏi các issue của người đó."
+          }
+        },
+        {
+          "name": "Delete Project",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectId}}"]
+            },
+            "description": "Xóa mềm project (đồng thời cascade xóa mềm toàn bộ sprint và issue thuộc project). Chỉ OWNER."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Issues",
+      "item": [
+        {
+          "name": "Create Issue",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const data = pm.response.json().data;",
+                  "    pm.collectionVariables.set('issueId', data._id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Thiết kế màn hình đăng nhập\",\n  \"description\": \"Mô tả chi tiết task\",\n  \"type\": \"TASK\",\n  \"status\": \"TODO\",\n  \"priority\": \"MEDIUM\",\n  \"sprintId\": \"{{sprintId}}\",\n  \"parentIssueId\": \"{{parentIssueId}}\",\n  \"assigneeId\": \"{{assigneeId}}\",\n  \"orderIndex\": 0\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectId}}/issues",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectId}}", "issues"]
+            },
+            "description": "Tạo issue mới trong project. Chỉ OWNER được phép.\n\nBắt buộc: `title`.\nTùy chọn: `description`, `type` (EPIC|TASK|SUBTASK|BUG), `status` (TODO|IN_PROGRESS|IN_REVIEW|DONE), `priority` (LOW|MEDIUM|HIGH|URGENT), `sprintId`, `parentIssueId`, `assigneeId`, `orderIndex`.\n\nXóa các field không dùng khỏi body (vd sprintId rỗng) nếu không muốn gán."
+          }
+        },
+        {
+          "name": "Get Issues By Project",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectId}}/issues?sprintId=&status=&type=&priority=&assigneeId=",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectId}}", "issues"],
+              "query": [
+                { "key": "sprintId", "value": "", "disabled": true },
+                { "key": "status", "value": "", "disabled": true, "description": "TODO|IN_PROGRESS|IN_REVIEW|DONE" },
+                { "key": "type", "value": "", "disabled": true, "description": "EPIC|TASK|SUBTASK|BUG" },
+                { "key": "priority", "value": "", "disabled": true, "description": "LOW|MEDIUM|HIGH|URGENT" },
+                { "key": "assigneeId", "value": "", "disabled": true }
+              ]
+            },
+            "description": "Lấy danh sách issue (chưa xóa mềm) của project, có thể lọc qua query params. OWNER, MEMBER."
+          }
+        },
+        {
+          "name": "Get Issues By Sprint",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectId}}/issues/sprint/{{sprintId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectId}}", "issues", "sprint", "{{sprintId}}"]
+            },
+            "description": "Lấy danh sách issue thuộc 1 sprint. OWNER, MEMBER."
+          }
+        },
+        {
+          "name": "Get Issue By Id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectId}}/issues/{{issueId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectId}}", "issues", "{{issueId}}"]
+            },
+            "description": "Lấy chi tiết 1 issue. OWNER, MEMBER."
+          }
+        },
+        {
+          "name": "Update Issue",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Thiết kế màn hình đăng nhập (cập nhật)\",\n  \"description\": \"Mô tả đã cập nhật\",\n  \"type\": \"TASK\",\n  \"status\": \"IN_PROGRESS\",\n  \"priority\": \"HIGH\",\n  \"sprintId\": \"{{sprintId}}\",\n  \"parentIssueId\": \"{{parentIssueId}}\",\n  \"assigneeId\": \"{{assigneeId}}\",\n  \"orderIndex\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectId}}/issues/{{issueId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectId}}", "issues", "{{issueId}}"]
+            },
+            "description": "Cập nhật issue (chỉ những field truyền lên mới bị thay đổi). Chỉ OWNER.\n\nGửi `assigneeId`/`sprintId`/`parentIssueId` là chuỗi rỗng hoặc null để gỡ liên kết."
+          }
+        },
+        {
+          "name": "Update Issue Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"IN_REVIEW\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectId}}/issues/{{issueId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectId}}", "issues", "{{issueId}}", "status"]
+            },
+            "description": "Cập nhật riêng trạng thái issue (dùng cho kéo-thả trên bảng Kanban). OWNER, MEMBER.\n\n`status` phải là 1 trong: TODO | IN_PROGRESS | IN_REVIEW | DONE."
+          }
+        },
+        {
+          "name": "Delete Issue",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectId}}/issues/{{issueId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectId}}", "issues", "{{issueId}}"]
+            },
+            "description": "Xóa mềm issue (đồng thời xóa mềm các subtask con và gỡ khỏi sprint). Chỉ OWNER."
+          }
+        }
+      ]
+    }
+  ]
+}

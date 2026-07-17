@@ -9,10 +9,8 @@ import Spinner from '@/components/ui/Spinner'
  * - Gọi GET /auth/me để hỏi backend "cookie còn hợp lệ không, tôi là ai?".
  * - Thành công  -> đồng bộ userInfo mới nhất vào store.
  * - Thất bại    -> xoá user (phiên đã hết) -> ProtectedRoute sẽ đá về /login.
- *
- * Chờ lần kiểm tra đầu tiên xong mới render router -> tránh cảnh tin nhầm
- * localStorage cũ (đã từng là lỗ hổng: cookie hết hạn nhưng vẫn "vào" được app).
- */
+*/
+
 const SessionGate = ({ children }: { children: ReactNode }) => {
   const setUser = useAuthStore((state) => state.setUser)
   const clearUser = useAuthStore((state) => state.clearUser)
