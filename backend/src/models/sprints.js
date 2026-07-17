@@ -75,6 +75,13 @@ sprintSchema.pre('validate', function (next) {
 sprintSchema.index({ projectId: 1, status: 1 })
 sprintSchema.index({ projectId: 1, orderIndex: 1 })
 
+// Chặn race-condition: mỗi project chỉ được có tối đa 1 sprint ACTIVE (chưa xóa mềm)
+// tại một thời điểm, thực thi ở tầng DB thay vì chỉ dựa vào check read-then-write ở service.
+sprintSchema.index(
+  { projectId: 1, status: 1 },
+  { unique: true, partialFilterExpression: { status: 'ACTIVE', isDeleted: false } },
+)
+
 const Sprint = mongoose.model('sprint', sprintSchema)
 
 export default Sprint

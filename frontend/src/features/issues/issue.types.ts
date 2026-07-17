@@ -83,9 +83,12 @@ export interface CreateIssuePayload {
 /** Body khi cập nhật toàn bộ issue (PUT /projects/:projectId/issues/:issueId) — mọi field optional. */
 export type UpdateIssuePayload = Partial<CreateIssuePayload>
 
-/** Body khi chỉ đổi status (PATCH /projects/:projectId/issues/:issueId/status) — vd kéo-thả trên Board. */
+/** Body khi chỉ đổi status (PATCH /projects/:projectId/issues/:issueId/status) — vd kéo-thả trên Board.
+ * `orderIndex` optional: cho phép 1 lần gọi xử lý cả đổi cột lẫn đổi vị trí khi kéo-thả,
+ * không cần dùng PUT (OWNER-only) chỉ để đổi vị trí. */
 export interface UpdateIssueStatusPayload {
   status: IssueStatus
+  orderIndex?: number
 }
 
 /** Query filter cho GET /projects/:projectId/issues (khớp issueService.getIssuesByProject). */

@@ -67,7 +67,13 @@ export const useUpdateIssueStatus = (projectId: string) => {
         queryKey: issueKeys.detail(projectId, updated._id),
       })
     },
-    onError: (error) => toast.error(getApiErrorMessage(error)),
+    // BE có thể từ chối (409, vd sprint vừa bị complete bởi người khác giữa lúc đang
+    // kéo) -> invalidate để board tự đồng bộ lại đúng trạng thái server, không để
+    // localIssues optimistic bị lệch vĩnh viễn.
+    onError: (error) => {
+      toast.error(getApiErrorMessage(error))
+      qc.invalidateQueries({ queryKey: issueKeys.lists() })
+    },
   })
 }
 

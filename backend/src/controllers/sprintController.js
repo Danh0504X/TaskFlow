@@ -5,7 +5,7 @@ import { sprintService } from '../services/sprintService.js'
 // Tạo sprint trong project.
 export const createSprint = asyncHandler(async (req, res) => {
   const { projectId } = req.params
-  const result = await sprintService.createSprint(projectId, req.user._id, req.body)
+  const result = await sprintService.createSprint(projectId, req.user._id, req.body, req.project)
 
   res.status(StatusCodes.CREATED).json({
     message: 'Sprint created successfully',
@@ -38,7 +38,7 @@ export const getSprintById = asyncHandler(async (req, res) => {
 // Cập nhật sprint.
 export const updateSprint = asyncHandler(async (req, res) => {
   const { projectId, sprintId } = req.params
-  const result = await sprintService.updateSprint(projectId, sprintId, req.body)
+  const result = await sprintService.updateSprint(projectId, sprintId, req.body, req.project)
 
   res.status(StatusCodes.OK).json({
     message: 'Sprint updated successfully',
@@ -49,7 +49,7 @@ export const updateSprint = asyncHandler(async (req, res) => {
 // Xóa mềm sprint.
 export const deleteSprint = asyncHandler(async (req, res) => {
   const { projectId, sprintId } = req.params
-  const result = await sprintService.deleteSprint(projectId, sprintId)
+  const result = await sprintService.deleteSprint(projectId, sprintId, req.project)
 
   res.status(StatusCodes.OK).json({
     message: 'Sprint deleted successfully',
@@ -60,7 +60,7 @@ export const deleteSprint = asyncHandler(async (req, res) => {
 // Start sprint (chuyển sang ACTIVE).
 export const startSprint = asyncHandler(async (req, res) => {
   const { projectId, sprintId } = req.params
-  const result = await sprintService.startSprint(projectId, sprintId)
+  const result = await sprintService.startSprint(projectId, sprintId, req.project)
 
   res.status(StatusCodes.OK).json({
     message: 'Sprint started successfully',
@@ -68,10 +68,17 @@ export const startSprint = asyncHandler(async (req, res) => {
   })
 })
 
-// Complete sprint (chuyển sang COMPLETED).
+// Complete sprint (chuyển sang COMPLETED). Nếu còn issue chưa DONE, req.body cần
+// { resolution, targetSprintId?, newSprint? } để quyết định chuyển chúng đi đâu.
 export const completeSprint = asyncHandler(async (req, res) => {
   const { projectId, sprintId } = req.params
-  const result = await sprintService.completeSprint(projectId, sprintId)
+  const result = await sprintService.completeSprint(
+    projectId,
+    sprintId,
+    req.project,
+    req.user._id,
+    req.body,
+  )
 
   res.status(StatusCodes.OK).json({
     message: 'Sprint completed successfully',

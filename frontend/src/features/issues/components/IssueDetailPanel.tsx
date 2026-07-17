@@ -3,7 +3,7 @@ import { motion, useReducedMotion } from 'motion/react'
 import { X, Share2, Eye, MoreHorizontal, Layers, Send } from 'lucide-react'
 import Avatar from '@/components/ui/Avatar'
 import Spinner from '@/components/ui/Spinner'
-import { useUpdateIssue } from '../hooks/useIssueMutations'
+import { useUpdateIssue, useUpdateIssueStatus } from '../hooks/useIssueMutations'
 import type { Issue, IssueStatus, IssuePriority } from '../issue.types'
 
 interface Comment {
@@ -29,6 +29,7 @@ interface IssueDetailPanelProps {
  */
 const IssueDetailPanel = ({ issue, projectId, isLoading, onClose }: IssueDetailPanelProps) => {
   const updateMutation = useUpdateIssue(projectId)
+  const statusMutation = useUpdateIssueStatus(projectId)
   const reduceMotion = useReducedMotion()
 
   // Nạp lại state chỉnh sửa cục bộ mỗi khi issue đổi (panel không unmount khi chuyển
@@ -50,17 +51,24 @@ const IssueDetailPanel = ({ issue, projectId, isLoading, onClose }: IssueDetailP
 
   // Đóng panel (nút X, bấm ra ngoài, phím Escape) đều đi qua đây: chỉ gọi API nếu có
   // thay đổi thật so với issue gốc, rồi đóng ngay — không chặn UI chờ request xong.
+  // Nếu CHỈ status đổi -> dùng PATCH .../status (OWNER+MEMBER, nhất quán với kéo-thả ở
+  // Board/Backlog, và tự động hưởng cơ chế khóa-Scrum khi dự án là Scrum). Nếu priority/
+  // description cũng đổi -> vẫn dùng PUT (OWNER-only, giữ nguyên quyền hiện hành cho 2 field đó).
   const handleClose = () => {
     if (issue) {
-      const hasChanges =
-        status !== issue.status ||
-        priority !== issue.priority ||
-        description !== (issue.description ?? '')
+      const statusChanged = status !== issue.status
+      const otherFieldsChanged =
+        priority !== issue.priority || description !== (issue.description ?? '')
 
-      if (hasChanges) {
+      if (otherFieldsChanged) {
         updateMutation.mutate({
           issueId: issue._id,
           payload: { status, priority, description },
+        })
+      } else if (statusChanged) {
+        statusMutation.mutate({
+          issueId: issue._id,
+          payload: { status },
         })
       }
     }

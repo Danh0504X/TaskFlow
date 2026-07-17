@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "TaskFlow - Project & Issues API",
-    "description": "CRUD API cho Project và Issue trong TaskFlow.\n\nCách dùng:\n1. Chạy request \"Sign In\" trong folder Auth để đăng nhập (server set cookie accessToken/refreshToken, Postman tự lưu và gửi lại ở các request sau).\n2. Chạy \"Create Project\" trong folder Projects — response sẽ tự lưu `projectId` vào biến collection.\n3. Set thêm `sprintId`, `assigneeId`, `parentIssueId`, `inviteEmail` nếu cần.\n4. Request \"Create Issue\" sẽ tự lưu `issueId` vào biến collection để dùng cho các request Get/Update/Delete phía sau.",
+    "description": "CRUD API cho Project, Sprint và Issue trong TaskFlow.\n\nCách dùng:\n1. Chạy request \"Sign In\" trong folder Auth để đăng nhập (server set cookie accessToken/refreshToken, Postman tự lưu và gửi lại ở các request sau).\n2. Chạy \"Create Project\" trong folder Projects (methodology SCRUM) — response sẽ tự lưu `projectId` vào biến collection.\n3. Với project SCRUM, chạy \"Create Sprint\" trong folder Sprints — response tự lưu `sprintId`. Các API sprint (create/update/delete/start/complete) trả 400 nếu project là KANBAN.\n4. Set thêm `assigneeId`, `parentIssueId`, `inviteEmail` nếu cần.\n5. Request \"Create Issue\" sẽ tự lưu `issueId` vào biến collection để dùng cho các request Get/Update/Delete phía sau. Với project SCRUM, không được gửi `sprintId` lúc tạo issue (issue mới luôn vào Backlog).\n6. Đổi status issue (\"Update Issue Status\") trên project SCRUM chỉ thành công khi issue đó đang thuộc 1 sprint ACTIVE — nếu không sẽ nhận 409.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -169,6 +169,134 @@
       ]
     },
     {
+      "name": "Sprints",
+      "item": [
+        {
+          "name": "Create Sprint",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const data = pm.response.json().data;",
+                  "    pm.collectionVariables.set('sprintId', data._id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Sprint 1\",\n  \"goal\": \"Hoàn thành màn hình đăng nhập\",\n  \"startDate\": \"2026-07-20\",\n  \"endDate\": \"2026-08-03\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectId}}/sprints",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectId}}", "sprints"]
+            },
+            "description": "Tạo sprint mới (status mặc định PLANNED). Chỉ OWNER, chỉ áp dụng cho project SCRUM (project KANBAN sẽ trả 400).\n\nBắt buộc: `name`, `startDate`, `endDate` (endDate phải sau startDate). Tùy chọn: `goal`, `orderIndex`."
+          }
+        },
+        {
+          "name": "Get Sprints By Project",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectId}}/sprints",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectId}}", "sprints"]
+            },
+            "description": "Lấy danh sách sprint (chưa xóa mềm) của project, sắp theo orderIndex. OWNER, MEMBER."
+          }
+        },
+        {
+          "name": "Get Sprint By Id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectId}}/sprints/{{sprintId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectId}}", "sprints", "{{sprintId}}"]
+            },
+            "description": "Lấy chi tiết 1 sprint. OWNER, MEMBER."
+          }
+        },
+        {
+          "name": "Update Sprint",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Sprint 1 (cập nhật)\",\n  \"goal\": \"Mục tiêu đã cập nhật\",\n  \"endDate\": \"2026-08-10\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectId}}/sprints/{{sprintId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectId}}", "sprints", "{{sprintId}}"]
+            },
+            "description": "Cập nhật sprint. Chỉ OWNER.\n\nQuy tắc theo trạng thái: PLANNED sửa tự do name/goal/startDate/endDate; ACTIVE chỉ sửa được name/goal/endDate (không sửa startDate); COMPLETED/CANCELLED không cho sửa gì (409)."
+          }
+        },
+        {
+          "name": "Start Sprint",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectId}}/sprints/{{sprintId}}/start",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectId}}", "sprints", "{{sprintId}}", "start"]
+            },
+            "description": "Chuyển sprint PLANNED -> ACTIVE. Chỉ OWNER.\n\nChỉ thành công nếu sprint đang PLANNED và project chưa có sprint ACTIVE nào khác (409 nếu vi phạm; race-condition được chặn thêm bởi unique partial index ở tầng DB)."
+          }
+        },
+        {
+          "name": "Complete Sprint",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resolution\": \"BACKLOG\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectId}}/sprints/{{sprintId}}/complete",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectId}}", "sprints", "{{sprintId}}", "complete"]
+            },
+            "description": "Chuyển sprint ACTIVE -> COMPLETED. Chỉ OWNER.\n\nNếu còn issue chưa DONE, bắt buộc `resolution`:\n- `BACKLOG`: đẩy các issue chưa DONE về Backlog (sprintId=null, giữ nguyên status).\n- `MOVE_TO_SPRINT`: cần thêm `targetSprintId` (phải là 1 sprint PLANNED khác cùng project).\n- `NEW_SPRINT`: cần thêm `newSprint: { name, startDate, endDate, goal? }` để tạo sprint PLANNED mới rồi chuyển issue vào đó.\n\nIssue đã DONE luôn giữ nguyên sprintId trỏ về sprint vừa complete (phục vụ velocity/báo cáo sau này)."
+          }
+        },
+        {
+          "name": "Delete Sprint",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectId}}/sprints/{{sprintId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectId}}", "sprints", "{{sprintId}}"]
+            },
+            "description": "Xóa mềm sprint (đồng thời gỡ các issue liên quan về Backlog). Chỉ OWNER. Không cho xóa sprint đang ACTIVE (409) — phải complete trước."
+          }
+        }
+      ]
+    },
+    {
       "name": "Issues",
       "item": [
         {
@@ -278,14 +406,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"status\": \"IN_REVIEW\"\n}"
+              "raw": "{\n  \"status\": \"IN_REVIEW\",\n  \"orderIndex\": 1000\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/projects/{{projectId}}/issues/{{issueId}}/status",
               "host": ["{{baseUrl}}"],
               "path": ["projects", "{{projectId}}", "issues", "{{issueId}}", "status"]
             },
-            "description": "Cập nhật riêng trạng thái issue (dùng cho kéo-thả trên bảng Kanban). OWNER, MEMBER.\n\n`status` phải là 1 trong: TODO | IN_PROGRESS | IN_REVIEW | DONE."
+            "description": "Cập nhật riêng trạng thái (và tùy chọn `orderIndex`) của issue — dùng cho kéo-thả trên Board/Backlog. OWNER, MEMBER.\n\n`status` bắt buộc, phải là 1 trong: TODO | IN_PROGRESS | IN_REVIEW | DONE. `orderIndex` tùy chọn.\n\nVới project SCRUM: chỉ thành công nếu issue đang thuộc 1 sprint đang ACTIVE, ngược lại trả 409 (\"Board đang khóa\" / issue đang ở Backlog)."
           }
         },
         {

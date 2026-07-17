@@ -5,7 +5,7 @@ import { issueService } from '../services/issueService.js'
 // Tạo issue trong project.
 export const createIssue = asyncHandler(async (req, res) => {
   const { projectId } = req.params
-  const result = await issueService.createIssue(projectId, req.user._id, req.body)
+  const result = await issueService.createIssue(projectId, req.user._id, req.body, req.project)
 
   res.status(StatusCodes.CREATED).json({
     message: 'Issue created successfully',
@@ -49,7 +49,7 @@ export const getIssueById = asyncHandler(async (req, res) => {
 // Cập nhật toàn bộ issue.
 export const updateIssue = asyncHandler(async (req, res) => {
   const { projectId, issueId } = req.params
-  const result = await issueService.updateIssue(projectId, issueId, req.body, req.project.key)
+  const result = await issueService.updateIssue(projectId, issueId, req.body, req.project.key, req.project)
 
   res.status(StatusCodes.OK).json({
     message: 'Issue updated successfully',
@@ -60,7 +60,7 @@ export const updateIssue = asyncHandler(async (req, res) => {
 // Cập nhật riêng status của issue.
 export const updateIssueStatus = asyncHandler(async (req, res) => {
   const { projectId, issueId } = req.params
-  const result = await issueService.updateIssueStatus(projectId, issueId, req.body, req.project.key)
+  const result = await issueService.updateIssueStatus(projectId, issueId, req.body, req.project.key, req.project)
 
   res.status(StatusCodes.OK).json({
     message: 'Issue status updated successfully',

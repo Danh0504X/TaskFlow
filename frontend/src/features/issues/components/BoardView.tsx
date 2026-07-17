@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useRef } from 'react'
 import {
   DndContext,
   MouseSensor,
@@ -11,48 +11,49 @@ import {
 import type { DragStartEvent, DragEndEvent, DragOverEvent } from '@dnd-kit/core'
 import SearchInput from '@/components/ui/SearchInput'
 import Spinner from '@/components/ui/Spinner'
-import { useProjectIssues } from '@/features/issues/hooks/useIssues'
-import { useIssueSearch } from '@/features/issues/hooks/useIssueSearch'
-import { useUpdateIssue } from '@/features/issues/hooks/useIssueMutations'
-import BoardColumn from '@/features/issues/components/BoardColumn'
-import IssueCard from '@/features/issues/components/IssueCard'
+import { useIssueSearch } from '../hooks/useIssueSearch'
+import BoardColumn from './BoardColumn'
+import IssueCard from './IssueCard'
 import { calculateNewOrderIndex } from '@/lib/dndHelpers'
-import type { IssueStatus, Issue } from '@/features/issues/issue.types'
+import type { IssueStatus, Issue } from '../issue.types'
 
-interface ProjectBoardProps {
-  projectId: string
+export interface BoardColumnDef {
+  status: IssueStatus
+  title: string
+}
+
+interface BoardViewProps {
+  issues: Issue[]
+  columns: BoardColumnDef[]
+  isLoading?: boolean
+  /** Khóa board (không cho kéo-thả) — dùng khi Scrum project không có sprint ACTIVE. */
+  disabled?: boolean
+  onDragEnd: (issueId: string, status: IssueStatus, orderIndex: number) => void
   onSelectIssue: (issueKey: string) => void
 }
 
-const COLUMNS = [
-  { status: 'TODO', title: 'Cần làm' },
-  { status: 'IN_PROGRESS', title: 'Đang tiến hành' },
-  { status: 'IN_REVIEW', title: 'Đang đánh giá' },
-  { status: 'DONE', title: 'Hoàn thành' },
-] as const
+/**
+ * Board thuần (dumb component) — không biết gì về methodology/sprint/mutation, chỉ nhận
+ * issues/columns và gọi `onDragEnd` khi kéo-thả xong. Dùng chung cho cả KanbanBoardContainer
+ * và ScrumBoardContainer để tránh copy-paste 2 board riêng biệt.
+ */
+const BoardView = ({ issues, columns, isLoading, disabled = false, onDragEnd, onSelectIssue }: BoardViewProps) => {
+  // State local để quản lý vị trí các issues mượt mà lúc đang kéo (DragOver).
+  // Đồng bộ lại mỗi khi `issues` từ server đổi reference (refetch) — dùng pattern "adjusting
+  // state during render" (so sánh với giá trị đã đồng bộ lần trước) thay vì useEffect, để
+  // tránh 1 lượt render thừa mỗi lần đồng bộ (xem react-hooks/set-state-in-effect).
+  const [localIssues, setLocalIssues] = useState<Issue[]>(issues)
+  const [syncedIssues, setSyncedIssues] = useState<Issue[]>(issues)
+  if (issues !== syncedIssues) {
+    setSyncedIssues(issues)
+    setLocalIssues(issues)
+  }
 
-const ProjectBoard = ({ projectId, onSelectIssue }: ProjectBoardProps) => {
-  // Lấy toàn bộ issues, sau đó lọc ở client để giữ lại TASK và BUG (loại bỏ EPIC, SUBTASK)
-  const { data: issues, isLoading } = useProjectIssues(projectId)
-  const updateIssueMutation = useUpdateIssue(projectId)
-
-  // State local để quản lý vị trí các issues mượt mà lúc đang kéo (DragOver)
-  const [localIssues, setLocalIssues] = useState<Issue[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
   const lastOverId = useRef<string | null>(null)
 
-  // Đồng bộ local issues khi query data từ server thay đổi
-  useEffect(() => {
-    if (issues) {
-      setLocalIssues(issues)
-    }
-  }, [issues])
-
-  const taskIssues = localIssues
-    .filter((issue) => issue.type !== 'EPIC' && issue.type !== 'SUBTASK')
-    .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0))
-
-  const { query, setQuery, filtered } = useIssueSearch(taskIssues)
+  const sortedIssues = [...localIssues].sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0))
+  const { query, setQuery, filtered } = useIssueSearch(sortedIssues)
 
   const mouseSensor = useSensor(MouseSensor, {
     activationConstraint: {
@@ -66,6 +67,9 @@ const ProjectBoard = ({ projectId, onSelectIssue }: ProjectBoardProps) => {
     },
   })
   const sensors = useSensors(mouseSensor, touchSensor)
+  // Khi disabled: không đăng ký sensor nào -> không thể khởi tạo thao tác kéo, board
+  // hiển thị read-only mà không cần tách 2 nhánh render riêng.
+  const activeSensors = disabled ? [] : sensors
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string)
@@ -90,7 +94,7 @@ const ProjectBoard = ({ projectId, onSelectIssue }: ProjectBoardProps) => {
 
     // Xác định status của container đích
     let targetStatus: IssueStatus | null = null
-    const isColumnId = COLUMNS.some((col) => col.status === overId)
+    const isColumnId = columns.some((col) => col.status === overId)
     if (isColumnId) {
       targetStatus = overId as IssueStatus
     } else {
@@ -157,20 +161,14 @@ const ProjectBoard = ({ projectId, onSelectIssue }: ProjectBoardProps) => {
     // Tìm trạng thái sau khi kéo thả của issue để cập nhật API
     const finalIssue = localIssues.find((i) => i._id === issueId)
     if (finalIssue) {
-      const activeOriginal = issues?.find((i) => i._id === issueId)
-      
+      const originalIssue = issues.find((i) => i._id === issueId)
+
       // Chỉ gọi API nếu thực sự có sự thay đổi về cột hoặc vị trí
       if (
-        activeOriginal?.status !== finalIssue.status ||
-        activeOriginal?.orderIndex !== finalIssue.orderIndex
+        originalIssue?.status !== finalIssue.status ||
+        originalIssue?.orderIndex !== finalIssue.orderIndex
       ) {
-        updateIssueMutation.mutate({
-          issueId,
-          payload: {
-            status: finalIssue.status,
-            orderIndex: finalIssue.orderIndex,
-          },
-        })
+        onDragEnd(issueId, finalIssue.status, finalIssue.orderIndex ?? 0)
       }
     }
 
@@ -180,14 +178,20 @@ const ProjectBoard = ({ projectId, onSelectIssue }: ProjectBoardProps) => {
 
   const handleDragCancel = () => {
     // Reset lại mảng localIssues nếu kéo bị hủy bỏ
-    if (issues) {
-      setLocalIssues(issues)
-    }
+    setLocalIssues(issues)
     setActiveId(null)
     lastOverId.current = null
   }
 
   const activeIssue = localIssues.find((i) => i._id === activeId)
+
+  if (isLoading) {
+    return (
+      <div className="py-12 flex justify-center text-muted">
+        <Spinner />
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -200,43 +204,36 @@ const ProjectBoard = ({ projectId, onSelectIssue }: ProjectBoardProps) => {
         />
       </div>
 
-      {isLoading ? (
-        <div className="py-12 flex justify-center text-muted">
-          <Spinner />
+      <DndContext
+        sensors={activeSensors}
+        collisionDetection={pointerWithin}
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
+      >
+        <div className="flex gap-6 overflow-x-auto pb-4 scrollbar-thin">
+          {columns.map((col) => (
+            <BoardColumn
+              key={col.status}
+              title={col.title}
+              status={col.status}
+              issues={filtered.filter((issue) => issue.status === col.status)}
+              onSelectIssue={onSelectIssue}
+            />
+          ))}
         </div>
-      ) : (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={pointerWithin}
-          onDragStart={handleDragStart}
-          onDragOver={handleDragOver}
-          onDragEnd={handleDragEnd}
-          onDragCancel={handleDragCancel}
-        >
-          <div className="flex gap-6 overflow-x-auto pb-4 scrollbar-thin">
-            {COLUMNS.map((col) => (
-              <BoardColumn
-                key={col.status}
-                title={col.title}
-                status={col.status}
-                issues={filtered.filter((issue) => issue.status === col.status)}
-                onSelectIssue={onSelectIssue}
-              />
-            ))}
-          </div>
 
-          <DragOverlay adjustScale={false}>
-            {activeId && activeIssue ? (
-              <div className="w-[256px] opacity-95 shadow-xl cursor-grabbing select-none pointer-events-none">
-                <IssueCard issue={activeIssue} />
-              </div>
-            ) : null}
-          </DragOverlay>
-        </DndContext>
-      )}
+        <DragOverlay adjustScale={false}>
+          {activeId && activeIssue ? (
+            <div className="w-[256px] opacity-95 shadow-xl cursor-grabbing select-none pointer-events-none">
+              <IssueCard issue={activeIssue} />
+            </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
     </div>
   )
 }
 
-export default ProjectBoard
-
+export default BoardView

@@ -13,12 +13,15 @@ import { useProject } from '../hooks/useProject'
 import { PROJECT_METHODOLOGY, type ProjectMethodology } from '../project.types'
 import ProjectSummaryTab from '../components/ProjectSummaryTab'
 import ProjectListTab from '../components/ProjectListTab'
-import ProjectBoard from '../components/ProjectBoard'
-import ProjectBacklogTab from '../components/ProjectBacklogTab'
+import KanbanBoardContainer from '../components/KanbanBoardContainer'
+import ScrumBoardContainer from '../components/ScrumBoardContainer'
+import BacklogView from '../components/BacklogView'
 
 type WorkspaceTab = 'SUMMARY' | 'LIST' | 'BOARD' | 'BACKLOG'
 
 // Backlog = quản lý Sprint -> chỉ có ý nghĩa với Scrum, Kanban không có Sprint nên ẩn tab này.
+// Đây chỉ là tab nội bộ (không có URL riêng) -> không cần route guard, vì không có gì để
+// gõ thẳng URL bypass; chặn thật vẫn nằm ở backend (ensureScrumProject trong sprintService.js).
 const getTabItems = (methodology: ProjectMethodology): { value: WorkspaceTab; label: string }[] => [
   { value: 'SUMMARY', label: 'Tóm tắt' },
   { value: 'LIST', label: 'Danh sách' },
@@ -110,8 +113,24 @@ const ProjectWorkspacePage = () => {
           >
             {activeTab === 'SUMMARY' && <ProjectSummaryTab projectId={project._id} />}
             {activeTab === 'LIST' && <ProjectListTab projectId={project._id} onSelectIssue={setSelectedIssueKey} />}
-            {activeTab === 'BOARD' && <ProjectBoard projectId={project._id} onSelectIssue={setSelectedIssueKey} />}
-            {activeTab === 'BACKLOG' && <ProjectBacklogTab projectId={project._id} onSelectIssue={setSelectedIssueKey} />}
+            {activeTab === 'BOARD' && (
+              project.methodology === PROJECT_METHODOLOGY.SCRUM ? (
+                <ScrumBoardContainer
+                  projectId={project._id}
+                  onSelectIssue={setSelectedIssueKey}
+                  onGoToBacklog={() => setActiveTab('BACKLOG')}
+                />
+              ) : (
+                <KanbanBoardContainer projectId={project._id} onSelectIssue={setSelectedIssueKey} />
+              )
+            )}
+            {activeTab === 'BACKLOG' && (
+              <BacklogView
+                projectId={project._id}
+                onSelectIssue={setSelectedIssueKey}
+                onGoToBoard={() => setActiveTab('BOARD')}
+              />
+            )}
           </motion.div>
         </AnimatePresence>
       </div>

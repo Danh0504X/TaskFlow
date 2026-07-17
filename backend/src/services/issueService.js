@@ -47,17 +47,22 @@ const toIssueDTO = (issue, projectKey) => {
   }
 }
 
-// Đảm bảo sprintId thuộc đúng project (và chưa bị xóa mềm).
+// Đảm bảo sprintId thuộc đúng project, chưa bị xóa mềm, và đang ở trạng thái còn "sống"
+// (PLANNED/ACTIVE) — không cho gán issue vào 1 sprint đã COMPLETED/CANCELLED.
 const ensureSprintInProject = async (projectId, sprintId) => {
   ensureValidObjectId(sprintId, 'sprint id')
   const sprint = await Sprint.findOne({
     _id: sprintId,
     projectId,
     isDeleted: false,
+    status: { $in: ['PLANNED', 'ACTIVE'] },
   }).lean()
 
   if (!sprint) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'Sprint does not belong to this project')
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      'Sprint does not belong to this project or is no longer open (must be PLANNED or ACTIVE)',
+    )
   }
 }
 
@@ -80,8 +85,30 @@ const ensureParentIssueInProject = async (projectId, parentIssueId, currentIssue
   }
 }
 
+// Board chỉ "mở" (cho đổi status) với: project KANBAN (luôn tự do), hoặc project SCRUM
+// khi issue đang thuộc 1 sprint đang ACTIVE. Đây là chốt chặn thật ở backend cho việc
+// "khóa board khi không có sprint đang chạy" — trước đây chỉ là ý tưởng UI, không có ở BE.
+const ensureIssueStatusChangeAllowed = async (project, issue) => {
+  if (!project || project.methodology !== 'SCRUM') return
+
+  if (!issue.sprintId) {
+    throw new ApiError(
+      StatusCodes.CONFLICT,
+      'Issue đang ở Backlog — cần đưa vào sprint đang chạy trước khi đổi trạng thái',
+    )
+  }
+
+  const sprint = await Sprint.findOne({ _id: issue.sprintId, isDeleted: false }).lean()
+  if (!sprint || sprint.status !== 'ACTIVE') {
+    throw new ApiError(
+      StatusCodes.CONFLICT,
+      'Board đang khóa vì dự án không có sprint nào đang chạy',
+    )
+  }
+}
+
 // Tạo issue trong project.
-const createIssue = async (projectId, userId, body = {}) => {
+const createIssue = async (projectId, userId, body = {}, project) => {
   ensureValidObjectId(projectId, 'project id')
 
   const {
@@ -112,6 +139,15 @@ const createIssue = async (projectId, userId, body = {}) => {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid issue priority')
   }
 
+  // Scrum: issue mới luôn vào Backlog, không cho gán sprint ngay lúc tạo (phải qua
+  // Backlog để lập kế hoạch trước). Kanban: giữ nguyên hành vi cũ, không có ràng buộc này.
+  if (project?.methodology === 'SCRUM' && sprintId) {
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      'Issue mới trong dự án Scrum luôn vào Backlog, không được gán sprint lúc tạo',
+    )
+  }
+
   if (sprintId) {
     await ensureSprintInProject(projectId, sprintId)
   }
@@ -126,19 +162,19 @@ const createIssue = async (projectId, userId, body = {}) => {
 
   // Tăng nguyên tử bộ đếm issue của project -> dùng làm issueNumber, tránh đụng
   // số thứ tự khi nhiều issue được tạo đồng thời.
-  const project = await Project.findOneAndUpdate(
+  const updatedProject = await Project.findOneAndUpdate(
     { _id: projectId, isDeleted: false },
     { $inc: { issueSeq: 1 } },
     { new: true },
   )
-  if (!project) {
+  if (!updatedProject) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Project not found')
   }
 
   const issue = await Issue.create({
     projectId,
     createdBy: userId,
-    issueNumber: project.issueSeq,
+    issueNumber: updatedProject.issueSeq,
     title: title.trim(),
     description: description?.trim() || '',
     type: type || undefined,
@@ -152,7 +188,7 @@ const createIssue = async (projectId, userId, body = {}) => {
 
   await issue.populate([ASSIGNEE_POPULATE, PARENT_ISSUE_POPULATE])
 
-  return toIssueDTO(issue, project.key)
+  return toIssueDTO(issue, updatedProject.key)
 }
 
 // Lấy danh sách issue theo project, hỗ trợ filter qua query.
@@ -206,7 +242,10 @@ const getIssuesBySprint = async (projectId, sprintId, projectKey) => {
   ensureValidObjectId(projectId, 'project id')
   ensureValidObjectId(sprintId, 'sprint id')
 
-  await ensureSprintInProject(projectId, sprintId)
+  const sprint = await Sprint.findOne({ _id: sprintId, projectId, isDeleted: false }).lean()
+  if (!sprint) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Sprint does not belong to this project')
+  }
 
   const issues = await Issue.find({ projectId, sprintId, isDeleted: false })
     .sort({ orderIndex: 1 })
@@ -234,13 +273,17 @@ const getIssueById = async (projectId, issueId, projectKey) => {
 }
 
 // Cập nhật toàn bộ issue.
-const updateIssue = async (projectId, issueId, body = {}, projectKey) => {
+const updateIssue = async (projectId, issueId, body = {}, projectKey, project) => {
   ensureValidObjectId(projectId, 'project id')
   ensureValidObjectId(issueId, 'issue id')
 
   const issue = await Issue.findOne({ _id: issueId, projectId, isDeleted: false })
   if (!issue) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Issue not found')
+  }
+
+  if (body.status !== undefined) {
+    await ensureIssueStatusChangeAllowed(project, issue)
   }
 
   const payload = {}
@@ -319,27 +362,33 @@ const updateIssue = async (projectId, issueId, body = {}, projectKey) => {
   return toIssueDTO(issue, projectKey)
 }
 
-// Cập nhật riêng status của issue (dành cho cả MEMBER).
-const updateIssueStatus = async (projectId, issueId, body = {}, projectKey) => {
+// Cập nhật riêng status của issue (dành cho cả MEMBER) — cũng là endpoint chính cho
+// kéo-thả trên Board/Backlog nên nhận thêm `orderIndex` (optional) để 1 lần gọi xử lý
+// được cả đổi cột lẫn đổi vị trí, không cần rơi về PUT (OWNER-only) chỉ vì orderIndex.
+const updateIssueStatus = async (projectId, issueId, body = {}, projectKey, project) => {
   ensureValidObjectId(projectId, 'project id')
   ensureValidObjectId(issueId, 'issue id')
 
-  const { status } = body
+  const { status, orderIndex } = body
   if (!status || !ISSUE_STATUSES.includes(status)) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid issue status')
   }
 
-  const issue = await Issue.findOneAndUpdate(
-    { _id: issueId, projectId, isDeleted: false },
-    { status },
-    { new: true, runValidators: true },
-  )
-    .populate(ASSIGNEE_POPULATE)
-    .populate(PARENT_ISSUE_POPULATE)
-
+  const issue = await Issue.findOne({ _id: issueId, projectId, isDeleted: false })
   if (!issue) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Issue not found')
   }
+
+  await ensureIssueStatusChangeAllowed(project, issue)
+
+  const update = { status }
+  if (orderIndex !== undefined) {
+    update.orderIndex = orderIndex
+  }
+
+  issue.set(update)
+  await issue.save()
+  await issue.populate([ASSIGNEE_POPULATE, PARENT_ISSUE_POPULATE])
 
   return toIssueDTO(issue, projectKey)
 }
