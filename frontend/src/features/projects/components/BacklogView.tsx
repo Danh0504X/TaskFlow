@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Calendar, ChevronDown, ChevronRight, Pencil, Play, Plus, Trash2 } from 'lucide-react'
+import { Calendar, ChevronDown, ChevronRight, Plus } from 'lucide-react'
 import {
   DndContext,
   MouseSensor,
@@ -20,13 +20,13 @@ import { useAuthStore } from '@/features/auth/authStore'
 import { useProjectIssues } from '@/features/issues/hooks/useIssues'
 import { useUpdateIssue } from '@/features/issues/hooks/useIssueMutations'
 import { calculateNewOrderIndex } from '@/lib/dndHelpers'
-import { formatDate } from '@/lib/format'
+import { formatDate, toDateInputValue } from '@/lib/format'
 import type { Issue, UpdateIssuePayload } from '@/features/issues/issue.types'
 import { useProject } from '../hooks/useProject'
 import { useSprints } from '@/features/sprints/hooks/useSprints'
-import { useDeleteSprint, useStartSprint } from '@/features/sprints/hooks/useSprintMutations'
+import { useCreateSprint, useDeleteSprint, useStartSprint } from '@/features/sprints/hooks/useSprintMutations'
 import { SPRINT_STATUS, type Sprint } from '@/features/sprints/sprint.types'
-import SprintFormModal from '@/features/sprints/components/SprintFormModal'
+import PlannedSprintCardHeader from '@/features/sprints/components/PlannedSprintCardHeader'
 
 interface BacklogViewProps {
   projectId: string
@@ -79,11 +79,12 @@ const BacklogView = ({ projectId, onSelectIssue, onGoToBoard }: BacklogViewProps
   const { data: sprints, isLoading: sprintsLoading } = useSprints(projectId)
   const { data: issues, isLoading: issuesLoading } = useProjectIssues(projectId)
   const updateIssueMutation = useUpdateIssue(projectId)
+  const createMutation = useCreateSprint(projectId)
   const startMutation = useStartSprint(projectId)
   const deleteMutation = useDeleteSprint(projectId)
 
   const [openContainers, setOpenContainers] = useState<Record<string, boolean>>({})
-  const [formSprint, setFormSprint] = useState<Sprint | null | 'new'>(null)
+  const [editingSprintId, setEditingSprintId] = useState<string | null>(null)
   const [deletingSprint, setDeletingSprint] = useState<Sprint | null>(null)
   const [startWarningSprint, setStartWarningSprint] = useState<Sprint | null>(null)
 
@@ -164,6 +165,24 @@ const BacklogView = ({ projectId, onSelectIssue, onGoToBoard }: BacklogViewProps
     startMutation.mutate(sprint._id)
   }
 
+  // Tạo sprint NGAY khi bấm nút — không qua modal. Tên mặc định "Sprint N" theo thứ tự,
+  // ngày mặc định bắt đầu hôm nay và kết thúc sau 2 tuần; người dùng chỉnh lại trực tiếp
+  // trong khung (tự vào chế độ sửa ngay sau khi tạo xong).
+  const handleCreateSprint = () => {
+    const start = new Date()
+    const end = new Date()
+    end.setDate(end.getDate() + 14)
+
+    createMutation.mutate(
+      {
+        name: `Sprint ${(sprints?.length ?? 0) + 1}`,
+        startDate: toDateInputValue(start.toISOString()),
+        endDate: toDateInputValue(end.toISOString()),
+      },
+      { onSuccess: (created) => setEditingSprintId(created._id) },
+    )
+  }
+
   if (sprintsLoading || issuesLoading) {
     return (
       <div className="py-12 flex justify-center text-muted">
@@ -177,8 +196,9 @@ const BacklogView = ({ projectId, onSelectIssue, onGoToBoard }: BacklogViewProps
       {isOwner && (
         <div className="flex justify-end">
           <button
-            onClick={() => setFormSprint('new')}
-            className="flex items-center gap-2 px-4 py-2.5 bg-brand text-white rounded-xl text-xs font-bold shadow-lg shadow-brand/20 hover:bg-brand-light transition-all active:scale-95"
+            onClick={handleCreateSprint}
+            disabled={createMutation.isPending}
+            className="flex items-center gap-2 px-4 py-2.5 bg-brand text-white rounded-xl text-xs font-bold shadow-lg shadow-brand/20 hover:bg-brand-light transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
           >
             <Plus size={15} />
             <span>Tạo sprint</span>
@@ -231,53 +251,20 @@ const BacklogView = ({ projectId, onSelectIssue, onGoToBoard }: BacklogViewProps
               id={sprint._id}
               className="bg-white border border-line/30 rounded-3xl p-6 shadow-sm"
             >
-              <div className="flex flex-wrap items-center justify-between gap-4 mb-6 pb-4 border-b border-line/10">
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => toggleOpen(sprint._id)}
-                    className="p-1 rounded hover:bg-slate-100 text-muted transition-all"
-                  >
-                    {isOpen(sprint._id) ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
-                  </button>
-                  <div>
-                    <h3 className="text-base font-extrabold text-ink">{sprint.name}</h3>
-                    <p className="text-xs text-muted mt-1 font-medium flex items-center gap-1.5">
-                      <Calendar size={12} />
-                      <span>
-                        {formatDate(sprint.startDate)} — {formatDate(sprint.endDate)} · {sprintIssues.length} công việc
-                      </span>
-                    </p>
-                  </div>
-                </div>
-
-                {isOwner && (
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleStartClick(sprint)}
-                      disabled={!!activeSprint || startMutation.isPending}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-lg text-[11px] font-bold hover:bg-emerald-100 transition-all disabled:opacity-40 disabled:pointer-events-none"
-                      title={activeSprint ? 'Dự án đã có sprint đang chạy' : 'Bắt đầu sprint này'}
-                    >
-                      <Play size={12} />
-                      <span>Start</span>
-                    </button>
-                    <button
-                      onClick={() => setFormSprint(sprint)}
-                      className="p-1.5 rounded-lg hover:bg-slate-100 text-muted hover:text-ink transition-all"
-                      aria-label="Sửa sprint"
-                    >
-                      <Pencil size={14} />
-                    </button>
-                    <button
-                      onClick={() => setDeletingSprint(sprint)}
-                      className="p-1.5 rounded-lg hover:bg-red-50 text-muted hover:text-red-600 transition-all"
-                      aria-label="Xóa sprint"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                )}
-              </div>
+              <PlannedSprintCardHeader
+                projectId={projectId}
+                sprint={sprint}
+                issueCount={sprintIssues.length}
+                isOwner={isOwner}
+                isOpen={isOpen(sprint._id)}
+                onToggleOpen={() => toggleOpen(sprint._id)}
+                isEditing={editingSprintId === sprint._id}
+                onToggleEdit={() => setEditingSprintId((prev) => (prev === sprint._id ? null : sprint._id))}
+                hasActiveSprint={!!activeSprint}
+                onStartClick={() => handleStartClick(sprint)}
+                startPending={startMutation.isPending}
+                onDeleteClick={() => setDeletingSprint(sprint)}
+              />
 
               {isOpen(sprint._id) && (
                 <div className="space-y-2.5 min-h-[50px]">
@@ -335,13 +322,6 @@ const BacklogView = ({ projectId, onSelectIssue, onGoToBoard }: BacklogViewProps
           Chưa có sprint nào. {isOwner && 'Bấm "Tạo sprint" để bắt đầu lập kế hoạch.'}
         </p>
       )}
-
-      <SprintFormModal
-        open={!!formSprint}
-        onClose={() => setFormSprint(null)}
-        projectId={projectId}
-        sprint={formSprint === 'new' ? null : formSprint}
-      />
 
       <ConfirmDialog
         open={!!deletingSprint}
