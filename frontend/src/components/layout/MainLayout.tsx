@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { LayoutGrid, FolderGit2, CheckSquare, LogOut } from 'lucide-react'
+import { LayoutGrid, FolderGit2, CheckSquare, LogOut, User } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { APP_LOGO_URL } from '@/lib/constants'
 import Avatar from '@/components/ui/Avatar'
@@ -11,6 +11,7 @@ const navItems = [
   { to: '/', label: 'Tổng quan', icon: LayoutGrid, end: true },
   { to: '/projects', label: 'Dự án của tôi', icon: FolderGit2, end: false },
   { to: '/tasks', label: 'Việc của tôi', icon: CheckSquare, end: false },
+  { to: '/profile', label: 'Hồ sơ', icon: User, end: false },
 ]
 
 /** Layout gốc cho các trang cần đăng nhập: sidebar dùng chung + nội dung trang render vào <Outlet />. */

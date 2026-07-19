@@ -16,7 +16,7 @@ import ProjectWorkspacePage from '@/features/projects/pages/ProjectWorkspacePage
 import ProjectSetupWizard from '@/features/projects/pages/ProjectSetupWizard'
 import MyTasksPage from '@/features/tasks/pages/MyTasksPage'
 import { useAuthStore } from '@/features/auth/authStore'
-
+import { ProfilePage } from '@/features/profile/pages/ProfilePage'
 // Chặn truy cập trang cần đăng nhập.
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const user = useAuthStore((state) => state.user)
@@ -45,6 +45,7 @@ const router = createBrowserRouter([
       { path: 'projects/new', element: <ProjectSetupWizard /> },
       { path: 'projects/:projectId', element: <ProjectWorkspacePage /> },
       { path: 'tasks', element: <MyTasksPage /> },
+      { path: 'profile', element: <ProfilePage /> },
     ],
   },
   {

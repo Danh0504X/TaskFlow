@@ -1,0 +1,22 @@
+{
+  "name": "project-hub",
+  "version": "1.0.0",
+  "description": "Full-stack project management app (Node.js + React)",
+  "private": true,
+  "scripts": {
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "build:backend": "cd backend && npm install",
+    "build:frontend": "cd frontend && npm install && npm run build",
+    "build": "npm run build:backend && npm run build:frontend",
+    "start": "cd backend && npm start",
+    "setup": "npm run build:backend && npm run build:frontend"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "keywords": ["nodejs", "express", "react", "typescript", "mongodb"],
+  "author": "Team",
+  "license": "ISC"
+}
