@@ -19,6 +19,7 @@ import { SortableItem } from '@/components/ui/dnd/SortableItem'
 import { useAuthStore } from '@/features/auth/authStore'
 import { useProjectIssues } from '@/features/issues/hooks/useIssues'
 import { useUpdateIssue } from '@/features/issues/hooks/useIssueMutations'
+import QuickAddIssue from '@/features/issues/components/QuickAddIssue'
 import { calculateNewOrderIndex } from '@/lib/dndHelpers'
 import { formatDate, toDateInputValue } from '@/lib/format'
 import type { Issue, UpdateIssuePayload } from '@/features/issues/issue.types'
@@ -275,8 +276,12 @@ const BacklogView = ({ projectId, onSelectIssue, onGoToBoard }: BacklogViewProps
                       </SortableItem>
                     ))}
                   </SortableContext>
-                  {sprintIssues.length === 0 && (
-                    <p className="text-xs text-subtle italic py-4 text-center">Kéo công việc từ Backlog vào đây.</p>
+                  {isOwner && (
+                    <QuickAddIssue
+                      projectId={projectId}
+                      targetSprintId={sprint._id}
+                      nextOrderIndex={calculateNewOrderIndex(sprintIssues, sprintIssues.length)}
+                    />
                   )}
                 </div>
               )}
@@ -309,8 +314,12 @@ const BacklogView = ({ projectId, onSelectIssue, onGoToBoard }: BacklogViewProps
                   </SortableItem>
                 ))}
               </SortableContext>
-              {backlogIssues.length === 0 && (
-                <p className="text-xs text-subtle italic py-4 text-center">Backlog trống.</p>
+              {isOwner && (
+                <QuickAddIssue
+                  projectId={projectId}
+                  targetSprintId={null}
+                  nextOrderIndex={calculateNewOrderIndex(backlogIssues, backlogIssues.length)}
+                />
               )}
             </div>
           )}
