@@ -26,11 +26,10 @@ export const SortableItem = ({ id, children, disabled = false }: SortableItemPro
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      {isDragging ? (
-        <div className="border-2 border-dashed border-brand/20 bg-brand/5 rounded-2xl h-[126px]" />
-      ) : (
-        children
-      )}
+      {/* Làm mờ item gốc khi đang kéo thay vì thay bằng khung placeholder chiều cao cố định
+       * -> tự khớp đúng chiều cao thật của item (card Board cao, dòng Backlog thấp), tránh
+       * các item khác bị đẩy lên/xuống một khoảng lớn do lệch chiều cao giả với chiều cao thật. */}
+      <div className={isDragging ? 'opacity-30 pointer-events-none' : undefined}>{children}</div>
     </div>
   )
 }
