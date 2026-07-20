@@ -37,7 +37,7 @@ const BoardColumn = ({ title, status, issues, onSelectIssue, projectId, quickAdd
         <SortableContext items={issueIds} strategy={verticalListSortingStrategy}>
           {issues.map((issue) => (
             <SortableItem key={issue._id} id={issue._id}>
-              <IssueCard issue={issue} projectId={projectId} onClick={() => onSelectIssue(issue.key)} />
+              <IssueCard issue={issue} projectId={projectId} isOwner={isOwner} onClick={() => onSelectIssue(issue.key)} />
             </SortableItem>
           ))}
         </SortableContext>

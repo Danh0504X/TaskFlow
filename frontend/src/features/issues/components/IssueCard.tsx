@@ -8,6 +8,8 @@ interface IssueCardProps {
   issue: Issue
   projectId: string
   onClick?: () => void
+  /** Chỉ OWNER được đổi người gán (đi qua PUT /issues/:id, OWNER-only) -> MEMBER chỉ xem. */
+  isOwner: boolean
 }
 
 // Thanh màu bên trái theo độ ưu tiên -> quét bảng Kanban nhanh hơn mà không cần đọc badge.
@@ -18,8 +20,8 @@ const priorityAccent: Record<IssuePriority, string> = {
   LOW: 'border-l-line',
 }
 
-const IssueCard = ({ issue, projectId, onClick }: IssueCardProps) => {
-  const updateMutation = useUpdateIssue(projectId)
+const IssueCard = ({ issue, projectId, onClick, isOwner }: IssueCardProps) => {
+  const updateMutation = useUpdateIssue(projectId, { silent: true })
 
   return (
     <div
@@ -49,6 +51,7 @@ const IssueCard = ({ issue, projectId, onClick }: IssueCardProps) => {
           value={issue.assigneeId ?? null}
           onChange={(userId) => updateMutation.mutate({ issueId: issue._id, payload: { assigneeId: userId } })}
           size={22}
+          readOnly={!isOwner}
         />
       </div>
     </div>

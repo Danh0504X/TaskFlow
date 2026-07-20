@@ -15,6 +15,7 @@ import type {
  * 2. hiện toast báo kết quả.
  * Lỗi được bắt tập trung -> hiện toast lỗi, không để component tự xử lý.
  */
+
 /** `silent`: bỏ qua toast thành công (vd quick-add liên tục ở Backlog — toast dồn dập gây phiền,
  * giống lý do useUpdateIssueStatus bên dưới không toast lúc kéo-thả). Mặc định vẫn toast như cũ. */
 export const useCreateIssue = (projectId: string, options?: { silent?: boolean }) => {
@@ -24,13 +25,17 @@ export const useCreateIssue = (projectId: string, options?: { silent?: boolean }
       issueApi.create(projectId, payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: issueKeys.lists() })
-      toast.success('Tạo issue thành công')
+      if (!options?.silent) {
+        toast.success('Tạo issue thành công')
+      }
     },
     onError: (error) => toast.error(getApiErrorMessage(error)),
   })
 }
 
-export const useUpdateIssue = (projectId: string) => {
+/** `silent`: bỏ qua toast thành công — dùng cho các cập nhật "nhanh, tại chỗ" (đổi người
+ * gán/độ ưu tiên qua dropdown, kéo-thả) mà toast liên tục sẽ gây phiền. Mặc định vẫn toast. */
+export const useUpdateIssue = (projectId: string, options?: { silent?: boolean }) => {  
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({
@@ -45,7 +50,9 @@ export const useUpdateIssue = (projectId: string) => {
       qc.invalidateQueries({
         queryKey: issueKeys.detail(projectId, updated._id),
       })
-      toast.success('Cập nhật issue thành công')
+      if (!options?.silent) {
+        toast.success('Cập nhật issue thành công')
+      }
     },
     onError: (error) => toast.error(getApiErrorMessage(error)),
   })

@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Check, UserPlus, X } from 'lucide-react'
 import Avatar from '@/components/ui/Avatar'
 import { useAuthStore } from '@/features/auth/authStore'
 import { useProject } from '@/features/projects/hooks/useProject'
+import { useDropdownPosition } from '@/lib/useDropdownPosition'
 
 interface AssigneePickerProps {
   projectId: string
@@ -11,14 +11,14 @@ interface AssigneePickerProps {
   value: string | null
   onChange: (userId: string | null) => void
   size?: number
-  /** Báo cho component cha biết dropdown đang mở/đóng — cần thiết vì dropdown render qua
-   * Portal nên các cách kiểm tra dựa trên DOM containment (vd blur/relatedTarget) không
-   * nhận diện đúng lúc đang tương tác với nó (xem QuickAddIssue.tsx). */
+  /** Báo cho component cha biết dropdown đang mở/đóng (xem useDropdownPosition). */
   onOpenChange?: (open: boolean) => void
+  /** Chỉ hiển thị avatar, không cho bấm đổi — dùng khi người xem không có quyền cập nhật
+   * issue (đổi assignee hiện đi qua PUT /issues/:id, chỉ OWNER). */
+  readOnly?: boolean
 }
 
 const DROPDOWN_WIDTH = 224 // khớp w-56
-const ESTIMATED_HEIGHT = 260 // ước lượng để quyết định mở lên/xuống, khớp max-h-64 + padding
 
 /**
  * Nút chọn người được gán — dùng chung cho quick-add issue, List, Board, Backlog... Danh
@@ -29,56 +29,33 @@ const ESTIMATED_HEIGHT = 260 // ước lượng để quyết định mở lên/
  * Dropdown render qua Portal ra `document.body`, định vị theo toạ độ thật (fixed) của nút
  * bấm -> không bị cắt bởi `overflow-hidden/auto` của khung chứa (vd cột Board cuộn dọc).
  */
-const AssigneePicker = ({ projectId, value, onChange, size = 24, onOpenChange }: AssigneePickerProps) => {
+const AssigneePicker = ({ projectId, value, onChange, size = 24, onOpenChange, readOnly = false }: AssigneePickerProps) => {
   const currentUser = useAuthStore((state) => state.user)
   const { data: project } = useProject(projectId)
-  const [open, setOpen] = useState(false)
-  const [coords, setCoords] = useState({ top: 0, left: 0 })
-  const triggerRef = useRef<HTMLButtonElement>(null)
-  const dropdownRef = useRef<HTMLDivElement>(null)
-
-  // Luôn đi qua đây để đóng/mở -> component cha (vd QuickAddIssue) luôn được báo đúng lúc.
-  // useCallback vì effect bên dưới cần 1 reference ổn định để đưa vào dependency array.
-  const updateOpen = useCallback(
-    (next: boolean) => {
-      setOpen(next)
-      onOpenChange?.(next)
-    },
-    [onOpenChange],
-  )
-
-  const openDropdown = () => {
-    const rect = triggerRef.current?.getBoundingClientRect()
-    if (rect) {
-      const spaceBelow = window.innerHeight - rect.bottom
-      const openUpward = spaceBelow < ESTIMATED_HEIGHT && rect.top > ESTIMATED_HEIGHT
-      setCoords({
-        top: openUpward ? rect.top - ESTIMATED_HEIGHT - 6 : rect.bottom + 6,
-        left: Math.min(rect.left, window.innerWidth - DROPDOWN_WIDTH - 8),
-      })
-    }
-    updateOpen(true)
-  }
-
-  useEffect(() => {
-    if (!open) return
-    // Dropdown ở portal (không phải con DOM của trigger) -> phải check cả 2 ref riêng.
-    const onClickOutside = (e: MouseEvent) => {
-      const target = e.target as Node
-      if (!triggerRef.current?.contains(target) && !dropdownRef.current?.contains(target)) {
-        updateOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', onClickOutside)
-    return () => document.removeEventListener('mousedown', onClickOutside)
-  }, [open, updateOpen])
+  const { open, coords, triggerRef, dropdownRef, toggle, close } = useDropdownPosition({
+    width: DROPDOWN_WIDTH,
+    onOpenChange,
+  })
 
   const members = (project?.members ?? []).filter((m) => m.status === 'ACTIVE')
   const selected = members.find((m) => m.userId === value)
 
   const handleSelect = (userId: string | null) => {
     onChange(userId)
-    updateOpen(false)
+    close()
+  }
+
+  if (readOnly) {
+    return selected?.user ? (
+      <Avatar src={selected.user.avatarUrl} name={selected.user.fullName} size={size} />
+    ) : (
+      <div
+        style={{ width: size, height: size }}
+        className="rounded-full bg-slate-100 border border-dashed flex items-center justify-center text-subtle text-[8px] font-bold shrink-0"
+      >
+        --
+      </div>
+    )
   }
 
   return (
@@ -88,11 +65,7 @@ const AssigneePicker = ({ projectId, value, onChange, size = 24, onOpenChange }:
         type="button"
         onClick={(e) => {
           e.stopPropagation()
-          if (open) {
-            updateOpen(false)
-          } else {
-            openDropdown()
-          }
+          toggle()
         }}
         title={selected?.user?.fullName ?? 'Chưa gán — bấm để chọn người thực hiện'}
         className="rounded-full transition-all hover:ring-2 hover:ring-brand/30 shrink-0"

@@ -247,7 +247,7 @@ const BoardView = ({
         <DragOverlay adjustScale={false}>
           {activeId && activeIssue ? (
             <div className="w-[256px] opacity-95 shadow-xl cursor-grabbing select-none pointer-events-none">
-              <IssueCard issue={activeIssue} projectId={projectId} />
+              <IssueCard issue={activeIssue} projectId={projectId} isOwner={isOwner} />
             </div>
           ) : null}
         </DragOverlay>
