@@ -1,13 +1,15 @@
-import { useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Calendar, ChevronDown, ChevronRight, Plus } from 'lucide-react'
 import {
   DndContext,
+  DragOverlay,
   MouseSensor,
   TouchSensor,
+  pointerWithin,
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
-import type { DragEndEvent } from '@dnd-kit/core'
+import type { DragEndEvent, DragOverEvent, DragStartEvent } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import Avatar from '@/components/ui/Avatar'
 import Spinner from '@/components/ui/Spinner'
@@ -19,6 +21,7 @@ import { SortableItem } from '@/components/ui/dnd/SortableItem'
 import { useAuthStore } from '@/features/auth/authStore'
 import { useProjectIssues } from '@/features/issues/hooks/useIssues'
 import { useUpdateIssue } from '@/features/issues/hooks/useIssueMutations'
+import QuickAddIssue from '@/features/issues/components/QuickAddIssue'
 import { calculateNewOrderIndex } from '@/lib/dndHelpers'
 import { formatDate, toDateInputValue } from '@/lib/format'
 import type { Issue, UpdateIssuePayload } from '@/features/issues/issue.types'
@@ -94,9 +97,29 @@ const BacklogView = ({ projectId, onSelectIssue, onGoToBoard }: BacklogViewProps
   const isOpen = (id: string) => openContainers[id] ?? true
   const toggleOpen = (id: string) => setOpenContainers((prev) => ({ ...prev, [id]: !isOpen(id) }))
 
-  const taskIssues = (issues ?? [])
-    .filter((issue) => issue.type !== 'EPIC' && issue.type !== 'SUBTASK')
-    .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0))
+  // useMemo khóa theo `issues` (reference ổn định từ React Query) -> tránh tạo mảng mới
+  // mỗi render, cần thiết vì `localIssues` bên dưới đồng bộ lại dựa trên so sánh reference.
+  const taskIssues = useMemo(
+    () =>
+      (issues ?? [])
+        .filter((issue) => issue.type !== 'EPIC' && issue.type !== 'SUBTASK')
+        .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0)),
+    [issues],
+  )
+
+  // State local để kéo-thả mượt (di chuyển ngay lúc đang kéo, không đợi API) — đồng bộ lại
+  // mỗi khi `taskIssues` đổi thật (adjust state during render, không dùng useEffect).
+  const [localIssues, setLocalIssues] = useState<Issue[]>(taskIssues)
+  const [syncedIssues, setSyncedIssues] = useState<Issue[]>(taskIssues)
+  if (taskIssues !== syncedIssues) {
+    setSyncedIssues(taskIssues)
+    setLocalIssues(taskIssues)
+  }
+
+  const [activeId, setActiveId] = useState<string | null>(null)
+  // Chiều rộng thật của dòng đang kéo (đo lúc bắt đầu kéo) -> áp cho DragOverlay bên dưới.
+  const [activeWidth, setActiveWidth] = useState<number | null>(null)
+  const lastOverId = useRef<string | null>(null)
 
   const activeSprint = sprints?.find((s) => s.status === SPRINT_STATUS.ACTIVE)
   const plannedSprints = (sprints ?? [])
@@ -104,7 +127,7 @@ const BacklogView = ({ projectId, onSelectIssue, onGoToBoard }: BacklogViewProps
     .sort((a, b) => a.orderIndex - b.orderIndex)
 
   const issuesOf = (sprintId: string | null) =>
-    taskIssues.filter((i) => (i.sprintId ?? null) === sprintId)
+    localIssues.filter((i) => (i.sprintId ?? null) === sprintId)
 
   const backlogIssues = issuesOf(null)
   const activeSprintIssues = activeSprint ? issuesOf(activeSprint._id) : []
@@ -119,42 +142,95 @@ const BacklogView = ({ projectId, onSelectIssue, onGoToBoard }: BacklogViewProps
   // MEMBER xem được nhưng không đăng ký sensor nào -> không thể khởi tạo kéo.
   const activeSensors = isOwner ? sensors : []
 
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event
-    if (!over || active.id === over.id) return
+  const resolveTargetContainer = (overId: string): string => {
+    if (containerIds.includes(overId)) return overId
+    const overIssue = localIssues.find((i) => i._id === overId)
+    return overIssue ? (overIssue.sprintId ?? BACKLOG_CONTAINER_ID) : BACKLOG_CONTAINER_ID
+  }
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string)
+    // Lấy đúng chiều rộng thật của dòng đang kéo -> DragOverlay (render ở portal, không kế
+    // thừa được chiều rộng của khung chứa) hiển thị khớp kích thước thay vì cố định to/nhỏ hơn.
+    setActiveWidth(event.active.rect.current.initial?.width ?? null)
+    lastOverId.current = null
+  }
 
-    const issueId = active.id as string
-    const activeIssue = taskIssues.find((i) => i._id === issueId)
+   // Di chuyển card ngay khi đang kéo qua container/vị trí khác — cho cảm giác mượt như Board,
+  // chưa gọi API, chỉ cập nhật state cục bộ để hiển thị.
+  const handleDragOver = (event: DragOverEvent) => {
+    const { active, over } = event
+    if (!over) return
+
+    const activeIdStr = active.id as string
+    const overId = over.id as string
+    if (activeIdStr === overId) return
+    // Tối ưu hóa: tránh re-render liên tục nếu chuột di chuyển nhanh trong cùng 1 card
+    if (lastOverId.current === overId) return
+    lastOverId.current = overId
+
+const activeIssue = localIssues.find((i) => i._id === activeIdStr)
     if (!activeIssue) return
 
-    let targetContainer = over.id as string
-    if (!containerIds.includes(targetContainer)) {
-      const overIssue = taskIssues.find((i) => i._id === over.id)
-      targetContainer = overIssue ? (overIssue.sprintId ?? BACKLOG_CONTAINER_ID) : BACKLOG_CONTAINER_ID
-    }
+    const targetContainer = resolveTargetContainer(overId)
 
-    const currentContainer = activeIssue.sprintId ?? BACKLOG_CONTAINER_ID
+    setLocalIssues((prev) => {
+      const destIssues = prev
+        .filter((i) => (i.sprintId ?? BACKLOG_CONTAINER_ID) === targetContainer && i._id !== activeIdStr)
+        .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0))
 
-    const destIssues = taskIssues
-      .filter((i) => (i.sprintId ?? BACKLOG_CONTAINER_ID) === targetContainer && i._id !== issueId)
-      .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0))
+      let targetIndex = destIssues.length
+      if (!containerIds.includes(overId)) {
+        const overIndex = destIssues.findIndex((i) => i._id === overId)
+        if (overIndex !== -1) targetIndex = overIndex
+      }
 
-    let targetIndex = destIssues.length
-    if (!containerIds.includes(over.id as string)) {
-      const overIndex = destIssues.findIndex((i) => i._id === over.id)
-      if (overIndex !== -1) targetIndex = overIndex
-    }
+      const newOrder = calculateNewOrderIndex(destIssues, targetIndex)
 
-    const newOrder = calculateNewOrderIndex(destIssues, targetIndex)
-
-    // Chỉ đổi sprintId/orderIndex — KHÔNG đụng status (Jira-style: đổi chỗ không đổi trạng thái).
-    const payload: UpdateIssuePayload = { orderIndex: newOrder }
-    if (currentContainer !== targetContainer) {
-      payload.sprintId = targetContainer === BACKLOG_CONTAINER_ID ? null : targetContainer
-    }
-
-    updateIssueMutation.mutate({ issueId, payload })
+      return prev.map((item) =>
+        item._id === activeIdStr
+          ? {
+              ...item,
+              orderIndex: newOrder,
+              sprintId: targetContainer === BACKLOG_CONTAINER_ID ? null : targetContainer,
+            }
+          : item,
+      )
+    })
   }
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active } = event
+    const issueId = active.id as string
+const finalIssue = localIssues.find((i) => i._id === issueId)
+    if (finalIssue) {
+      const originalIssue = taskIssues.find((i) => i._id === issueId)
+      const currentContainer = originalIssue ? (originalIssue.sprintId ?? BACKLOG_CONTAINER_ID) : BACKLOG_CONTAINER_ID
+      const finalContainer = finalIssue.sprintId ?? BACKLOG_CONTAINER_ID
+
+      // Chỉ gọi API nếu thực sự có thay đổi về container hoặc vị trí.
+      if (originalIssue?.orderIndex !== finalIssue.orderIndex || currentContainer !== finalContainer) {
+        // Chỉ đổi sprintId/orderIndex — KHÔNG đụng status (Jira-style: đổi chỗ không đổi trạng thái).
+        const payload: UpdateIssuePayload = { orderIndex: finalIssue.orderIndex ?? 0 }
+        if (currentContainer !== finalContainer) {
+          payload.sprintId = finalContainer === BACKLOG_CONTAINER_ID ? null : finalContainer
+        }
+        updateIssueMutation.mutate({ issueId, payload })
+      }
+    }
+
+    setActiveId(null)
+    setActiveWidth(null)
+    lastOverId.current = null
+  }
+    const handleDragCancel = () => {
+    // Reset lại localIssues nếu kéo bị hủy bỏ (vd nhấn Esc).
+    setLocalIssues(taskIssues)
+    setActiveId(null)
+    setActiveWidth(null)
+    lastOverId.current = null
+  }
+
+  const activeIssue = localIssues.find((i) => i._id === activeId)
 
   const handleStartClick = (sprint: Sprint) => {
     const count = issuesOf(sprint._id).length
@@ -242,7 +318,14 @@ const BacklogView = ({ projectId, onSelectIssue, onGoToBoard }: BacklogViewProps
         </div>
       )}
 
-      <DndContext sensors={activeSensors} onDragEnd={handleDragEnd}>
+      <DndContext
+        sensors={activeSensors}
+        collisionDetection={pointerWithin}
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
+      >
         {plannedSprints.map((sprint) => {
           const sprintIssues = issuesOf(sprint._id)
           return (
@@ -275,8 +358,12 @@ const BacklogView = ({ projectId, onSelectIssue, onGoToBoard }: BacklogViewProps
                       </SortableItem>
                     ))}
                   </SortableContext>
-                  {sprintIssues.length === 0 && (
-                    <p className="text-xs text-subtle italic py-4 text-center">Kéo công việc từ Backlog vào đây.</p>
+                  {isOwner && (
+                    <QuickAddIssue
+                      projectId={projectId}
+                      targetSprintId={sprint._id}
+                      nextOrderIndex={calculateNewOrderIndex(sprintIssues, sprintIssues.length)}
+                    />
                   )}
                 </div>
               )}
@@ -309,12 +396,26 @@ const BacklogView = ({ projectId, onSelectIssue, onGoToBoard }: BacklogViewProps
                   </SortableItem>
                 ))}
               </SortableContext>
-              {backlogIssues.length === 0 && (
-                <p className="text-xs text-subtle italic py-4 text-center">Backlog trống.</p>
+              {isOwner && (
+                <QuickAddIssue
+                  projectId={projectId}
+                  targetSprintId={null}
+                  nextOrderIndex={calculateNewOrderIndex(backlogIssues, backlogIssues.length)}
+                />
               )}
             </div>
           )}
         </DroppableContainer>
+                <DragOverlay adjustScale={false}>
+          {activeId && activeIssue ? (
+            <div
+              style={activeWidth ? { width: activeWidth } : undefined}
+              className="opacity-95 shadow-xl cursor-grabbing select-none pointer-events-none"
+            >
+              <IssueRow issue={activeIssue} onSelectIssue={() => {}} />
+            </div>
+          ) : null}
+        </DragOverlay>
       </DndContext>
 
       {plannedSprints.length === 0 && !activeSprint && (

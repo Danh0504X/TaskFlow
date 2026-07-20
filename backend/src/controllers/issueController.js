@@ -5,8 +5,7 @@ import { issueService } from '../services/issueService.js'
 // Tạo issue trong project.
 export const createIssue = asyncHandler(async (req, res) => {
   const { projectId } = req.params
-  const result = await issueService.createIssue(projectId, req.user._id, req.body, req.project)
-
+ const result = await issueService.createIssue(projectId, req.user._id, req.body)
   res.status(StatusCodes.CREATED).json({
     message: 'Issue created successfully',
     data: result,

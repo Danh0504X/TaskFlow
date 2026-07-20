@@ -108,8 +108,8 @@ const ensureIssueStatusChangeAllowed = async (project, issue) => {
 }
 
 // Tạo issue trong project.
-const createIssue = async (projectId, userId, body = {}, project) => {
-  ensureValidObjectId(projectId, 'project id')
+const createIssue = async (projectId, userId, body = {}) => {
+    ensureValidObjectId(projectId, 'project id')
 
   const {
     title,
@@ -139,15 +139,11 @@ const createIssue = async (projectId, userId, body = {}, project) => {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid issue priority')
   }
 
-  // Scrum: issue mới luôn vào Backlog, không cho gán sprint ngay lúc tạo (phải qua
-  // Backlog để lập kế hoạch trước). Kanban: giữ nguyên hành vi cũ, không có ràng buộc này.
-  if (project?.methodology === 'SCRUM' && sprintId) {
-    throw new ApiError(
-      StatusCodes.BAD_REQUEST,
-      'Issue mới trong dự án Scrum luôn vào Backlog, không được gán sprint lúc tạo',
-    )
-  }
-
+// Không gửi sprintId -> issue vào Backlog (mặc định, phù hợp cả Scrum lẫn Kanban).
+  // Có gửi sprintId -> tạo thẳng vào sprint đó, miễn là sprint thuộc đúng project và còn
+  // "mở" (PLANNED/ACTIVE) — dùng cho quick-add ngay trong 1 sprint cụ thể (Backlog) hoặc
+  // trực tiếp trên Board (sprint đang ACTIVE). Không tự suy luận sprint nếu client không
+  // truyền rõ id — tránh gán nhầm vào sprint không mong muốn.
   if (sprintId) {
     await ensureSprintInProject(projectId, sprintId)
   }

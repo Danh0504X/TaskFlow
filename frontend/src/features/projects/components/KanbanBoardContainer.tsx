@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useProjectIssues } from '@/features/issues/hooks/useIssues'
 import { useUpdateIssueStatus } from '@/features/issues/hooks/useIssueMutations'
 import BoardView, { type BoardColumnDef } from '@/features/issues/components/BoardView'
@@ -24,8 +25,12 @@ const KanbanBoardContainer = ({ projectId, onSelectIssue }: KanbanBoardContainer
   const { data: issues, isLoading } = useProjectIssues(projectId)
   const updateStatusMutation = useUpdateIssueStatus(projectId)
 
-  const taskIssues = (issues ?? []).filter(
-    (issue) => issue.type !== 'EPIC' && issue.type !== 'SUBTASK',
+  // useMemo khóa theo `issues` (reference ổn định từ React Query, chỉ đổi khi dữ liệu thật
+  // sự mới) -> tránh tạo mảng mới mỗi render khiến BoardView tưởng dữ liệu đổi và reset
+  // state kéo-thả cục bộ giữa chừng (gây giật/nhập nhịp khi kéo-thả).
+  const taskIssues = useMemo(
+    () => (issues ?? []).filter((issue) => issue.type !== 'EPIC' && issue.type !== 'SUBTASK'),
+    [issues],
   )
 
   const handleDragEnd = (issueId: string, status: IssueStatus, orderIndex: number) => {

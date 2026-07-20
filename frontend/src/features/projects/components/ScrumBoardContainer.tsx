@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState,useMemo } from 'react'
 import { CheckCircle2 } from 'lucide-react'
 import Spinner from '@/components/ui/Spinner'
 import { useAuthStore } from '@/features/auth/authStore'
@@ -50,6 +50,14 @@ const ScrumBoardContainer = ({ projectId, onSelectIssue, onGoToBacklog }: ScrumB
   const userMemberRecord = project?.members?.find((m) => m.userId === currentUser?._id)
   const isOwner = userMemberRecord?.role === 'OWNER'
 
+    // useMemo khóa theo `sprintIssues` (reference ổn định từ React Query) -> tránh tạo mảng
+  // mới mỗi render khiến BoardView tưởng dữ liệu đổi và reset state kéo-thả cục bộ giữa
+  // chừng (gây giật/nhập nhịp khi kéo-thả). Phải đặt trước mọi early-return (rules of hooks).
+  const taskIssues = useMemo(
+    () => (sprintIssues ?? []).filter((issue) => issue.type !== 'EPIC' && issue.type !== 'SUBTASK'),
+    [sprintIssues],
+  )
+
   if (sprintsLoading) {
     return (
       <div className="py-24 flex justify-center text-muted">
@@ -62,9 +70,6 @@ const ScrumBoardContainer = ({ projectId, onSelectIssue, onGoToBacklog }: ScrumB
     return <BoardLockedEmptyState onGoToBacklog={onGoToBacklog} />
   }
 
-  const taskIssues = (sprintIssues ?? []).filter(
-    (issue) => issue.type !== 'EPIC' && issue.type !== 'SUBTASK',
-  )
   const doneCount = taskIssues.filter((i) => i.status === 'DONE').length
   const totalCount = taskIssues.length
   const progressPercent = totalCount ? Math.round((doneCount / totalCount) * 100) : 0

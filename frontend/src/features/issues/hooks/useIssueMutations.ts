@@ -15,8 +15,9 @@ import type {
  * 2. hiện toast báo kết quả.
  * Lỗi được bắt tập trung -> hiện toast lỗi, không để component tự xử lý.
  */
-
-export const useCreateIssue = (projectId: string) => {
+/** `silent`: bỏ qua toast thành công (vd quick-add liên tục ở Backlog — toast dồn dập gây phiền,
+ * giống lý do useUpdateIssueStatus bên dưới không toast lúc kéo-thả). Mặc định vẫn toast như cũ. */
+export const useCreateIssue = (projectId: string, options?: { silent?: boolean }) => {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (payload: CreateIssuePayload) =>
