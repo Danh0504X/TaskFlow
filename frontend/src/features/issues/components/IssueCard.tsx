@@ -1,10 +1,12 @@
-import Avatar from '@/components/ui/Avatar'
 import IssueTypeIcon from '@/components/ui/IssueTypeIcon'
 import IssuePriorityBadge from '@/components/ui/IssuePriorityBadge'
+import { useUpdateIssue } from '../hooks/useIssueMutations'
 import type { Issue, IssuePriority } from '../issue.types'
+import AssigneePicker from './AssigneePicker'
 
 interface IssueCardProps {
   issue: Issue
+  projectId: string
   onClick?: () => void
 }
 
@@ -16,7 +18,9 @@ const priorityAccent: Record<IssuePriority, string> = {
   LOW: 'border-l-line',
 }
 
-const IssueCard = ({ issue, onClick }: IssueCardProps) => {
+const IssueCard = ({ issue, projectId, onClick }: IssueCardProps) => {
+  const updateMutation = useUpdateIssue(projectId)
+
   return (
     <div
       onClick={onClick}
@@ -40,15 +44,12 @@ const IssueCard = ({ issue, onClick }: IssueCardProps) => {
       <div className="flex items-center justify-between pt-3 border-t border-line/10">
         <IssuePriorityBadge priority={issue.priority} showIcon />
 
-        <div className="flex items-center gap-2">
-          {issue.assignee ? (
-            <Avatar src={issue.assignee.avatarUrl} name={issue.assignee.fullName} size={20} />
-          ) : (
-            <div className="w-5 h-5 rounded-full bg-slate-100 border border-dashed flex items-center justify-center text-subtle text-[8px] font-bold">
-              --
-            </div>
-          )}
-        </div>
+      <AssigneePicker
+          projectId={projectId}
+          value={issue.assigneeId ?? null}
+          onChange={(userId) => updateMutation.mutate({ issueId: issue._id, payload: { assigneeId: userId } })}
+          size={22}
+        />
       </div>
     </div>
   )

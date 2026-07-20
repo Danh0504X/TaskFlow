@@ -127,6 +127,9 @@ const ScrumBoardContainer = ({ projectId, onSelectIssue, onGoToBacklog }: ScrumB
         disabled={false}
         onDragEnd={handleDragEnd}
         onSelectIssue={onSelectIssue}
+        projectId={projectId}
+        quickAddSprintId={activeSprint._id}
+        isOwner={isOwner}
       />
 
       {isOwner && (

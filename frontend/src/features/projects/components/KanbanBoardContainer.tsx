@@ -1,8 +1,10 @@
 import { useMemo } from 'react'
+import { useAuthStore } from '@/features/auth/authStore'
 import { useProjectIssues } from '@/features/issues/hooks/useIssues'
 import { useUpdateIssueStatus } from '@/features/issues/hooks/useIssueMutations'
 import BoardView, { type BoardColumnDef } from '@/features/issues/components/BoardView'
 import type { IssueStatus } from '@/features/issues/issue.types'
+import { useProject } from '../hooks/useProject'
 
 interface KanbanBoardContainerProps {
   projectId: string
@@ -21,6 +23,8 @@ const COLUMNS: BoardColumnDef[] = [
  * Chỉ lo việc lấy dữ liệu + wire mutation; phần render/DnD nằm trong BoardView (dumb).
  */
 const KanbanBoardContainer = ({ projectId, onSelectIssue }: KanbanBoardContainerProps) => {
+  const currentUser = useAuthStore((state) => state.user)
+  const { data: project } = useProject(projectId)
   // Lấy toàn bộ issues, sau đó lọc ở client để giữ lại TASK và BUG (loại bỏ EPIC, SUBTASK)
   const { data: issues, isLoading } = useProjectIssues(projectId)
   const updateStatusMutation = useUpdateIssueStatus(projectId)
@@ -32,6 +36,9 @@ const KanbanBoardContainer = ({ projectId, onSelectIssue }: KanbanBoardContainer
     () => (issues ?? []).filter((issue) => issue.type !== 'EPIC' && issue.type !== 'SUBTASK'),
     [issues],
   )
+
+  const userMemberRecord = project?.members?.find((m) => m.userId === currentUser?._id)
+  const isOwner = userMemberRecord?.role === 'OWNER'
 
   const handleDragEnd = (issueId: string, status: IssueStatus, orderIndex: number) => {
     // PATCH /status (OWNER+MEMBER) thay vì PUT (OWNER-only) -> MEMBER kéo-thả không còn bị 403.
@@ -46,6 +53,9 @@ const KanbanBoardContainer = ({ projectId, onSelectIssue }: KanbanBoardContainer
       disabled={false}
       onDragEnd={handleDragEnd}
       onSelectIssue={onSelectIssue}
+      projectId={projectId}
+      quickAddSprintId={null}
+      isOwner={isOwner}
     />
   )
 }
