@@ -19,8 +19,9 @@ interface QuickAddIssueProps {
 const QuickAddIssue = ({ projectId, targetSprintId, nextOrderIndex }: QuickAddIssueProps) => {
   const [isAdding, setIsAdding] = useState(false)
   const [title, setTitle] = useState('')
-  const createMutation = useCreateIssue(projectId)
-
+  // silent: bỏ toast "Tạo issue thành công" -> thêm nhanh liên tục không bị dồn thông báo,
+  // mượt hơn (issue mới xuất hiện ngay trong khung là đủ phản hồi rồi, không cần toast).
+  const createMutation = useCreateIssue(projectId, { silent: true })
   const handleCommit = () => {
     // Chặn commit 2 lần (vd Enter xong rồi blur trước khi request hoàn tất).
     if (createMutation.isPending) return
