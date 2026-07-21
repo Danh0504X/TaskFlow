@@ -32,7 +32,8 @@ const ConfirmDialog = ({
       open={open}
       onClose={onClose}
       title={title}
-      className="max-w-md"
+      layout="compact"
+      tone={danger ? 'danger' : 'brand'}
       footer={
         <>
           <Button variant="secondary" onClick={onClose} disabled={loading}>
