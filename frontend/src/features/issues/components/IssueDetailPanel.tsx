@@ -1,10 +1,20 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { motion, useReducedMotion } from 'motion/react'
-import { X, Share2, Eye, MoreHorizontal, Layers, Send } from 'lucide-react'
+import { X, Send, Plus } from 'lucide-react'
 import Avatar from '@/components/ui/Avatar'
 import Spinner from '@/components/ui/Spinner'
-import { useUpdateIssue, useUpdateIssueStatus } from '../hooks/useIssueMutations'
-import type { Issue, IssueStatus, IssuePriority } from '../issue.types'
+import IssueTypeIcon from '@/components/ui/IssueTypeIcon'
+import { useAuthStore } from '@/features/auth/authStore'
+import { useProject } from '@/features/projects/hooks/useProject'
+import { useUpdateIssue, useUpdateIssueStatus, useCreateIssue } from '../hooks/useIssueMutations'
+import { useProjectIssues } from '../hooks/useIssues'
+import { issueKeys } from '../issue.keys'
+import StatusPicker from './StatusPicker'
+import PriorityPicker from './PriorityPicker'
+import AssigneePicker from './AssigneePicker'
+import EpicPicker from './EpicPicker'
+import { ISSUE_TYPE, type Issue, type IssueStatus, type IssuePriority } from '../issue.types'
 
 interface Comment {
   id: string
@@ -20,17 +30,100 @@ interface IssueDetailPanelProps {
   projectId: string
   isLoading?: boolean
   onClose: () => void
+  /** Mở panel này cho 1 issue khác theo key — dùng để "đi vào" 1 subtask từ danh sách việc con. */
+  onSelectIssue: (key: string) => void
+}
+
+/** `parentIssueId` là object đã populate ({_id, title, type}) khi có, hoặc string thô lúc gửi lên. */
+const getParentId = (issue: Pick<Issue, 'parentIssueId'>): string | null => {
+  if (!issue.parentIssueId) return null
+  return typeof issue.parentIssueId === 'string' ? issue.parentIssueId : issue.parentIssueId._id
+}
+
+interface SubtaskQuickAddProps {
+  onSubmit: (title: string) => void
+  pending: boolean
+}
+
+/** Ô nhập luôn hiển thị ở cuối danh sách việc con — Enter hoặc bấm nút gửi để tạo, không cần mở rộng trước. */
+const SubtaskQuickAdd = ({ onSubmit, pending }: SubtaskQuickAddProps) => {
+  const [value, setValue] = useState('')
+
+  const commit = () => {
+    const trimmed = value.trim()
+    if (!trimmed || pending) return
+    onSubmit(trimmed)
+    setValue('')
+  }
+
+  const handleKeyDown = (e: ReactKeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      commit()
+    } else if (e.key === 'Escape') {
+      // Không cho Escape ở đây "leo" lên document và đóng luôn panel chi tiết.
+      e.stopPropagation()
+      setValue('')
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <input
+        value={value}
+        disabled={pending}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder="Thêm việc con..."
+        className="flex-1 min-w-0 bg-white border border-line/25 rounded-xl px-3 py-2 text-xs font-semibold text-ink outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand/30 placeholder:text-subtle disabled:opacity-60"
+      />
+      <button
+        type="button"
+        onClick={commit}
+        disabled={!value.trim() || pending}
+        className="p-2 bg-brand/10 text-brand hover:bg-brand hover:text-white rounded-xl transition-all shrink-0 disabled:opacity-40 disabled:hover:bg-brand/10 disabled:hover:text-brand"
+      >
+        <Plus size={14} />
+      </button>
+    </div>
+  )
 }
 
 /**
  * Panel chi tiết issue dạng slide-over. Trạng thái/độ ưu tiên/mô tả chỉnh sửa cục bộ trong lúc mở,
  * lưu thật (PUT /issues/:id) khi đóng panel — không lưu theo từng phím gõ để tránh spam API.
+ * Tên, người thực hiện, epic lưu ngay khi đổi (nhất quán với AssigneePicker ở Board/List).
  * Bình luận vẫn là mock cục bộ, chưa có API bình luận ở backend.
  */
-const IssueDetailPanel = ({ issue, projectId, isLoading, onClose }: IssueDetailPanelProps) => {
+const IssueDetailPanel = ({ issue, projectId, isLoading, onClose, onSelectIssue }: IssueDetailPanelProps) => {
+  const currentUser = useAuthStore((state) => state.user)
+  const queryClient = useQueryClient()
+  const { data: project } = useProject(projectId)
+  const { data: allIssues } = useProjectIssues(projectId)
   const updateMutation = useUpdateIssue(projectId)
+  const silentUpdateMutation = useUpdateIssue(projectId, { silent: true })
   const statusMutation = useUpdateIssueStatus(projectId)
+  const createSubtaskMutation = useCreateIssue(projectId, { silent: true })
   const reduceMotion = useReducedMotion()
+
+  const userMemberRecord = project?.members?.find((m) => m.userId === currentUser?._id)
+  const isOwner = userMemberRecord?.role === 'OWNER'
+
+  // `useCreateIssue`/`useUpdateIssue`/`useUpdateIssueStatus` (dùng chung toàn app) chỉ
+  // `invalidateQueries` sau khi lưu -> UI phải đợi thêm 1 lượt GET nền mới thấy thay đổi,
+  // cảm giác trễ khi thêm/sửa liên tục (vd thêm nhiều subtask). Ghi thẳng kết quả trả về
+  // vào cache của đúng query mà panel này đang đọc (`useProjectIssues(projectId)`, không
+  // filter) để cập nhật UI ngay lập tức; invalidate ở hook dùng chung vẫn chạy song song
+  // để đồng bộ lại các query khác (Board/List/Backlog có filter riêng).
+  const listQueryKey = issueKeys.list(projectId)
+  const upsertIssueInCache = (updated: Issue) => {
+    queryClient.setQueryData<Issue[]>(listQueryKey, (old) =>
+      old?.map((i) => (i._id === updated._id ? updated : i)),
+    )
+  }
+  const appendIssueToCache = (created: Issue) => {
+    queryClient.setQueryData<Issue[]>(listQueryKey, (old) => (old ? [...old, created] : old))
+  }
 
   // Nạp lại state chỉnh sửa cục bộ mỗi khi issue đổi (panel không unmount khi chuyển
   // từ issue này sang issue khác) — theo mẫu "Adjusting state on render" của React,
@@ -39,14 +132,18 @@ const IssueDetailPanel = ({ issue, projectId, isLoading, onClose }: IssueDetailP
   const [status, setStatus] = useState<IssueStatus>('TODO')
   const [priority, setPriority] = useState<IssuePriority>('MEDIUM')
   const [description, setDescription] = useState('')
+  const [isEditingTitle, setIsEditingTitle] = useState(false)
+  const [titleDraft, setTitleDraft] = useState('')
   const [commentText, setCommentText] = useState('')
   const [comments, setComments] = useState<Comment[]>([])
+  const titleInputRef = useRef<HTMLInputElement>(null)
 
   if (issue && issue._id !== loadedIssueId) {
     setLoadedIssueId(issue._id)
     setStatus(issue.status)
     setPriority(issue.priority)
     setDescription(issue.description ?? '')
+    setIsEditingTitle(false)
   }
 
   // Đóng panel (nút X, bấm ra ngoài, phím Escape) đều đi qua đây: chỉ gọi API nếu có
@@ -84,6 +181,62 @@ const IssueDetailPanel = ({ issue, projectId, isLoading, onClose }: IssueDetailP
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [issue, status, priority, description])
 
+  const startEditingTitle = () => {
+    if (!issue || !isOwner) return
+    setTitleDraft(issue.title)
+    setIsEditingTitle(true)
+  }
+
+  useEffect(() => {
+    if (isEditingTitle) titleInputRef.current?.focus()
+  }, [isEditingTitle])
+
+  const commitTitle = () => {
+    if (!issue) return
+    const trimmed = titleDraft.trim()
+    setIsEditingTitle(false)
+    if (trimmed && trimmed !== issue.title) {
+      silentUpdateMutation.mutate(
+        { issueId: issue._id, payload: { title: trimmed } },
+        { onSuccess: upsertIssueInCache },
+      )
+    }
+  }
+
+  const handleTitleKeyDown = (e: ReactKeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      commitTitle()
+    } else if (e.key === 'Escape') {
+      e.stopPropagation()
+      setIsEditingTitle(false)
+    }
+  }
+
+  const handleAssigneeChange = (userId: string | null) => {
+    if (!issue) return
+    silentUpdateMutation.mutate(
+      { issueId: issue._id, payload: { assigneeId: userId } },
+      { onSuccess: upsertIssueInCache },
+    )
+  }
+
+  const handleEpicChange = (epicId: string | null) => {
+    if (!issue) return
+    silentUpdateMutation.mutate(
+      { issueId: issue._id, payload: { parentIssueId: epicId } },
+      { onSuccess: upsertIssueInCache },
+    )
+  }
+
+  const handleCreateSubtask = (title: string) => {
+    if (!issue) return
+    createSubtaskMutation.mutate(
+      { title, type: ISSUE_TYPE.SUBTASK, parentIssueId: issue._id },
+      { onSuccess: appendIssueToCache },
+    )
+  }
+
   const handleAddComment = (e: FormEvent) => {
     e.preventDefault()
     if (!commentText.trim()) return
@@ -93,6 +246,12 @@ const IssueDetailPanel = ({ issue, projectId, isLoading, onClose }: IssueDetailP
     ])
     setCommentText('')
   }
+
+  const canHaveEpic = !!issue && (issue.type === ISSUE_TYPE.TASK || issue.type === ISSUE_TYPE.BUG)
+  const canHaveSubtasks = canHaveEpic
+  const subtasks = issue ? (allIssues ?? []).filter((i) => i.type === ISSUE_TYPE.SUBTASK && getParentId(i) === issue._id) : []
+  const doneSubtasks = subtasks.filter((s) => s.status === 'DONE').length
+  const subtaskProgress = subtasks.length > 0 ? Math.round((doneSubtasks / subtasks.length) * 100) : 0
 
   return (
     <>
@@ -111,146 +270,212 @@ const IssueDetailPanel = ({ issue, projectId, isLoading, onClose }: IssueDetailP
         exit={reduceMotion ? undefined : { x: '100%' }}
         transition={{ type: 'spring', stiffness: 320, damping: 32 }}
       >
-      <div className="px-6 py-4 border-b border-line/20 flex justify-between items-center bg-slate-50/50 shrink-0">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-muted">Issue</span>
-          <span className="text-xs text-muted">/</span>
-          <span className="text-xs font-extrabold text-brand tracking-wider">{issue?.key}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <button className="p-1.5 hover:bg-slate-100 rounded-lg text-muted transition-all">
-            <Share2 size={15} />
-          </button>
-          <button className="p-1.5 hover:bg-slate-100 rounded-lg text-muted transition-all">
-            <Eye size={15} />
-          </button>
-          <button className="p-1.5 hover:bg-slate-100 rounded-lg text-muted transition-all">
-            <MoreHorizontal size={15} />
-          </button>
-          <div className="w-px h-5 bg-line/20 mx-1" />
+        <div className="px-6 py-4 border-b border-line/20 flex justify-between items-center bg-slate-50/50 shrink-0">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-muted">Issue</span>
+            <span className="text-xs text-muted">/</span>
+            <span className="text-xs font-extrabold text-brand tracking-wider">{issue?.key}</span>
+          </div>
           <button onClick={handleClose} className="p-1.5 hover:bg-slate-100 rounded-lg text-muted hover:text-ink transition-all">
             <X size={16} />
           </button>
         </div>
-      </div>
 
-      {isLoading || !issue ? (
-        <div className="flex-1 flex items-center justify-center text-muted">
-          <Spinner />
-        </div>
-      ) : (
-        <>
-          <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin">
-            <div>
-              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-brand/5 text-brand rounded text-[9px] font-bold uppercase tracking-wider mb-2">
-                {issue.type}
-              </span>
-              <h2 className="text-lg font-extrabold text-ink leading-snug">{issue.title}</h2>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 p-4 border border-line/15 rounded-2xl bg-slate-50/50">
-              <div className="space-y-1">
-                <span className="text-[10px] font-bold text-muted uppercase tracking-wider">Trạng thái</span>
-                <select
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value as IssueStatus)}
-                  className="w-full bg-white border border-line/25 rounded-xl px-2.5 py-1.5 text-xs font-bold text-ink focus:ring-2 focus:ring-brand/20 outline-none appearance-none cursor-pointer"
-                >
-                  <option value="TODO">Cần làm</option>
-                  <option value="IN_PROGRESS">Đang làm</option>
-                  <option value="IN_REVIEW">Đang đánh giá</option>
-                  <option value="DONE">Hoàn thành</option>
-                </select>
-              </div>
-
-              <div className="space-y-1">
-                <span className="text-[10px] font-bold text-muted uppercase tracking-wider">Độ ưu tiên</span>
-                <select
-                  value={priority}
-                  onChange={(e) => setPriority(e.target.value as IssuePriority)}
-                  className="w-full bg-white border border-line/25 rounded-xl px-2.5 py-1.5 text-xs font-bold text-ink focus:ring-2 focus:ring-brand/20 outline-none appearance-none cursor-pointer"
-                >
-                  <option value="LOW">Thấp</option>
-                  <option value="MEDIUM">Trung bình</option>
-                  <option value="HIGH">Cao</option>
-                  <option value="URGENT">Khẩn cấp</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="space-y-3 pt-2 border-t border-line/10">
-              <div className="flex justify-between items-center text-xs font-semibold">
-                <span className="text-muted">Người thực hiện</span>
-                {issue.assignee ? (
-                  <div className="flex items-center gap-2">
-                    <Avatar src={issue.assignee.avatarUrl} name={issue.assignee.fullName} size={20} />
-                    <span className="text-ink font-bold">{issue.assignee.fullName}</span>
-                  </div>
+        {isLoading ? (
+          <div className="flex-1 flex items-center justify-center text-muted">
+            <Spinner />
+          </div>
+        ) : !issue ? (
+          // Có thể xảy ra khi đi từ 1 subtask sang issue khác không nằm trong danh sách đang
+          // cache ở trang hiện tại (vd "Công việc của tôi" chỉ chứa issue được giao cho mình).
+          <div className="flex-1 flex flex-col items-center justify-center gap-2 text-muted p-6 text-center">
+            <p className="text-xs font-semibold">Không tìm thấy issue này trong danh sách hiện tại.</p>
+            <button onClick={onClose} className="text-brand text-xs font-bold hover:underline">
+              Đóng
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="flex-1 overflow-y-auto p-6 space-y-5 scrollbar-thin">
+              <div>
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-brand/5 text-brand rounded text-[9px] font-bold uppercase tracking-wider mb-2">
+                  <IssueTypeIcon type={issue.type} size={11} />
+                  {issue.type}
+                </span>
+                {isEditingTitle ? (
+                  <input
+                    ref={titleInputRef}
+                    value={titleDraft}
+                    onChange={(e) => setTitleDraft(e.target.value)}
+                    onBlur={commitTitle}
+                    onKeyDown={handleTitleKeyDown}
+                    className="w-full text-lg font-extrabold text-ink leading-snug bg-slate-50 border border-brand/30 rounded-xl px-3 py-1.5 outline-none focus:ring-2 focus:ring-brand/20 -mx-3"
+                  />
                 ) : (
-                  <span className="text-subtle">Chưa phân công</span>
+                  <h2
+                    onClick={startEditingTitle}
+                    className={`text-lg font-extrabold text-ink leading-snug rounded-xl px-3 py-1.5 -mx-3 transition-all ${isOwner ? 'cursor-text hover:bg-slate-50' : ''}`}
+                    title={isOwner ? 'Bấm để đổi tên' : undefined}
+                  >
+                    {issue.title}
+                  </h2>
                 )}
               </div>
 
-              {issue.epicName && (
-                <div className="flex justify-between items-center text-xs font-semibold">
-                  <span className="text-muted">Epic</span>
-                  <span className="text-ink font-bold flex items-center gap-1.5">
-                    <Layers size={12} className="text-brand" />
-                    <span>{issue.epicName}</span>
-                  </span>
+              <div className="grid grid-cols-2 gap-4 p-4 border border-line/15 rounded-2xl bg-slate-50/50">
+                <div className="space-y-1.5">
+                  <span className="text-[10px] font-bold text-muted uppercase tracking-wider">Trạng thái</span>
+                  <StatusPicker value={status} onChange={setStatus} />
+                </div>
+
+                <div className="space-y-1.5">
+                  <span className="text-[10px] font-bold text-muted uppercase tracking-wider">Độ ưu tiên</span>
+                  <PriorityPicker value={priority} onChange={setPriority} readOnly={!isOwner} />
+                </div>
+
+                <div className="space-y-1.5">
+                  <span className="text-[10px] font-bold text-muted uppercase tracking-wider">Người thực hiện</span>
+                  <div className="flex items-center gap-2">
+                    <AssigneePicker
+                      projectId={projectId}
+                      value={issue.assigneeId ?? null}
+                      onChange={handleAssigneeChange}
+                      size={22}
+                      readOnly={!isOwner}
+                    />
+                    <span className="text-xs font-semibold text-ink truncate">
+                      {issue.assignee?.fullName ?? 'Chưa gán'}
+                    </span>
+                  </div>
+                </div>
+
+                {canHaveEpic && (
+                  <div className="space-y-1.5">
+                    <span className="text-[10px] font-bold text-muted uppercase tracking-wider">Epic</span>
+                    <EpicPicker
+                      projectId={projectId}
+                      issues={allIssues ?? []}
+                      value={getParentId(issue)}
+                      onChange={handleEpicChange}
+                      excludeIssueId={issue._id}
+                      readOnly={!isOwner}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {canHaveSubtasks && (
+                <div className="space-y-2.5 pt-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-extrabold text-ink uppercase tracking-wider">Việc con</span>
+                    {subtasks.length > 0 && (
+                      <span className="text-[10px] font-bold text-muted">
+                        {doneSubtasks}/{subtasks.length} hoàn thành
+                      </span>
+                    )}
+                  </div>
+
+                  {subtasks.length > 0 && (
+                    <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                      <div
+                        className="h-full bg-brand rounded-full transition-all"
+                        style={{ width: `${subtaskProgress}%` }}
+                      />
+                    </div>
+                  )}
+
+                  <div className="space-y-1">
+                    {subtasks.map((subtask) => (
+                      <div
+                        key={subtask._id}
+                        className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-slate-50 transition-all group"
+                      >
+                        <StatusPicker
+                          value={subtask.status}
+                          onChange={(next) =>
+                            statusMutation.mutate(
+                              { issueId: subtask._id, payload: { status: next } },
+                              { onSuccess: upsertIssueInCache },
+                            )
+                          }
+                          readOnly={false}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => onSelectIssue(subtask.key)}
+                          className="flex-1 min-w-0 text-left text-xs font-semibold text-ink group-hover:text-brand truncate transition-all"
+                        >
+                          {subtask.title}
+                        </button>
+                        <AssigneePicker
+                          projectId={projectId}
+                          value={subtask.assigneeId ?? null}
+                          onChange={(userId) =>
+                            silentUpdateMutation.mutate(
+                              { issueId: subtask._id, payload: { assigneeId: userId } },
+                              { onSuccess: upsertIssueInCache },
+                            )
+                          }
+                          size={20}
+                          readOnly={!isOwner}
+                        />
+                      </div>
+                    ))}
+                  </div>
+
+                  {isOwner && <SubtaskQuickAdd onSubmit={handleCreateSubtask} pending={createSubtaskMutation.isPending} />}
                 </div>
               )}
-            </div>
 
-            <div className="space-y-2 pt-4 border-t border-line/10">
-              <label className="text-xs font-extrabold text-ink uppercase tracking-wider block">Mô tả công việc</label>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={4}
-                className="w-full bg-slate-50 border border-line/25 rounded-2xl px-4 py-3 text-xs font-semibold focus:ring-2 focus:ring-brand/20 outline-none transition-all resize-none leading-relaxed"
-              />
-            </div>
+              <div className="space-y-2 pt-4 border-t border-line/10">
+                <label className="text-xs font-extrabold text-ink uppercase tracking-wider block">Mô tả công việc</label>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={4}
+                  className="w-full bg-slate-50 border border-line/25 rounded-2xl px-4 py-3 text-xs font-semibold focus:ring-2 focus:ring-brand/20 outline-none transition-all resize-none leading-relaxed"
+                />
+              </div>
 
-            <div className="space-y-4 pt-4 border-t border-line/10">
-              <label className="text-xs font-extrabold text-ink uppercase tracking-wider block">Thảo luận & Bình luận</label>
-              <div className="space-y-3.5 max-h-40 overflow-y-auto pr-1">
-                {comments.map((c) => (
-                  <div key={c.id} className="flex gap-3 items-start p-2.5 hover:bg-slate-50 rounded-xl transition-all">
-                    <Avatar src={c.authorAvatar} name={c.authorName} size={28} />
-                    <div className="flex-grow">
-                      <div className="flex justify-between items-baseline">
-                        <span className="font-bold text-xs text-ink leading-none">{c.authorName}</span>
-                        <span className="text-[10px] text-muted font-medium">{c.time}</span>
+              <div className="space-y-4 pt-4 border-t border-line/10">
+                <label className="text-xs font-extrabold text-ink uppercase tracking-wider block">Thảo luận & Bình luận</label>
+                <div className="space-y-3.5 max-h-40 overflow-y-auto pr-1">
+                  {comments.map((c) => (
+                    <div key={c.id} className="flex gap-3 items-start p-2.5 hover:bg-slate-50 rounded-xl transition-all">
+                      <Avatar src={c.authorAvatar} name={c.authorName} size={28} />
+                      <div className="flex-grow">
+                        <div className="flex justify-between items-baseline">
+                          <span className="font-bold text-xs text-ink leading-none">{c.authorName}</span>
+                          <span className="text-[10px] text-muted font-medium">{c.time}</span>
+                        </div>
+                        <p className="text-xs text-muted leading-relaxed mt-1 font-semibold">{c.text}</p>
                       </div>
-                      <p className="text-xs text-muted leading-relaxed mt-1 font-semibold">{c.text}</p>
                     </div>
-                  </div>
-                ))}
-                {comments.length === 0 && (
-                  <p className="text-xs text-subtle italic">Chưa có bình luận nào.</p>
-                )}
+                  ))}
+                  {comments.length === 0 && (
+                    <p className="text-xs text-subtle italic">Chưa có bình luận nào.</p>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
 
-          <form onSubmit={handleAddComment} className="p-4 border-t border-line/20 bg-slate-50/50 flex gap-2 items-center shrink-0">
-            <input
-              type="text"
-              value={commentText}
-              onChange={(e) => setCommentText(e.target.value)}
-              placeholder="Viết phản hồi công việc..."
-              className="flex-grow bg-white border border-line/25 rounded-xl px-4 py-2 text-xs font-semibold focus:ring-2 focus:ring-brand/20 outline-none transition-all placeholder:text-subtle"
-            />
-            <button
-              type="submit"
-              className="p-2 bg-brand text-white hover:bg-brand-light rounded-xl shadow-md shadow-brand/10 transition-all shrink-0 active:scale-95"
-            >
-              <Send size={14} />
-            </button>
-          </form>
-        </>
-      )}
+            <form onSubmit={handleAddComment} className="p-4 border-t border-line/20 bg-slate-50/50 flex gap-2 items-center shrink-0">
+              <input
+                type="text"
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                placeholder="Viết phản hồi công việc..."
+                className="flex-grow bg-white border border-line/25 rounded-xl px-4 py-2 text-xs font-semibold focus:ring-2 focus:ring-brand/20 outline-none transition-all placeholder:text-subtle"
+              />
+              <button
+                type="submit"
+                className="p-2 bg-brand text-white hover:bg-brand-light rounded-xl shadow-md shadow-brand/10 transition-all shrink-0 active:scale-95"
+              >
+                <Send size={14} />
+              </button>
+            </form>
+          </>
+        )}
       </motion.div>
     </>
   )
