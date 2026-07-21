@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, type FocusEvent, type KeyboardEvent } from 'react'
 import { Plus } from 'lucide-react'
 import { useCreateIssue } from '../hooks/useIssueMutations'
-import type { IssueStatus } from '../issue.types'
+import { ISSUE_TYPE, type IssueStatus, type IssueType } from '../issue.types'
 import AssigneePicker from './AssigneePicker'
+import IssueTypePicker from './IssueTypePicker'
 
 interface QuickAddIssueProps {
   projectId: string
@@ -15,25 +16,32 @@ interface QuickAddIssueProps {
   /** Status gán sẵn cho issue mới — dùng khi quick-add ngay trong 1 cột Board (vd cột "Đang
    * làm" thì issue mới vào thẳng IN_PROGRESS). Bỏ trống -> backend mặc định TODO. */
   status?: IssueStatus
+    /** Cho chọn loại issue (Epic/Task) ngay trong khung — dùng ở trang Danh sách (tạo issue gốc,
+   * không thuộc sprint/cột nào cụ thể). Board/Backlog không cần vì ngữ cảnh đã ngầm định Task. */
+  allowTypeSelection?: boolean
 }
 
 /**
- * Nút "+" thêm nhanh issue ở cuối mỗi khung sprint/backlog/cột Board — nhập title + tuỳ chọn
- * gán người thực hiện ngay (AssigneePicker) cùng lúc tạo.
+ * Nút "+" thêm nhanh issue ở cuối mỗi khung sprint/backlog/cột Board/danh sách — nhập title +
+ * tuỳ chọn gán người thực hiện và/hoặc loại issue (Epic/Task) ngay cùng lúc tạo.
  *
- * Lưu khi: Enter, click ra ngoài khung, HOẶC chọn xong người thực hiện. Vì AssigneePicker
- * render qua Portal (ngoài DOM của khung này), lúc bấm chọn 1 người, trình duyệt bắn `blur`
- * (relatedTarget trỏ vào phần tử trong Portal, không thuộc khung) TRƯỚC khi bắn `click` chọn
- * người — nếu chỉ dựa vào blur, khung sẽ tự lưu SỚM với assigneeId cũ (chưa kịp chọn) rồi
- * chặn luôn lần lưu đúng phía sau (do đang pending). `isPickerOpen` (báo qua onOpenChange)
- * dùng để chặn hẳn việc tự lưu qua blur trong lúc dropdown đang mở; commit thật sự khi chọn
- * xong nằm ở `handleAssigneeChange` (dùng giá trị vừa chọn trực tiếp, không qua state).
+  * Lưu khi: Enter, click ra ngoài khung, HOẶC chọn xong 1 trong 2 dropdown (assignee/type).
+ * Vì các dropdown này render qua Portal (ngoài DOM của khung), lúc bấm chọn, trình duyệt bắn
+ * `blur` (relatedTarget trỏ vào phần tử trong Portal, không thuộc khung) TRƯỚC khi bắn `click`
+ * chọn — nếu chỉ dựa vào blur, khung sẽ tự lưu SỚM với giá trị cũ (chưa kịp chọn) rồi chặn
+ * luôn lần lưu đúng phía sau (do đang pending). `anyPickerOpen` (báo qua onOpenChange của từng
+ * dropdown) dùng để chặn hẳn việc tự lưu qua blur trong lúc 1 trong 2 dropdown đang mở; commit
+ * thật sự khi chọn xong nằm ở `handleAssigneeChange`/`handleTypeChange` (dùng giá trị vừa chọn
+ * trực tiếp, không qua state, tránh closure cũ).
  */
-const QuickAddIssue = ({ projectId, targetSprintId, nextOrderIndex, status }: QuickAddIssueProps) => {
+const QuickAddIssue = ({ projectId, targetSprintId, nextOrderIndex, status, allowTypeSelection = false }: QuickAddIssueProps) => {
   const [isAdding, setIsAdding] = useState(false)
   const [title, setTitle] = useState('')
   const [assigneeId, setAssigneeId] = useState<string | null>(null)
-  const [isPickerOpen, setIsPickerOpen] = useState(false)
+  const [type, setType] = useState<IssueType>(ISSUE_TYPE.TASK)
+  const [isAssigneePickerOpen, setIsAssigneePickerOpen] = useState(false)
+  const [isTypePickerOpen, setIsTypePickerOpen] = useState(false)
+  const anyPickerOpen = isAssigneePickerOpen || isTypePickerOpen
   const rowRef = useRef<HTMLDivElement>(null)
   // silent: bỏ toast "Tạo issue thành công" -> thêm nhanh liên tục không bị dồn thông báo,
   // mượt hơn (issue mới xuất hiện ngay trong khung là đủ phản hồi rồi, không cần toast).
@@ -43,62 +51,82 @@ const QuickAddIssue = ({ projectId, targetSprintId, nextOrderIndex, status }: Qu
     setIsAdding(false)
     setTitle('')
     setAssigneeId(null)
+    setType(ISSUE_TYPE.TASK)
   }
 
-  // Nhận `assigneeId` qua tham số thay vì đọc lại state -> tránh closure cũ khi gọi ngay
-  // sau khi chọn trong AssigneePicker (setAssigneeId chưa kịp áp dụng ở lần gọi đó).
-  const commit = (currentAssigneeId: string | null) => {    
+  // Nhận assignee/type qua tham số thay vì đọc lại state -> tránh closure cũ khi gọi ngay
+  // sau khi chọn trong dropdown (setState chưa kịp áp dụng ở lần gọi đó).
+  //
+  // `cancelIfEmpty`: phân biệt 2 loại lời gọi khi title đang rỗng —
+  // - true (Enter, click ra ngoài thật): coi như người dùng bỏ dở -> hủy khung (reset).
+  // - false (vừa chọn xong 1 dropdown): người dùng có thể mới chọn assignee/type TRƯỚC khi
+  //   gõ title -> chỉ giữ lại lựa chọn, KHÔNG hủy khung, để họ gõ title tiếp sau đó.
+  const commit = (currentAssigneeId: string | null, currentType: IssueType, cancelIfEmpty: boolean) => {
     // Chặn commit 2 lần (vd Enter xong rồi blur trước khi request hoàn tất).
     if (createMutation.isPending) return
 
     const trimmed = title.trim()
     if (!trimmed) {
-      reset()
+      if (cancelIfEmpty) reset()
       return
     }
 
     createMutation.mutate(
-      { title: trimmed, sprintId: targetSprintId, orderIndex: nextOrderIndex, status, assigneeId: currentAssigneeId },
+      {
+        title: trimmed,
+        sprintId: targetSprintId,
+        orderIndex: nextOrderIndex,
+        status,
+        assigneeId: currentAssigneeId,
+        type: allowTypeSelection ? currentType : undefined,
+      },
       { onSuccess: reset },
     )
   }
 
   const handleAssigneeChange = (userId: string | null) => {
     setAssigneeId(userId)
-    // Chọn xong người thực hiện coi như đã hoàn tất nhập liệu -> lưu ngay với giá trị vừa chọn.
-    commit(userId)
+    // Có title rồi thì lưu luôn; chưa có thì chỉ giữ lại lựa chọn, không hủy khung.
+    commit(userId, type, false)
+  }
+
+  const handleTypeChange = (nextType: IssueType) => {
+    setType(nextType)
+    // Có title rồi thì lưu luôn; chưa có thì chỉ giữ lại lựa chọn, không hủy khung.
+    commit(assigneeId, nextType, false)
   }
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault()
-      commit(assigneeId)
+      commit(assigneeId, type, true)
     } else if (e.key === 'Escape') {
       reset()
     }
   }
 
-  // Đang mở AssigneePicker (portal) thì đừng tự lưu qua blur — commit thật đã được
-  // handleAssigneeChange lo khi chọn xong; còn nếu bấm ra ngoài toàn bộ (kể cả dropdown) mà
-  // chưa chọn gì, AssigneePicker tự đóng và effect bên dưới sẽ commit lại theo state hiện có.
+  // Đang mở 1 trong 2 dropdown (portal) thì đừng tự lưu/hủy qua blur — commit thật đã được
+  // handleAssigneeChange/handleTypeChange lo khi chọn xong; còn nếu bấm ra ngoài toàn bộ (kể cả
+  // dropdown) mà chưa chọn gì, dropdown tự đóng và effect bên dưới sẽ xử lý tiếp.
   const handleRowBlur = (e: FocusEvent<HTMLDivElement>) => {
-    if (isPickerOpen) return
+    if (anyPickerOpen) return
     if (!rowRef.current?.contains(e.relatedTarget as Node)) {
-      commit(assigneeId)
+      commit(assigneeId, type, true)
     }
   }
 
-  // Dropdown vừa đóng (chọn xong hoặc bấm ra ngoài không chọn gì) mà focus cũng không còn
-  // nằm trong khung nữa -> coi như đã "click ra ngoài" toàn bộ khung, tự lưu/hủy theo state
-  // hiện tại. Nếu vừa chọn xong, commit ở đây chỉ là gọi thừa (bị chặn bởi guard isPending).
+  // Dropdown vừa đóng (chọn xong hoặc bấm ra ngoài không chọn gì) mà focus cũng không còn nằm
+  // trong khung nữa -> có thể là "chọn xong" (title vẫn đang rỗng, không được hủy) hoặc "bấm
+  // ra ngoài không chọn gì" (không phân biệt được 2 trường hợp này chỉ từ vị trí focus) -> chọn
+  // phương án an toàn hơn: không tự hủy ở đây (cancelIfEmpty=false), chỉ tự lưu nếu đã có title.
   const wasPickerOpenRef = useRef(false)
   useEffect(() => {
-    if (wasPickerOpenRef.current && !isPickerOpen && !rowRef.current?.contains(document.activeElement)) {
-      commit(assigneeId)
+    if (wasPickerOpenRef.current && !anyPickerOpen && !rowRef.current?.contains(document.activeElement)) {
+      commit(assigneeId, type, false)
     }
-    wasPickerOpenRef.current = isPickerOpen
+    wasPickerOpenRef.current = anyPickerOpen
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isPickerOpen])
+  }, [anyPickerOpen])
 
   if (!isAdding) {
     return (
@@ -114,6 +142,9 @@ const QuickAddIssue = ({ projectId, targetSprintId, nextOrderIndex, status }: Qu
 
   return (
     <div ref={rowRef} onBlur={handleRowBlur} className="flex items-center gap-2">
+      {allowTypeSelection && (
+        <IssueTypePicker value={type} onChange={handleTypeChange} onOpenChange={setIsTypePickerOpen} />
+      )}
       <input
         type="text"
         autoFocus
@@ -128,7 +159,7 @@ const QuickAddIssue = ({ projectId, targetSprintId, nextOrderIndex, status }: Qu
         projectId={projectId}
         value={assigneeId}
         onChange={handleAssigneeChange}
-        onOpenChange={setIsPickerOpen}
+        onOpenChange={setIsAssigneePickerOpen}
         size={30}
       />
     </div>
