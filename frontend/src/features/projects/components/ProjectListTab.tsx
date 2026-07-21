@@ -1,14 +1,19 @@
-import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { CornerDownRight, ChevronDown, ChevronRight, Trash2, Plus } from 'lucide-react'
-import Avatar from '@/components/ui/Avatar'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { AnimatePresence, motion } from 'motion/react'
+import { CornerDownRight, ChevronDown, ChevronRight, Pencil, Trash2, Plus } from 'lucide-react'
 import SearchInput from '@/components/ui/SearchInput'
 import Spinner from '@/components/ui/Spinner'
 import IssueTypeIcon from '@/components/ui/IssueTypeIcon'
-import IssuePriorityBadge from '@/components/ui/IssuePriorityBadge'
-import IssueStatusBadge from '@/components/ui/IssueStatusBadge'
+import { useAuthStore } from '@/features/auth/authStore'
+import { useProject } from '../hooks/useProject'
 import { useProjectIssues } from '@/features/issues/hooks/useIssues'
 import { useIssueSearch } from '@/features/issues/hooks/useIssueSearch'
-import { useCreateIssue, useDeleteIssue } from '@/features/issues/hooks/useIssueMutations'
+import { useCreateIssue, useDeleteIssue, useUpdateIssue, useUpdateIssueStatus } from '@/features/issues/hooks/useIssueMutations'
+import AssigneePicker from '@/features/issues/components/AssigneePicker'
+import PriorityPicker from '@/features/issues/components/PriorityPicker'
+import StatusPicker from '@/features/issues/components/StatusPicker'
+import QuickAddIssue from '@/features/issues/components/QuickAddIssue'
+import { calculateNewOrderIndex } from '@/lib/dndHelpers'
 import { ISSUE_TYPE, type Issue, type IssueType } from '@/features/issues/issue.types'
 
 interface ProjectListTabProps {
@@ -62,14 +67,21 @@ const buildIssueTree = (issues: Issue[]) => {
 // / Subtask trở xuống (nhẹ, mờ hơn) mà không cần đọc icon loại issue.
 const getTitleIndentClass = (depth: number) => {
   if (depth <= 0) return ''
-  if (depth === 1) return 'pl-10'
-  return 'pl-16'
+  if (depth === 1) return 'pl-8'
+  return 'pl-14'
 }
 
-const getCornerMarginClass = (depth: number) => (depth <= 1 ? 'ml-2' : 'ml-6')
+// Độ rộng cố định cho các cột bên phải -> Assignee/Priority/Status/Actions luôn thẳng hàng
+// giữa các dòng dù Title thụt lề khác nhau theo độ sâu cây phân cấp.
+const COL_ASSIGNEE = 'w-10 flex justify-center shrink-0'
+const COL_PRIORITY = 'w-32 shrink-0'
+const COL_STATUS = 'w-32 shrink-0'
+const COL_ACTIONS = 'w-16 flex items-center justify-end gap-1 shrink-0'
 
 interface IssueRowProps {
   issue: Issue
+  projectId: string
+  isOwner: boolean
   depth: number
   onSelectIssue: (issueKey: string) => void
   onDeleteIssue: (issue: Issue) => void
@@ -77,18 +89,40 @@ interface IssueRowProps {
   toggle?: { collapsed: boolean; onToggle: () => void; childCount: number }
 }
 
-const IssueRow = ({ issue, depth, onSelectIssue, onDeleteIssue, onAddChild, toggle }: IssueRowProps) => {
+const IssueRow = ({ issue, projectId, isOwner, depth, onSelectIssue, onDeleteIssue, onAddChild, toggle }: IssueRowProps) => {
   const isEpic = issue.type === ISSUE_TYPE.EPIC
   const isDeep = depth >= 2 // Subtask (hoặc sâu hơn) -> chữ nhẹ hơn, mờ hơn Task.
 
+  // silent: các cập nhật tại chỗ (assignee/priority/title) không cần toast — chọn/gõ xong
+  // thấy đổi ngay trên dòng là đủ phản hồi, toast liên tục sẽ gây phiền.
+  const updateMutation = useUpdateIssue(projectId, { silent: true })
+  const updateStatusMutation = useUpdateIssueStatus(projectId)
+
+  const [isEditingTitle, setIsEditingTitle] = useState(false)
+  const [titleDraft, setTitleDraft] = useState(issue.title)
+  const titleInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (isEditingTitle) titleInputRef.current?.focus()
+  }, [isEditingTitle])
+
+  const commitTitle = () => {
+    const trimmed = titleDraft.trim()
+    setIsEditingTitle(false)
+    if (!trimmed || trimmed === issue.title) {
+      setTitleDraft(issue.title)
+      return
+    }
+    updateMutation.mutate({ issueId: issue._id, payload: { title: trimmed } })
+  }
+
   return (
-    <tr
+    <div
       onClick={() => onSelectIssue(issue.key)}
-      className={`transition-colors cursor-pointer group ${
-        isEpic ? 'bg-brand/5 hover:bg-brand/10' : 'hover:bg-slate-50/60'
-      }`}
+      className={`group flex items-center gap-3 px-3 py-2 rounded-2xl transition-colors cursor-pointer ${isEpic ? 'bg-brand/5 hover:bg-brand/10' : 'hover:bg-slate-50/70'
+        }`}
     >
-      <td className="px-2 py-3.5 text-center">
+      <div className="w-6 flex justify-center shrink-0">
         {toggle ? (
           <button
             type="button"
@@ -103,80 +137,126 @@ const IssueRow = ({ issue, depth, onSelectIssue, onDeleteIssue, onAddChild, togg
             {toggle.collapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
           </button>
         ) : (
-          depth > 0 && <CornerDownRight size={13} className={`text-subtle ${getCornerMarginClass(depth)}`} />
+          depth > 0 && <CornerDownRight size={13} className="text-subtle" />
         )}
-      </td>
-      <td className={`px-4 py-3.5 max-w-md truncate ${getTitleIndentClass(depth)}`}>
-        <div className="flex items-center gap-2.5">
-          <IssueTypeIcon type={issue.type} size={isEpic ? 15 : isDeep ? 13 : 14} />
-          <span className={`font-bold shrink-0 ${isDeep ? 'text-subtle text-[10px]' : 'text-brand text-xs'}`}>
-            {issue.key}
-          </span>
-          <span
-            className={
-              issue.status === 'DONE'
-                ? 'line-through text-subtle font-medium'
-                : isEpic
-                  ? 'font-extrabold text-ink text-[13px]'
-                  : isDeep
-                    ? 'font-medium text-muted text-[11px]'
-                    : 'font-semibold text-ink'
-            }
-          >
-            {issue.title}
-          </span>
-          {toggle && toggle.childCount > 0 && (
-            <span className="text-[10px] text-subtle font-bold shrink-0">({toggle.childCount})</span>
-          )}
-        </div>
-      </td>
-      <td className="px-4 py-3.5">
-        {issue.assignee ? (
-          <div className="flex items-center gap-2">
-            <Avatar src={issue.assignee.avatarUrl} name={issue.assignee.fullName} size={20} />
-            <span className="truncate max-w-[100px]">{issue.assignee.fullName}</span>
-          </div>
+      </div>
+
+      <div className={`flex-1 min-w-0 flex items-center gap-2.5 ${getTitleIndentClass(depth)}`}>
+        <IssueTypeIcon type={issue.type} size={isEpic ? 15 : isDeep ? 13 : 14} />
+        <span className={`font-bold shrink-0 ${isDeep ? 'text-subtle text-[10px]' : 'text-brand text-xs'}`}>{issue.key}</span>
+
+        {isEditingTitle ? (
+          <input
+            ref={titleInputRef}
+            value={titleDraft}
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) => setTitleDraft(e.target.value)}
+            onBlur={commitTitle}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                commitTitle()
+              } else if (e.key === 'Escape') {
+                setTitleDraft(issue.title)
+                setIsEditingTitle(false)
+              }
+            }}
+            className="flex-1 min-w-0 bg-white border border-brand/30 rounded-lg px-2 py-1 text-xs font-semibold text-ink outline-none focus:ring-2 focus:ring-brand/20"
+          />
         ) : (
-          <span className="text-subtle">—</span>
-        )}
-      </td>
-      <td className="px-4 py-3.5">
-        <IssuePriorityBadge priority={issue.priority} showIcon={false} />
-      </td>
-      <td className="px-5 py-3.5">
-        <IssueStatusBadge status={issue.status} />
-      </td>
-      <td className="px-3 py-3.5 text-center">
-        <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          {onAddChild && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation()
-                onAddChild()
-              }}
-              className="p-1.5 rounded-lg text-subtle hover:bg-brand/10 hover:text-brand transition-all"
-              aria-label={`Thêm việc con cho ${issue.key}`}
-              title="Thêm việc con"
+          <>
+            <span
+              className={`truncate ${issue.status === 'DONE'
+                  ? 'line-through text-subtle font-medium'
+                  : isEpic
+                    ? 'font-extrabold text-ink text-[13px]'
+                    : isDeep
+                      ? 'font-medium text-muted text-[11px]'
+                      : 'font-semibold text-ink'
+                }`}
             >
-              <Plus size={14} />
-            </button>
-          )}
+              {issue.title}
+            </span>
+            {toggle && toggle.childCount > 0 && (
+              <span className="text-[10px] text-subtle font-bold shrink-0">({toggle.childCount})</span>
+            )}
+            {isOwner && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setIsEditingTitle(true)
+                }}
+                className="p-1 rounded opacity-0 group-hover:opacity-100 text-subtle hover:text-brand hover:bg-slate-100 transition-all shrink-0"
+                aria-label="Sửa tên"
+                title="Sửa tên"
+              >
+                <Pencil size={12} />
+              </button>
+            )}
+            {issue.epicName && (
+              <span className="px-2 py-0.5 bg-brand/5 border border-brand/10 text-brand rounded text-[9px] font-bold uppercase tracking-wider shrink-0">
+                {issue.epicName}
+              </span>
+            )}
+          </>
+        )}
+      </div>
+
+      <div className={COL_ASSIGNEE}>
+        <AssigneePicker
+          projectId={projectId}
+          value={issue.assigneeId ?? null}
+          onChange={(userId) => updateMutation.mutate({ issueId: issue._id, payload: { assigneeId: userId } })}
+          size={26}
+          readOnly={!isOwner}
+        />
+      </div>
+
+      <div className={COL_PRIORITY}>
+        <PriorityPicker
+          value={issue.priority}
+          onChange={(priority) => updateMutation.mutate({ issueId: issue._id, payload: { priority } })}
+          readOnly={!isOwner}
+        />
+      </div>
+
+      <div className={COL_STATUS}>
+        <StatusPicker
+          value={issue.status}
+          onChange={(status) => updateStatusMutation.mutate({ issueId: issue._id, payload: { status } })}
+        />
+      </div>
+
+      <div className={`${COL_ACTIONS} opacity-0 group-hover:opacity-100 transition-opacity`}>
+        {onAddChild && (
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation()
-              onDeleteIssue(issue)
+              onAddChild()
             }}
-            className="p-1.5 rounded-lg text-subtle hover:bg-red-50 hover:text-red-500 transition-all"
-            aria-label={`Xoá ${issue.key}`}
-            title="Xoá issue"
+            className="p-1.5 rounded-lg text-subtle hover:bg-brand/10 hover:text-brand transition-all"
+            aria-label={`Thêm việc con cho ${issue.key}`}
+            title="Thêm việc con"
           >
-            <Trash2 size={14} />
+            <Plus size={14} />
           </button>
-        </div>
-      </td>
-    </tr>
+        )}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            onDeleteIssue(issue)
+          }}
+          className="p-1.5 rounded-lg text-subtle hover:bg-red-50 hover:text-red-500 transition-all"
+          aria-label={`Xoá ${issue.key}`}
+          title="Xoá issue"
+        >
+          <Trash2 size={14} />
+        </button>
+      </div>
+    </div>
   )
 }
 
@@ -188,71 +268,77 @@ interface InlineAddIssueRowProps {
 }
 
 /**
- * Dòng nhập liệu tạo nhanh issue con: tự focus khi hiện ra, Enter/blur có nội dung -> lưu,
- * blur/Escape khi rỗng -> huỷ không tạo gì. `committedRef` chặn việc commit 2 lần (vd Enter
- * xử lý xong rồi input vẫn kịp bắn thêm sự kiện blur trước khi dòng này unmount).
+ * Dòng nhập liệu tạo nhanh issue con: tự focus khi hiện ra. Enter có nội dung -> lưu, xoá
+ * trắng rồi focus lại ngay để gõ tiếp liên tục (không đóng dòng, giống Jira) — dòng chỉ thật
+ * sự đóng khi rời khỏi hẳn (blur ra ngoài) hoặc nhấn Escape. `closingRef` chặn đóng 2 lần (vd
+ * Escape xử lý xong rồi input vẫn kịp bắn thêm sự kiện blur trước khi dòng này unmount).
  */
 const InlineAddIssueRow = ({ depth, childType, onCancel, onSubmit }: InlineAddIssueRowProps) => {
   const [value, setValue] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
-  const committedRef = useRef(false)
+  const closingRef = useRef(false)
 
   useEffect(() => {
     inputRef.current?.focus()
   }, [])
 
-  const commit = () => {
-    if (committedRef.current) return
-    committedRef.current = true
+  // Enter: lưu xong vẫn giữ dòng mở, xoá trắng + focus lại để thêm cái tiếp theo ngay.
+  const commitAndContinue = () => {
     const trimmed = value.trim()
-    if (trimmed) {
-      onSubmit(trimmed)
-    } else {
-      onCancel()
-    }
+    if (!trimmed) return
+    onSubmit(trimmed)
+    setValue('')
+    inputRef.current?.focus()
   }
 
-  const cancel = () => {
-    if (committedRef.current) return
-    committedRef.current = true
+  // Rời khỏi dòng (blur ra ngoài) hoặc Escape: lưu nốt nội dung đang gõ dở (nếu có) rồi đóng hẳn.
+  const commitAndClose = () => {
+    if (closingRef.current) return
+    closingRef.current = true
+    const trimmed = value.trim()
+    if (trimmed) onSubmit(trimmed)
     onCancel()
   }
 
   return (
-    <tr>
-      <td className="px-2 py-2" />
-      <td colSpan={5} className={`py-1.5 pr-4 ${depth <= 1 ? 'pl-10' : 'pl-16'}`}>
-        <div className="flex items-center gap-2">
-          <IssueTypeIcon type={childType} size={14} />
-          <input
-            ref={inputRef}
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            onBlur={commit}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault()
-                commit()
-              } else if (e.key === 'Escape') {
-                cancel()
-              }
-            }}
-            placeholder={childType === ISSUE_TYPE.SUBTASK ? 'Nhập tên việc con rồi Enter...' : 'Nhập tên công việc rồi Enter...'}
-            className="w-full bg-white border border-brand/30 rounded-lg px-3 py-1.5 text-xs font-semibold text-ink outline-none focus:ring-2 focus:ring-brand/20 placeholder:text-subtle placeholder:font-medium"
-          />
-        </div>
-      </td>
-    </tr>
+    <div className={`flex items-center gap-2 py-1.5 pr-4 ${depth <= 1 ? 'pl-16' : 'pl-24'}`}>
+      <IssueTypeIcon type={childType} size={14} />
+      <input
+        ref={inputRef}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={commitAndClose}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault()
+            commitAndContinue()
+          } else if (e.key === 'Escape') {
+            e.preventDefault()
+            closingRef.current = true
+            onCancel()
+          }
+        }}
+        placeholder={childType === ISSUE_TYPE.SUBTASK ? 'Nhập tên việc con rồi Enter...' : 'Nhập tên công việc rồi Enter...'}
+        className="w-full bg-white border border-brand/30 rounded-lg px-3 py-1.5 text-xs font-semibold text-ink outline-none focus:ring-2 focus:ring-brand/20 placeholder:text-subtle placeholder:font-medium"
+      />
+    </div>
   )
 }
 
 const ProjectListTab = ({ projectId, onSelectIssue }: ProjectListTabProps) => {
+  const currentUser = useAuthStore((state) => state.user)
+  const { data: project } = useProject(projectId)
   const { data: issues, isLoading } = useProjectIssues(projectId)
   const { query, setQuery, filtered } = useIssueSearch(issues)
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set())
   const [addingChildFor, setAddingChildFor] = useState<string | null>(null)
   const deleteMutation = useDeleteIssue(projectId)
-  const createMutation = useCreateIssue(projectId)
+  // silent: thêm liên tục nhiều issue con (Enter không đóng dòng) mà cứ toast từng cái sẽ dồn
+  // dập gây phiền — issue mới xuất hiện ngay trong cây là đủ phản hồi rồi.
+  const createMutation = useCreateIssue(projectId, { silent: true })
+
+  const userMemberRecord = project?.members?.find((m) => m.userId === currentUser?._id)
+  const isOwner = userMemberRecord?.role === 'OWNER'
 
   const toggleCollapsed = (id: string) => {
     setCollapsedIds((prev) => {
@@ -275,14 +361,22 @@ const ProjectListTab = ({ projectId, onSelectIssue }: ProjectListTabProps) => {
     setAddingChildFor(issueId)
   }
 
+  // Không đóng khung thêm-con ở đây nữa (InlineAddIssueRow tự giữ mở sau khi Enter để gõ tiếp
+  // liên tục) — chỉ đóng thật khi InlineAddIssueRow gọi onCancel (rời khỏi dòng/Escape).
   const handleCreateChild = (parentIssue: Issue, title: string) => {
     const childType = parentIssue.type === ISSUE_TYPE.EPIC ? ISSUE_TYPE.TASK : ISSUE_TYPE.SUBTASK
     createMutation.mutate({ title, type: childType, parentIssueId: parentIssue._id })
-    setAddingChildFor(null)
   }
 
   const isSearching = query.trim().length > 0
   const { roots, ungrouped } = useMemo(() => buildIssueTree(issues ?? []), [issues])
+
+  // Danh sách issue gốc (không nằm trong Epic nào) đã sắp theo orderIndex -> tính vị trí
+  // "cuối danh sách" cho issue mới tạo từ quick-add.
+  const topLevelIssues = useMemo(
+    () => [...roots, ...ungrouped].map((n) => n.issue).sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0)),
+    [roots, ungrouped],
+  )
 
   // Xoá luôn khi bấm, không hỏi xác nhận. Xoá 1 Epic sẽ kéo theo xoá các Task con của nó
   // (xem issueService.deleteIssue ở backend).
@@ -294,11 +388,14 @@ const ProjectListTab = ({ projectId, onSelectIssue }: ProjectListTabProps) => {
     const collapsed = collapsedIds.has(node.issue._id)
     const canAddChild = isEpic || node.issue.type === ISSUE_TYPE.TASK || node.issue.type === ISSUE_TYPE.BUG
     const isAdding = addingChildFor === node.issue._id
+    const showChildrenBlock = hasChildren || isAdding
 
     return (
-      <Fragment key={node.issue._id}>
+      <div key={node.issue._id}>
         <IssueRow
           issue={node.issue}
+          projectId={projectId}
+          isOwner={isOwner}
           depth={depth}
           onSelectIssue={onSelectIssue}
           onDeleteIssue={handleDeleteIssue}
@@ -309,25 +406,33 @@ const ProjectListTab = ({ projectId, onSelectIssue }: ProjectListTabProps) => {
               : undefined
           }
         />
-        {!collapsed && (
-          <>
-            {node.children.map((child) => renderNode(child, depth + 1))}
-            {isAdding && (
-              <InlineAddIssueRow
-                depth={depth + 1}
-                childType={isEpic ? ISSUE_TYPE.TASK : ISSUE_TYPE.SUBTASK}
-                onCancel={() => setAddingChildFor(null)}
-                onSubmit={(title) => handleCreateChild(node.issue, title)}
-              />
-            )}
-          </>
-        )}
-      </Fragment>
+        <AnimatePresence initial={false}>
+          {!collapsed && showChildrenBlock && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.18, ease: 'easeOut' }}
+              className="overflow-hidden"
+            >
+              {node.children.map((child) => renderNode(child, depth + 1))}
+              {isAdding && (
+                <InlineAddIssueRow
+                  depth={depth + 1}
+                  childType={isEpic ? ISSUE_TYPE.TASK : ISSUE_TYPE.SUBTASK}
+                  onCancel={() => setAddingChildFor(null)}
+                  onSubmit={(title) => handleCreateChild(node.issue, title)}
+                />
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     )
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-4 py-3.5 px-5 bg-white/70 backdrop-blur-md rounded-2xl border border-line/30 shadow-sm">
         <SearchInput
           containerClassName="max-w-md"
@@ -337,48 +442,58 @@ const ProjectListTab = ({ projectId, onSelectIssue }: ProjectListTabProps) => {
         />
       </div>
 
-      <div className="bg-white border border-line/30 rounded-3xl overflow-hidden shadow-sm">
+      <div className="bg-white border border-line/30 rounded-3xl p-3 shadow-sm">
         {isLoading ? (
           <div className="py-12 flex justify-center text-muted">
             <Spinner />
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-left">
-              <thead>
-                <tr className="border-b border-line/30 bg-slate-50/50 text-[10px] font-bold text-muted uppercase tracking-wider">
-                  <th className="px-2 py-4 w-10" />
-                  <th className="px-4 py-4 min-w-[320px]">Công việc</th>
-                  <th className="px-4 py-4">Người thực hiện</th>
-                  <th className="px-4 py-4">Độ ưu tiên</th>
-                  <th className="px-5 py-4">Trạng thái</th>
-                  <th className="px-3 py-4 w-12" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-line/10 text-xs font-medium text-ink">
-                {isSearching
-                  ? filtered.map((issue) => (
-                      <IssueRow
-                        key={issue._id}
-                        issue={issue}
-                        depth={0}
-                        onSelectIssue={onSelectIssue}
-                        onDeleteIssue={handleDeleteIssue}
-                      />
-                    ))
-                  : (
-                    <>
-                      {roots.map((root) => renderNode(root, 0))}
-                      {ungrouped.map((node) => renderNode(node, 0))}
-                    </>
-                  )}
-              </tbody>
-            </table>
+          <>
+            <div className="sticky top-0 z-10 flex items-center gap-3 px-3 py-2 text-[10px] font-bold text-muted uppercase tracking-wider bg-white border-b border-line/15 rounded-t-2xl">
+              <div className="w-6 shrink-0" />
+              <div className="flex-1 min-w-0">Công việc</div>
+              <div className={COL_ASSIGNEE}>Người thực hiện</div>
+              <div className={COL_PRIORITY}>Độ ưu tiên</div>
+              <div className={COL_STATUS}>Trạng thái</div>
+              <div className={COL_ACTIONS} />
+            </div>
+
+            <div className="space-y-0.5">
+              {isSearching
+                ? filtered.map((issue) => (
+                  <IssueRow
+                    key={issue._id}
+                    issue={issue}
+                    projectId={projectId}
+                    isOwner={isOwner}
+                    depth={0}
+                    onSelectIssue={onSelectIssue}
+                    onDeleteIssue={handleDeleteIssue}
+                  />
+                ))
+                : (
+                  <>
+                    {roots.map((root) => renderNode(root, 0))}
+                    {ungrouped.map((node) => renderNode(node, 0))}
+                  </>
+                )}
+            </div>
+
+            {!isSearching && isOwner && (
+              <div className="px-1 pt-1.5">
+                <QuickAddIssue
+                  projectId={projectId}
+                  targetSprintId={null}
+                  nextOrderIndex={calculateNewOrderIndex(topLevelIssues, topLevelIssues.length)}
+                  allowTypeSelection
+                />
+              </div>
+            )}
 
             {roots.length === 0 && ungrouped.length === 0 && (
               <p className="text-xs text-subtle italic py-10 text-center">Chưa có công việc nào.</p>
             )}
-          </div>
+          </>
         )}
       </div>
     </div>

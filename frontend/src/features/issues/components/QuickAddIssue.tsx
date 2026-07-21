@@ -16,7 +16,7 @@ interface QuickAddIssueProps {
   /** Status gán sẵn cho issue mới — dùng khi quick-add ngay trong 1 cột Board (vd cột "Đang
    * làm" thì issue mới vào thẳng IN_PROGRESS). Bỏ trống -> backend mặc định TODO. */
   status?: IssueStatus
-    /** Cho chọn loại issue (Epic/Task) ngay trong khung — dùng ở trang Danh sách (tạo issue gốc,
+  /** Cho chọn loại issue (Epic/Task) ngay trong khung — dùng ở trang Danh sách (tạo issue gốc,
    * không thuộc sprint/cột nào cụ thể). Board/Backlog không cần vì ngữ cảnh đã ngầm định Task. */
   allowTypeSelection?: boolean
 }
@@ -25,7 +25,11 @@ interface QuickAddIssueProps {
  * Nút "+" thêm nhanh issue ở cuối mỗi khung sprint/backlog/cột Board/danh sách — nhập title +
  * tuỳ chọn gán người thực hiện và/hoặc loại issue (Epic/Task) ngay cùng lúc tạo.
  *
-  * Lưu khi: Enter, click ra ngoài khung, HOẶC chọn xong 1 trong 2 dropdown (assignee/type).
+ * Sau khi Enter tạo xong 1 issue, khung KHÔNG đóng lại — chỉ xoá trắng title (giữ nguyên type
+ * đã chọn) và focus lại ngay ô nhập để gõ tiếp liên tục (giống Jira), tránh phải bấm "+" lại
+ * mỗi lần. Chỉ thật sự đóng khung khi bấm ra ngoài hẳn hoặc nhấn Escape.
+ *
+ * Lưu khi: Enter, click ra ngoài khung, HOẶC chọn xong 1 trong 2 dropdown (assignee/type).
  * Vì các dropdown này render qua Portal (ngoài DOM của khung), lúc bấm chọn, trình duyệt bắn
  * `blur` (relatedTarget trỏ vào phần tử trong Portal, không thuộc khung) TRƯỚC khi bắn `click`
  * chọn — nếu chỉ dựa vào blur, khung sẽ tự lưu SỚM với giá trị cũ (chưa kịp chọn) rồi chặn
@@ -43,6 +47,7 @@ const QuickAddIssue = ({ projectId, targetSprintId, nextOrderIndex, status, allo
   const [isTypePickerOpen, setIsTypePickerOpen] = useState(false)
   const anyPickerOpen = isAssigneePickerOpen || isTypePickerOpen
   const rowRef = useRef<HTMLDivElement>(null)
+  const titleInputRef = useRef<HTMLInputElement>(null)
   // silent: bỏ toast "Tạo issue thành công" -> thêm nhanh liên tục không bị dồn thông báo,
   // mượt hơn (issue mới xuất hiện ngay trong khung là đủ phản hồi rồi, không cần toast).
   const createMutation = useCreateIssue(projectId, { silent: true })
@@ -54,6 +59,14 @@ const QuickAddIssue = ({ projectId, targetSprintId, nextOrderIndex, status, allo
     setType(ISSUE_TYPE.TASK)
   }
 
+  // Sau khi tạo xong 1 issue mà vẫn muốn thêm tiếp: chỉ xoá title + người gán, GIỮ nguyên
+  // type đang chọn (thường thêm liên tiếp nhiều issue cùng loại), khung vẫn mở, focus lại ô nhập.
+  const continueAdding = () => {
+    setTitle('')
+    setAssigneeId(null)
+    titleInputRef.current?.focus()
+  }
+
   // Nhận assignee/type qua tham số thay vì đọc lại state -> tránh closure cũ khi gọi ngay
   // sau khi chọn trong dropdown (setState chưa kịp áp dụng ở lần gọi đó).
   //
@@ -61,7 +74,16 @@ const QuickAddIssue = ({ projectId, targetSprintId, nextOrderIndex, status, allo
   // - true (Enter, click ra ngoài thật): coi như người dùng bỏ dở -> hủy khung (reset).
   // - false (vừa chọn xong 1 dropdown): người dùng có thể mới chọn assignee/type TRƯỚC khi
   //   gõ title -> chỉ giữ lại lựa chọn, KHÔNG hủy khung, để họ gõ title tiếp sau đó.
-  const commit = (currentAssigneeId: string | null, currentType: IssueType, cancelIfEmpty: boolean) => {
+  //
+  // `closeAfterSuccess`: sau khi tạo THÀNH CÔNG thì đóng hẳn khung (true — dùng khi người
+  // dùng đã thật sự rời khỏi khung: blur ra ngoài) hay chỉ xoá trắng để gõ tiếp (false — Enter,
+  // hoặc chọn dropdown trong lúc còn đang ở trong khung).
+  const commit = (
+    currentAssigneeId: string | null,
+    currentType: IssueType,
+    cancelIfEmpty: boolean,
+    closeAfterSuccess: boolean,
+  ) => {
     // Chặn commit 2 lần (vd Enter xong rồi blur trước khi request hoàn tất).
     if (createMutation.isPending) return
 
@@ -80,26 +102,27 @@ const QuickAddIssue = ({ projectId, targetSprintId, nextOrderIndex, status, allo
         assigneeId: currentAssigneeId,
         type: allowTypeSelection ? currentType : undefined,
       },
-      { onSuccess: reset },
+      { onSuccess: () => (closeAfterSuccess ? reset() : continueAdding()) },
     )
   }
 
   const handleAssigneeChange = (userId: string | null) => {
     setAssigneeId(userId)
-    // Có title rồi thì lưu luôn; chưa có thì chỉ giữ lại lựa chọn, không hủy khung.
-    commit(userId, type, false)
+    // Có title rồi thì lưu luôn (vẫn ở trong khung nên không đóng); chưa có thì chỉ giữ lại lựa chọn.
+    commit(userId, type, false, false)
   }
 
   const handleTypeChange = (nextType: IssueType) => {
     setType(nextType)
-    // Có title rồi thì lưu luôn; chưa có thì chỉ giữ lại lựa chọn, không hủy khung.
-    commit(assigneeId, nextType, false)
+    // Có title rồi thì lưu luôn (vẫn ở trong khung nên không đóng); chưa có thì chỉ giữ lại lựa chọn.
+    commit(assigneeId, nextType, false, false)
   }
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault()
-      commit(assigneeId, type, true)
+      // Enter = "thêm rồi thêm tiếp" -> không đóng khung.
+      commit(assigneeId, type, true, false)
     } else if (e.key === 'Escape') {
       reset()
     }
@@ -111,18 +134,20 @@ const QuickAddIssue = ({ projectId, targetSprintId, nextOrderIndex, status, allo
   const handleRowBlur = (e: FocusEvent<HTMLDivElement>) => {
     if (anyPickerOpen) return
     if (!rowRef.current?.contains(e.relatedTarget as Node)) {
-      commit(assigneeId, type, true)
+      // Rời khỏi khung thật sự -> lưu nốt nếu có nội dung, rồi đóng hẳn.
+      commit(assigneeId, type, true, true)
     }
   }
 
   // Dropdown vừa đóng (chọn xong hoặc bấm ra ngoài không chọn gì) mà focus cũng không còn nằm
   // trong khung nữa -> có thể là "chọn xong" (title vẫn đang rỗng, không được hủy) hoặc "bấm
   // ra ngoài không chọn gì" (không phân biệt được 2 trường hợp này chỉ từ vị trí focus) -> chọn
-  // phương án an toàn hơn: không tự hủy ở đây (cancelIfEmpty=false), chỉ tự lưu nếu đã có title.
+  // phương án an toàn hơn: không tự hủy ở đây (cancelIfEmpty=false). Focus cũng đã rời khung nên
+  // nếu có lưu được thì đóng luôn (closeAfterSuccess=true), nhất quán với handleRowBlur.
   const wasPickerOpenRef = useRef(false)
   useEffect(() => {
     if (wasPickerOpenRef.current && !anyPickerOpen && !rowRef.current?.contains(document.activeElement)) {
-      commit(assigneeId, type, false)
+      commit(assigneeId, type, false, true)
     }
     wasPickerOpenRef.current = anyPickerOpen
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -146,6 +171,7 @@ const QuickAddIssue = ({ projectId, targetSprintId, nextOrderIndex, status, allo
         <IssueTypePicker value={type} onChange={handleTypeChange} onOpenChange={setIsTypePickerOpen} />
       )}
       <input
+        ref={titleInputRef}
         type="text"
         autoFocus
         value={title}
