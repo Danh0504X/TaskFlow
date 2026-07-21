@@ -89,7 +89,7 @@ const CompleteSprintModal = ({
       open={open}
       onClose={onClose}
       title="Kết thúc sprint"
-      className="max-w-lg"
+      tone="danger"
       footer={
         <>
           <Button variant="secondary" onClick={onClose} disabled={completeMutation.isPending}>
