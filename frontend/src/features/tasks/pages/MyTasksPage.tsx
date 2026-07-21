@@ -123,6 +123,7 @@ const MyTasksPage = () => {
             projectId={selectedTask?.projectId ?? ''}
             isLoading={isLoading}
             onClose={() => setSelectedTaskKey(null)}
+            onSelectIssue={setSelectedTaskKey}
           />
         )}
       </AnimatePresence>

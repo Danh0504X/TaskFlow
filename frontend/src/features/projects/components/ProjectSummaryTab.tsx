@@ -198,12 +198,12 @@ const ProjectSummaryTab = ({ projectId }: ProjectSummaryTabProps) => {
   const typePct = (val: number) => Math.round((val / totalTypes) * 100)
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Hàng 1: Trạng thái, Hạn chót & Tiến độ, Cơ cấu công việc */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
 
         {/* Card 1: Trạng thái công việc */}
-        <div className="bg-white border border-line/30 rounded-3xl p-6 shadow-sm flex flex-col justify-between min-h-[300px]">
+        <div className="bg-white border border-line/30 rounded-3xl p-5 shadow-sm flex flex-col justify-between min-h-[300px]">
           <h3 className="text-base font-bold text-ink mb-4 flex items-center gap-2">
             <CheckCircle2 size={18} className="text-brand" />
             <span>Trạng thái công việc</span>
@@ -244,7 +244,7 @@ const ProjectSummaryTab = ({ projectId }: ProjectSummaryTabProps) => {
         </div>
 
         {/* Card 2: Hạn chót & Tiến độ */}
-        <div className="bg-white border border-line/30 rounded-3xl p-6 shadow-sm flex flex-col justify-between min-h-[300px]">
+        <div className="bg-white border border-line/30 rounded-3xl p-5 shadow-sm flex flex-col justify-between min-h-[300px]">
           <h3 className="text-base font-bold text-ink mb-4 flex items-center gap-2">
             <Clock size={18} className="text-amber-500" />
             <span>Hạn chót & Tiến độ</span>
@@ -294,7 +294,7 @@ const ProjectSummaryTab = ({ projectId }: ProjectSummaryTabProps) => {
         </div>
 
         {/* Card 3: Cơ cấu công việc */}
-        <div className="bg-white border border-line/30 rounded-3xl p-6 shadow-sm flex flex-col justify-between min-h-[300px]">
+        <div className="bg-white border border-line/30 rounded-3xl p-5 shadow-sm flex flex-col justify-between min-h-[300px]">
           <h3 className="text-base font-bold text-ink mb-4 flex items-center gap-2">
             <Layers size={18} className="text-cyan-500" />
             <span>Cơ cấu công việc</span>
@@ -330,10 +330,10 @@ const ProjectSummaryTab = ({ projectId }: ProjectSummaryTabProps) => {
       </div>
 
       {/* Hàng 2: Hoạt động gần đây & Phân tải công việc */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
         {/* Hoạt động gần đây */}
-        <div className="bg-white border border-line/30 rounded-3xl p-6 shadow-sm flex flex-col h-[320px]">
+        <div className="bg-white border border-line/30 rounded-3xl p-5 shadow-sm flex flex-col h-[320px]">
           <h3 className="text-base font-bold text-ink mb-4">Hoạt động gần đây</h3>
           <div className="flex-1 overflow-y-auto space-y-4 pr-1 scrollbar-thin">
             {activities.map((act) => (
@@ -362,7 +362,7 @@ const ProjectSummaryTab = ({ projectId }: ProjectSummaryTabProps) => {
         </div>
 
         {/* Phân tải công việc */}
-        <div className="bg-white border border-line/30 rounded-3xl p-6 shadow-sm flex flex-col h-[320px]">
+        <div className="bg-white border border-line/30 rounded-3xl p-5 shadow-sm flex flex-col h-[320px]">
           <h3 className="text-base font-bold text-ink mb-4">Phân tải công việc</h3>
           <div className="flex-1 overflow-y-auto space-y-4 pr-1 scrollbar-thin">
             {calculatedWorkloads.map((item) => (
@@ -388,7 +388,7 @@ const ProjectSummaryTab = ({ projectId }: ProjectSummaryTabProps) => {
       </div>
 
       {/* Hàng 3: Mức độ đóng góp của thành viên */}
-      <div className="bg-white border border-line/30 rounded-3xl p-6 shadow-sm">
+      <div className="bg-white border border-line/30 rounded-3xl p-5 shadow-sm">
         <h3 className="text-base font-bold text-ink mb-2">Đóng góp của thành viên</h3>
         <p className="text-xs text-muted font-medium mb-6">Tỷ lệ công việc đã hoàn thành (DONE) trên tổng số task được giao của từng người.</p>
 

@@ -3,8 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { ArrowLeft, Plus } from 'lucide-react'
 import Spinner from '@/components/ui/Spinner'
-import Tabs from '@/components/ui/Tabs'
-import ProjectStatusBadge from '@/features/projects/components/ProjectStatusBadge'
+import { cn } from '@/lib/cn'
 import ProjectMethodologyBadge from '@/features/projects/components/ProjectMethodologyBadge'
 import IssueDetailPanel from '@/features/issues/components/IssueDetailPanel'
 import IssueCreateModal from '@/features/issues/components/IssueCreateModal'
@@ -30,6 +29,47 @@ const getTabItems = (methodology: ProjectMethodology): { value: WorkspaceTab; la
     ? [{ value: 'BACKLOG' as const, label: 'Backlog' }]
     : []),
 ]
+
+interface WorkspaceTabsProps {
+  items: { value: WorkspaceTab; label: string }[]
+  value: WorkspaceTab
+  onChange: (value: WorkspaceTab) => void
+}
+
+/** Tabs điều hướng chính của trang project — kiểu gạch chân mỏng (Jira), không nền pill, chữ
+ * nhỏ gọn. Tách riêng khỏi `Tabs.tsx` dùng chung (kiểu pill) vì đó vẫn đang phục vụ bộ lọc
+ * ở trang "Công việc của tôi" — 2 ngữ cảnh khác nhau (điều hướng chính vs. bộ lọc). */
+const WorkspaceTabs = ({ items, value, onChange }: WorkspaceTabsProps) => {
+  const reduceMotion = useReducedMotion()
+
+  return (
+    <div className="flex items-center gap-5">
+      {items.map((item) => {
+        const isActive = value === item.value
+        return (
+          <button
+            key={item.value}
+            type="button"
+            onClick={() => onChange(item.value)}
+            className={cn(
+              'relative pb-2.5 text-xs font-semibold transition-colors',
+              isActive ? 'text-brand' : 'text-muted hover:text-ink',
+            )}
+          >
+            {item.label}
+            {isActive && (
+              <motion.span
+                layoutId="workspace-tab-underline"
+                className="absolute left-0 right-0 -bottom-px h-[2px] bg-brand rounded-full"
+                transition={reduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 420, damping: 34 }}
+              />
+            )}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
 
 const ProjectWorkspacePage = () => {
   const { projectId } = useParams<{ projectId: string }>()
@@ -65,74 +105,74 @@ const ProjectWorkspacePage = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto flex flex-col gap-8 p-8">
-      <button
-        onClick={() => navigate('/projects')}
-        className="flex items-center gap-2 text-xs font-bold text-muted hover:text-brand transition-all w-fit"
-      >
-        <ArrowLeft size={14} />
-        <span>Quay lại danh sách dự án</span>
-      </button>
+    <div className="h-screen flex flex-col overflow-hidden">
+      {/* Header cố định — không cuộn theo nội dung tab bên dưới. */}
+      <header className="shrink-0 border-b border-line/20 bg-white/80 backdrop-blur-md px-6 md:px-8 pt-3">
+        <button
+          onClick={() => navigate('/projects')}
+          className="flex items-center gap-1.5 text-[11px] font-bold text-muted hover:text-brand transition-all w-fit mb-2"
+        >
+          <ArrowLeft size={12} />
+          <span>Dự án của tôi</span>
+        </button>
 
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-line/20">
-        <div className="flex items-start gap-4 min-w-0">
-          <div className="w-14 h-14 rounded-2xl bg-brand/8 border border-brand/10 flex items-center justify-center text-brand font-extrabold text-lg shrink-0">
-            {(project.key || project.name).slice(0, 2).toUpperCase()}
-          </div>
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2.5">
-              <h1 className="text-3xl font-extrabold text-ink tracking-tight">{project.name}</h1>
-              <ProjectMethodologyBadge methodology={project.methodology} />
-              <ProjectStatusBadge status={project.status} />
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-lg bg-brand/8 border border-brand/10 flex items-center justify-center text-brand font-extrabold text-xs shrink-0">
+              {(project.key || project.name).slice(0, 2).toUpperCase()}
             </div>
-            <p className="text-muted mt-1.5 text-xs font-semibold leading-relaxed max-w-2xl">
-              {project.description || 'Chưa có mô tả cho dự án này.'}
-            </p>
+            <h1 className="text-lg md:text-xl font-bold text-ink tracking-tight truncate">{project.name}</h1>
+            <ProjectMethodologyBadge methodology={project.methodology} />
           </div>
+
+          <button
+            onClick={() => setIsCreateIssueOpen(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-brand text-white rounded-xl text-xs font-bold shadow-md shadow-brand/20 hover:bg-brand-light transition-all active:scale-95 shrink-0"
+          >
+            <Plus size={14} />
+            <span>Thêm issue</span>
+          </button>
         </div>
 
-        <button
-          onClick={() => setIsCreateIssueOpen(true)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-brand text-white rounded-xl text-xs font-bold shadow-lg shadow-brand/20 hover:bg-brand-light transition-all active:scale-95 self-start"
-        >
-          <Plus size={15} />
-          <span>Thêm issue</span>
-        </button>
+        <WorkspaceTabs items={getTabItems(project.methodology)} value={activeTab} onChange={setActiveTab} />
       </header>
 
-      <Tabs items={getTabItems(project.methodology)} value={activeTab} onChange={setActiveTab} className="w-fit" />
-
-      <div className="flex-grow relative">
-        <AnimatePresence mode="popLayout" initial={false}>
-          <motion.div
-            key={activeTab}
-            initial={reduceMotion ? false : { opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={reduceMotion ? undefined : { opacity: 0 }}
-            transition={{ duration: 0.15, ease: 'easeOut' }}
-          >
-            {activeTab === 'SUMMARY' && <ProjectSummaryTab projectId={project._id} />}
-            {activeTab === 'LIST' && <ProjectListTab projectId={project._id} onSelectIssue={setSelectedIssueKey} />}
-            {activeTab === 'BOARD' && (
-              project.methodology === PROJECT_METHODOLOGY.SCRUM ? (
-                <ScrumBoardContainer
-                  projectId={project._id}
-                  onSelectIssue={setSelectedIssueKey}
-                  onGoToBacklog={() => setActiveTab('BACKLOG')}
-                />
-              ) : (
-                <KanbanBoardContainer projectId={project._id} onSelectIssue={setSelectedIssueKey} />
-              )
-            )}
-            {activeTab === 'BACKLOG' && (
-              <BacklogView
-                projectId={project._id}
-                onSelectIssue={setSelectedIssueKey}
-                onGoToBoard={() => setActiveTab('BOARD')}
-              />
-            )}
-          </motion.div>
-        </AnimatePresence>
+      {/* Body — vùng cuộn DUY NHẤT của trang, header phía trên luôn đứng yên. */}
+      <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin">
+        <div className="max-w-7xl mx-auto p-6 md:p-8">
+          <div className="relative">
+            <AnimatePresence mode="popLayout" initial={false}>
+              <motion.div
+                key={activeTab}
+                initial={reduceMotion ? false : { opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={reduceMotion ? undefined : { opacity: 0 }}
+                transition={{ duration: 0.15, ease: 'easeOut' }}
+              >
+                {activeTab === 'SUMMARY' && <ProjectSummaryTab projectId={project._id} />}
+                {activeTab === 'LIST' && <ProjectListTab projectId={project._id} onSelectIssue={setSelectedIssueKey} />}
+                {activeTab === 'BOARD' && (
+                  project.methodology === PROJECT_METHODOLOGY.SCRUM ? (
+                    <ScrumBoardContainer
+                      projectId={project._id}
+                      onSelectIssue={setSelectedIssueKey}
+                      onGoToBacklog={() => setActiveTab('BACKLOG')}
+                    />
+                  ) : (
+                    <KanbanBoardContainer projectId={project._id} onSelectIssue={setSelectedIssueKey} />
+                  )
+                )}
+                {activeTab === 'BACKLOG' && (
+                  <BacklogView
+                    projectId={project._id}
+                    onSelectIssue={setSelectedIssueKey}
+                    onGoToBoard={() => setActiveTab('BOARD')}
+                  />
+                )}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        </div>
       </div>
 
       <AnimatePresence>
@@ -142,6 +182,7 @@ const ProjectWorkspacePage = () => {
             projectId={project._id}
             isLoading={issuesLoading}
             onClose={() => setSelectedIssueKey(null)}
+            onSelectIssue={setSelectedIssueKey}
           />
         )}
       </AnimatePresence>
