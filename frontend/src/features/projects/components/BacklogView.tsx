@@ -11,7 +11,6 @@ import {
 } from '@dnd-kit/core'
 import type { DragEndEvent, DragOverEvent, DragStartEvent } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import Avatar from '@/components/ui/Avatar'
 import Spinner from '@/components/ui/Spinner'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import IssueTypeIcon from '@/components/ui/IssueTypeIcon'
@@ -22,6 +21,7 @@ import { useAuthStore } from '@/features/auth/authStore'
 import { useProjectIssues } from '@/features/issues/hooks/useIssues'
 import { useUpdateIssue } from '@/features/issues/hooks/useIssueMutations'
 import QuickAddIssue from '@/features/issues/components/QuickAddIssue'
+import AssigneePicker from '@/features/issues/components/AssigneePicker'
 import { calculateNewOrderIndex } from '@/lib/dndHelpers'
 import { formatDate, toDateInputValue } from '@/lib/format'
 import type { Issue, UpdateIssuePayload } from '@/features/issues/issue.types'
@@ -41,47 +41,68 @@ interface BacklogViewProps {
 const BACKLOG_CONTAINER_ID = 'backlog'
 
 /** 1 dòng issue trong Backlog/sprint container — dùng chung cho mọi container. */
-const IssueRow = ({ issue, onSelectIssue }: { issue: Issue; onSelectIssue: (key: string) => void }) => (
-  <div
-    onClick={() => onSelectIssue(issue.key)}
-    className="flex flex-wrap items-center justify-between gap-4 p-3.5 bg-white border border-line/15 rounded-2xl hover:bg-slate-50/50 transition-all cursor-pointer select-none"
-  >
-    <div className="flex items-center gap-3 flex-1 min-w-0">
-      <IssueTypeIcon type={issue.type} size={14} />
-      <span className="text-xs font-bold text-brand flex-shrink-0">{issue.key}</span>
-      <p className="text-xs font-semibold text-ink truncate flex-grow max-w-lg">{issue.title}</p>
-      {issue.epicName && (
-        <span className="px-2 py-0.5 bg-brand/5 border border-brand/10 text-brand rounded text-[9px] font-bold uppercase tracking-wider flex-shrink-0">
-          {issue.epicName}
-        </span>
-      )}
+const IssueRow = ({
+  issue,
+  projectId,
+  isOwner,
+  onSelectIssue,
+}: {
+  issue: Issue
+  projectId: string
+  isOwner: boolean
+  onSelectIssue: (key: string) => void
+}) => {
+  const updateIssueMutation = useUpdateIssue(projectId, { silent: true })
+
+  return (
+    <div
+      onClick={() => onSelectIssue(issue.key)}
+      className="flex flex-wrap items-center justify-between gap-4 p-3.5 bg-white border border-line/15 rounded-2xl hover:bg-slate-50/50 transition-all cursor-pointer select-none"
+    >
+      <div className="flex items-center gap-3 flex-1 min-w-0">
+        <IssueTypeIcon type={issue.type} size={14} />
+        <span className="text-xs font-bold text-brand flex-shrink-0">{issue.key}</span>
+        <p className="text-xs font-semibold text-ink truncate flex-grow max-w-lg">{issue.title}</p>
+        {issue.epicName && (
+          <span className="px-2 py-0.5 bg-brand/5 border border-brand/10 text-brand rounded text-[9px] font-bold uppercase tracking-wider flex-shrink-0">
+            {issue.epicName}
+          </span>
+        )}
+      </div>
+      <div className="flex items-center gap-3.5">
+        <IssuePriorityBadge priority={issue.priority} showIcon={false} />
+        <AssigneePicker
+          projectId={projectId}
+          value={issue.assigneeId ?? null}
+          onChange={(userId) => updateIssueMutation.mutate({ issueId: issue._id, payload: { assigneeId: userId } })}
+          size={24}
+          readOnly={!isOwner}
+        />
+      </div>
     </div>
-    <div className="flex items-center gap-3.5">
-      <IssuePriorityBadge priority={issue.priority} showIcon={false} />
-      {issue.assignee ? (
-        <Avatar src={issue.assignee.avatarUrl} name={issue.assignee.fullName} size={24} />
-      ) : (
-        <div className="w-6 h-6 rounded-full bg-slate-100 border border-dashed flex items-center justify-center text-subtle text-[8px] font-bold">
-          --
-        </div>
-      )}
-    </div>
-  </div>
-)
+  )
+}
 
 /**
  * Backlog thật (thay ProjectBacklogTab.tsx cũ — nơi từng giả lập theo `status` issue thay
- * vì dùng Sprint thật). Gồm: 1 khối "Sprint đang chạy" (read-only, pin nổi bật) nếu có,
- * N khối sprint PLANNED (sửa/xóa/start), và 1 khối Backlog. Kéo-thả giữa Backlog <-> sprint
- * PLANNED chỉ đổi `sprintId`/`orderIndex`, KHÔNG đụng `status` (giữ nguyên trạng thái —
- * Jira-style). Chỉ OWNER được thao tác (tạo/sửa/xóa/start sprint, kéo-thả); MEMBER chỉ xem.
+ * vì dùng Sprint thật). Gồm: 1 khối "Sprint đang chạy" (pin nổi bật) nếu có, N khối sprint
+ * PLANNED (sửa/xóa/start), và 1 khối Backlog. Cả 3 loại khung đều kéo-thả qua lại được với
+ * nhau (kể cả kéo issue ra khỏi sprint đang chạy) — chỉ đổi `sprintId`/`orderIndex`, KHÔNG
+ * đụng `status` (giữ nguyên trạng thái — Jira-style). Sprint đang chạy chỉ không có nút
+ * sửa/xóa/start (những thao tác đó vẫn ở Backlog/Board tương ứng); chỉ OWNER kéo-thả được,
+ * MEMBER chỉ xem.
+ *  *
+ * Cơ chế kéo-thả mượt như Board: state `localIssues` được cập nhật ngay trong `onDragOver`
+ * (di chuyển card qua container khác / đổi vị trí ngay khi đang kéo, chưa cần thả), kèm
+ * `DragOverlay` cho card nổi theo con trỏ — cùng pattern với `BoardView.tsx`, chỉ khác là
+ * container phân biệt theo `sprintId` thay vì `status`.
  */
 const BacklogView = ({ projectId, onSelectIssue, onGoToBoard }: BacklogViewProps) => {
   const currentUser = useAuthStore((state) => state.user)
   const { data: project } = useProject(projectId)
   const { data: sprints, isLoading: sprintsLoading } = useSprints(projectId)
   const { data: issues, isLoading: issuesLoading } = useProjectIssues(projectId)
-  const updateIssueMutation = useUpdateIssue(projectId)
+  const updateIssueMutation = useUpdateIssue(projectId, { silent: true })
   const createMutation = useCreateSprint(projectId)
   const startMutation = useStartSprint(projectId)
   const deleteMutation = useDeleteSprint(projectId)
@@ -126,14 +147,21 @@ const BacklogView = ({ projectId, onSelectIssue, onGoToBoard }: BacklogViewProps
     .filter((s) => s.status === SPRINT_STATUS.PLANNED)
     .sort((a, b) => a.orderIndex - b.orderIndex)
 
+  // Danh sách hiển thị/kéo-thả lấy từ `localIssues` (phản ánh vị trí đang kéo dở);
+  // `taskIssues` chỉ dùng làm mốc gốc từ server (đồng bộ + so sánh lúc thả).
   const issuesOf = (sprintId: string | null) =>
     localIssues.filter((i) => (i.sprintId ?? null) === sprintId)
 
   const backlogIssues = issuesOf(null)
   const activeSprintIssues = activeSprint ? issuesOf(activeSprint._id) : []
 
-  // Container id dùng cho DnD: 'backlog' hoặc sprintId của 1 sprint PLANNED.
-  const containerIds = [BACKLOG_CONTAINER_ID, ...plannedSprints.map((s) => s._id)]
+  // Container id dùng cho DnD: 'backlog', sprintId của sprint đang ACTIVE (nếu có), hoặc
+  // sprintId của 1 sprint PLANNED. Sprint ACTIVE tham gia được cả kéo ra lẫn kéo vào.
+  const containerIds = [
+    BACKLOG_CONTAINER_ID,
+    ...(activeSprint ? [activeSprint._id] : []),
+    ...plannedSprints.map((s) => s._id),
+  ]
 
   const mouseSensor = useSensor(MouseSensor, { activationConstraint: { distance: 5 } })
   const touchSensor = useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } })
@@ -147,6 +175,7 @@ const BacklogView = ({ projectId, onSelectIssue, onGoToBoard }: BacklogViewProps
     const overIssue = localIssues.find((i) => i._id === overId)
     return overIssue ? (overIssue.sprintId ?? BACKLOG_CONTAINER_ID) : BACKLOG_CONTAINER_ID
   }
+
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string)
     // Lấy đúng chiều rộng thật của dòng đang kéo -> DragOverlay (render ở portal, không kế
@@ -155,7 +184,7 @@ const BacklogView = ({ projectId, onSelectIssue, onGoToBoard }: BacklogViewProps
     lastOverId.current = null
   }
 
-   // Di chuyển card ngay khi đang kéo qua container/vị trí khác — cho cảm giác mượt như Board,
+  // Di chuyển card ngay khi đang kéo qua container/vị trí khác — cho cảm giác mượt như Board,
   // chưa gọi API, chỉ cập nhật state cục bộ để hiển thị.
   const handleDragOver = (event: DragOverEvent) => {
     const { active, over } = event
@@ -164,6 +193,7 @@ const BacklogView = ({ projectId, onSelectIssue, onGoToBoard }: BacklogViewProps
     const activeIdStr = active.id as string
     const overId = over.id as string
     if (activeIdStr === overId) return
+
     // Tối ưu hóa: tránh re-render liên tục nếu chuột di chuyển nhanh trong cùng 1 card
     if (lastOverId.current === overId) return
     lastOverId.current = overId
@@ -201,7 +231,8 @@ const activeIssue = localIssues.find((i) => i._id === activeIdStr)
   const handleDragEnd = (event: DragEndEvent) => {
     const { active } = event
     const issueId = active.id as string
-const finalIssue = localIssues.find((i) => i._id === issueId)
+
+    const finalIssue = localIssues.find((i) => i._id === issueId)
     if (finalIssue) {
       const originalIssue = taskIssues.find((i) => i._id === issueId)
       const currentContainer = originalIssue ? (originalIssue.sprintId ?? BACKLOG_CONTAINER_ID) : BACKLOG_CONTAINER_ID
@@ -222,6 +253,7 @@ const finalIssue = localIssues.find((i) => i._id === issueId)
     setActiveWidth(null)
     lastOverId.current = null
   }
+
     const handleDragCancel = () => {
     // Reset lại localIssues nếu kéo bị hủy bỏ (vd nhấn Esc).
     setLocalIssues(taskIssues)
@@ -282,42 +314,6 @@ const finalIssue = localIssues.find((i) => i._id === issueId)
         </div>
       )}
 
-      {/* Sprint đang chạy — chỉ xem, thao tác thật ở tab Board. */}
-      {activeSprint && (
-        <div className="bg-white border-2 border-blue-200 rounded-3xl p-6 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-4 mb-5 pb-4 border-b border-line/10">
-            <div>
-              <div className="flex items-center gap-2.5">
-                <h3 className="text-base font-extrabold text-ink">{activeSprint.name}</h3>
-                <span className="px-2.5 py-0.5 bg-blue-50 text-blue-700 border border-blue-100 rounded-md text-[10px] font-bold uppercase tracking-wider">
-                  Đang chạy
-                </span>
-              </div>
-              <p className="text-xs text-muted mt-1 font-medium flex items-center gap-1.5">
-                <Calendar size={12} />
-                <span>
-                  {formatDate(activeSprint.startDate)} — {formatDate(activeSprint.endDate)} · {activeSprintIssues.length} công việc
-                </span>
-              </p>
-            </div>
-            <button
-              onClick={onGoToBoard}
-              className="text-xs font-bold text-brand hover:underline shrink-0"
-            >
-              Xem trên Board →
-            </button>
-          </div>
-          <div className="space-y-2.5">
-            {activeSprintIssues.map((issue) => (
-              <IssueRow key={issue._id} issue={issue} onSelectIssue={onSelectIssue} />
-            ))}
-            {activeSprintIssues.length === 0 && (
-              <p className="text-xs text-subtle italic py-4 text-center">Sprint chưa có công việc nào.</p>
-            )}
-          </div>
-        </div>
-      )}
-
       <DndContext
         sensors={activeSensors}
         collisionDetection={pointerWithin}
@@ -326,6 +322,60 @@ const finalIssue = localIssues.find((i) => i._id === issueId)
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
+        {/* Sprint đang chạy — kéo-thả được (kể cả kéo ra ngoài); sửa/xóa/start vẫn ở Board. */}
+        {activeSprint && (
+          <DroppableContainer
+            id={activeSprint._id}
+            className="bg-white border-2 border-blue-200 rounded-3xl p-6 shadow-sm"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-5 pb-4 border-b border-line/10">
+              <div className="flex items-start gap-3">
+                <button
+                  onClick={() => toggleOpen(activeSprint._id)}
+                  className="p-1 mt-0.5 rounded hover:bg-slate-100 text-muted transition-all shrink-0"
+                >
+                  {isOpen(activeSprint._id) ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+                </button>
+                <div>
+                  <div className="flex items-center gap-2.5">
+                    <h3 className="text-base font-extrabold text-ink">{activeSprint.name}</h3>
+                    <span className="px-2.5 py-0.5 bg-blue-50 text-blue-700 border border-blue-100 rounded-md text-[10px] font-bold uppercase tracking-wider">
+                      Đang chạy
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted mt-1 font-medium flex items-center gap-1.5">
+                    <Calendar size={12} />
+                    <span>
+                      {formatDate(activeSprint.startDate)} — {formatDate(activeSprint.endDate)} · {activeSprintIssues.length} công việc
+                    </span>
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={onGoToBoard}
+                className="text-xs font-bold text-brand hover:underline shrink-0"
+              >
+                Xem trên Board →
+              </button>
+            </div>
+
+            {isOpen(activeSprint._id) && (
+              <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1 scrollbar-thin">
+                <SortableContext items={activeSprintIssues.map((i) => i._id)} strategy={verticalListSortingStrategy}>
+                  {activeSprintIssues.map((issue) => (
+                    <SortableItem key={issue._id} id={issue._id} disabled={!isOwner}>
+                      <IssueRow issue={issue} projectId={projectId} isOwner={isOwner} onSelectIssue={onSelectIssue} />
+                    </SortableItem>
+                  ))}
+                </SortableContext>
+                {activeSprintIssues.length === 0 && (
+                  <p className="text-xs text-subtle italic py-4 text-center">Sprint chưa có công việc nào. Kéo công việc vào đây.</p>
+                )}
+              </div>
+            )}
+          </DroppableContainer>
+        )}
+
         {plannedSprints.map((sprint) => {
           const sprintIssues = issuesOf(sprint._id)
           return (
@@ -350,14 +400,16 @@ const finalIssue = localIssues.find((i) => i._id === issueId)
               />
 
               {isOpen(sprint._id) && (
-                <div className="space-y-2.5 min-h-[50px]">
-                  <SortableContext items={sprintIssues.map((i) => i._id)} strategy={verticalListSortingStrategy}>
-                    {sprintIssues.map((issue) => (
-                      <SortableItem key={issue._id} id={issue._id} disabled={!isOwner}>
-                        <IssueRow issue={issue} onSelectIssue={onSelectIssue} />
-                      </SortableItem>
-                    ))}
-                  </SortableContext>
+                <div className="space-y-2.5">
+                  <div className="space-y-2.5 min-h-[50px] max-h-72 overflow-y-auto pr-1 scrollbar-thin">
+                    <SortableContext items={sprintIssues.map((i) => i._id)} strategy={verticalListSortingStrategy}>
+                      {sprintIssues.map((issue) => (
+                        <SortableItem key={issue._id} id={issue._id} disabled={!isOwner}>
+                          <IssueRow issue={issue} projectId={projectId} isOwner={isOwner} onSelectIssue={onSelectIssue} />
+                        </SortableItem>
+                      ))}
+                    </SortableContext>
+                  </div>
                   {isOwner && (
                     <QuickAddIssue
                       projectId={projectId}
@@ -392,7 +444,7 @@ const finalIssue = localIssues.find((i) => i._id === issueId)
               <SortableContext items={backlogIssues.map((i) => i._id)} strategy={verticalListSortingStrategy}>
                 {backlogIssues.map((issue) => (
                   <SortableItem key={issue._id} id={issue._id} disabled={!isOwner}>
-                    <IssueRow issue={issue} onSelectIssue={onSelectIssue} />
+                    <IssueRow issue={issue} projectId={projectId} isOwner={isOwner} onSelectIssue={onSelectIssue} />
                   </SortableItem>
                 ))}
               </SortableContext>
@@ -406,13 +458,14 @@ const finalIssue = localIssues.find((i) => i._id === issueId)
             </div>
           )}
         </DroppableContainer>
+
                 <DragOverlay adjustScale={false}>
           {activeId && activeIssue ? (
             <div
               style={activeWidth ? { width: activeWidth } : undefined}
               className="opacity-95 shadow-xl cursor-grabbing select-none pointer-events-none"
             >
-              <IssueRow issue={activeIssue} onSelectIssue={() => {}} />
+              <IssueRow issue={activeIssue} projectId={projectId} isOwner={isOwner} onSelectIssue={() => {}} />
             </div>
           ) : null}
         </DragOverlay>

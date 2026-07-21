@@ -30,14 +30,31 @@ interface BoardViewProps {
   disabled?: boolean
   onDragEnd: (issueId: string, status: IssueStatus, orderIndex: number) => void
   onSelectIssue: (issueKey: string) => void
+  projectId: string
+  /** null = Kanban (không có sprint). Có giá trị = Scrum, quick-add tạo thẳng vào sprint
+   * đang ACTIVE đó (Board Scrum chỉ hiển thị 1 sprint duy nhất — chính nó). */
+  quickAddSprintId: string | null
+  /** Chỉ OWNER được tạo issue (khớp quyền tạo issue ở backend) -> ẩn khung quick-add với MEMBER. */
+  isOwner: boolean
 }
 
 /**
- * Board thuần (dumb component) — không biết gì về methodology/sprint/mutation, chỉ nhận
- * issues/columns và gọi `onDragEnd` khi kéo-thả xong. Dùng chung cho cả KanbanBoardContainer
- * và ScrumBoardContainer để tránh copy-paste 2 board riêng biệt.
+ * Board thuần (dumb component) — không biết gì về methodology/sprint/mutation ngoài những gì
+ * được truyền vào qua props, chỉ nhận issues/columns và gọi `onDragEnd` khi kéo-thả xong.
+ * Dùng chung cho cả KanbanBoardContainer và ScrumBoardContainer để tránh copy-paste 2 board
+ * riêng biệt.
  */
-const BoardView = ({ issues, columns, isLoading, disabled = false, onDragEnd, onSelectIssue }: BoardViewProps) => {
+const BoardView = ({
+  issues,
+  columns,
+  isLoading,
+  disabled = false,
+  onDragEnd,
+  onSelectIssue,
+  projectId,
+  quickAddSprintId,
+  isOwner,
+}: BoardViewProps) => {
   // State local để quản lý vị trí các issues mượt mà lúc đang kéo (DragOver).
   // Đồng bộ lại mỗi khi `issues` từ server đổi reference (refetch) — dùng pattern "adjusting
   // state during render" (so sánh với giá trị đã đồng bộ lần trước) thay vì useEffect, để
@@ -220,6 +237,9 @@ const BoardView = ({ issues, columns, isLoading, disabled = false, onDragEnd, on
               status={col.status}
               issues={filtered.filter((issue) => issue.status === col.status)}
               onSelectIssue={onSelectIssue}
+              projectId={projectId}
+              quickAddSprintId={quickAddSprintId}
+              isOwner={isOwner}
             />
           ))}
         </div>
@@ -227,7 +247,7 @@ const BoardView = ({ issues, columns, isLoading, disabled = false, onDragEnd, on
         <DragOverlay adjustScale={false}>
           {activeId && activeIssue ? (
             <div className="w-[256px] opacity-95 shadow-xl cursor-grabbing select-none pointer-events-none">
-              <IssueCard issue={activeIssue} />
+              <IssueCard issue={activeIssue} projectId={projectId} isOwner={isOwner} />
             </div>
           ) : null}
         </DragOverlay>

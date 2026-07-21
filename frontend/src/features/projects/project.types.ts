@@ -24,11 +24,21 @@ export type ProjectMethodology =
 export type ProjectMemberRole = 'OWNER' | 'MEMBER'
 export type ProjectMemberStatus = 'PENDING' | 'ACTIVE' | 'REMOVED'
 
+/** Thông tin rút gọn của user gắn trên member — chỉ có khi backend đã populate (hiện tại
+ * chỉ `GET /projects/:id`, xem projectService.getProjectById). */
+export interface ProjectMemberUser {
+  _id: string
+  fullName: string
+  avatarUrl: string | null
+}
+
 export interface ProjectMember {
   userId: string
   role: ProjectMemberRole
   status: ProjectMemberStatus
   joinedAt: string
+    /** Chỉ có khi lấy chi tiết 1 project (GET /projects/:id) — dùng cho assignee picker... */
+  user?: ProjectMemberUser
 }
 
 /** Một project trả về từ backend. */

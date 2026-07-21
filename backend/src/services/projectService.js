@@ -22,6 +22,29 @@ const ensureValidObjectId = (id, label = 'id') => {
 // Chuẩn hoá key người dùng nhập: chữ hoa, bỏ ký tự không phải chữ/số.
 const normalizeKey = (key) => key.trim().toUpperCase().replace(/[^A-Z0-9]/g, '')
 
+// Chuẩn hoá project trả về cho client sau khi đã populate `members.userId`: giữ `userId`
+// là string thô (để mọi so sánh `member.userId === currentUserId` ở FE không bị vỡ), đồng
+// thời thêm field `user` chứa thông tin đã populate (fullName/avatarUrl) cho FE hiển thị/chọn
+// thành viên (vd assignee picker) — cùng pattern với `assignee`/`assigneeId` ở toIssueDTO.
+const toProjectDTO = (project) => {
+  const obj = typeof project.toObject === 'function' ? project.toObject() : project
+
+  return {
+    ...obj,
+    members: obj.members.map((member) => {
+      const populatedUser = member.userId && typeof member.userId === 'object' ? member.userId : null
+
+      return {
+        ...member,
+        userId: populatedUser ? populatedUser._id : member.userId,
+        user: populatedUser
+          ? { _id: populatedUser._id, fullName: populatedUser.fullName, avatarUrl: populatedUser.avatarUrl ?? null }
+          : undefined,
+      }
+    }),
+  }
+}
+
 // Không có key -> tự sinh từ tên project (chữ đầu mỗi từ, tối đa 5 ký tự).
 const deriveKeyFromName = (name) => {
   const initials = name
@@ -175,16 +198,18 @@ const getMyProjects = async (userId) => {
     .lean()
 }
 
-// Lấy chi tiết 1 project.
+// Lấy chi tiết 1 project. Populate `members.userId` (fullName/avatarUrl) -> frontend dùng
+// trực tiếp để hiển thị/chọn thành viên (vd assignee picker) mà không cần gọi API riêng.
 const getProjectById = async (projectId, userId) => {
   ensureValidObjectId(projectId, 'project id')
   const project = await Project.findOne({ _id: projectId, isDeleted: false })
+    .populate({ path: 'members.userId', select: 'fullName avatarUrl' })
 
   if (!project) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Project not found')
   }
 
-  return project
+  return toProjectDTO(project)
 }
 
 // Cập nhật project.

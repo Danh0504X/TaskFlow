@@ -1,17 +1,24 @@
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import type { Issue, IssueStatus } from '../issue.types'
 import IssueCard from './IssueCard'
+import QuickAddIssue from './QuickAddIssue'
 import { DroppableContainer } from '@/components/ui/dnd/DroppableContainer'
 import { SortableItem } from '@/components/ui/dnd/SortableItem'
+import { calculateNewOrderIndex } from '@/lib/dndHelpers'
 
 interface BoardColumnProps {
   title: string
   status: IssueStatus
   issues: Issue[]
   onSelectIssue: (issueKey: string) => void
+  projectId: string
+  /** null = Kanban (không có sprint). Có giá trị = Scrum, tạo thẳng vào sprint đang ACTIVE đó. */
+  quickAddSprintId: string | null
+  /** Chỉ OWNER được tạo issue (khớp quyền tạo issue ở backend) -> ẩn khung quick-add với MEMBER. */
+  isOwner: boolean
 }
 
-const BoardColumn = ({ title, status, issues, onSelectIssue }: BoardColumnProps) => {
+const BoardColumn = ({ title, status, issues, onSelectIssue, projectId, quickAddSprintId, isOwner }: BoardColumnProps) => {
   const issueIds = issues.map((i) => i._id)
 
   return (
@@ -30,15 +37,24 @@ const BoardColumn = ({ title, status, issues, onSelectIssue }: BoardColumnProps)
         <SortableContext items={issueIds} strategy={verticalListSortingStrategy}>
           {issues.map((issue) => (
             <SortableItem key={issue._id} id={issue._id}>
-              <IssueCard issue={issue} onClick={() => onSelectIssue(issue.key)} />
+              <IssueCard issue={issue} projectId={projectId} isOwner={isOwner} onClick={() => onSelectIssue(issue.key)} />
             </SortableItem>
           ))}
         </SortableContext>
 
-        {issues.length === 0 && (
-          <div className="border border-dashed border-line/35 rounded-2xl py-8 text-center text-subtle text-xs font-medium">
-            Không có công việc
-          </div>
+        {isOwner ? (
+          <QuickAddIssue
+            projectId={projectId}
+            targetSprintId={quickAddSprintId}
+            nextOrderIndex={calculateNewOrderIndex(issues, issues.length)}
+            status={status}
+          />
+        ) : (
+          issues.length === 0 && (
+            <div className="border border-dashed border-line/35 rounded-2xl py-8 text-center text-subtle text-xs font-medium">
+              Không có công việc
+            </div>
+          )
         )}
       </div>
     </DroppableContainer>
