@@ -18,7 +18,7 @@ import InvitationPage from '@/features/projects/pages/InvitationPage'
 import ArchivedProjectsPage from '@/features/projects/pages/ArchivedProjectsPage'
 import MyTasksPage from '@/features/tasks/pages/MyTasksPage'
 import { useAuthStore } from '@/features/auth/authStore'
-
+import { ProfilePage } from '@/features/profile/pages/ProfilePage'
 // Chặn truy cập trang cần đăng nhập.
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const user = useAuthStore((state) => state.user)
@@ -49,6 +49,7 @@ const router = createBrowserRouter([
       { path: 'projects/:projectId/invitation', element: <InvitationPage /> },
       { path: 'projects/archived', element: <ArchivedProjectsPage /> },
       { path: 'tasks', element: <MyTasksPage /> },
+      { path: 'profile', element: <ProfilePage /> },
     ],
   },
   {
