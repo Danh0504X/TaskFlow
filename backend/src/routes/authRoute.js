@@ -8,6 +8,7 @@ import {
   signOut,
   refreshToken,
   changePassword,
+  updateMe,
   getMe,
 } from '../controllers/authController.js'
 import { protectedRoute } from '../middlewares/authMiddleware.js'
@@ -19,6 +20,7 @@ import {
   signInSchema,
   googleSignInSchema,
   changePasswordSchema,
+  updateProfileSchema,
 } from '../validations/auth.validation.js'
 
 const router = express.Router()
@@ -39,6 +41,9 @@ router.post('/sign-out', signOut)
 
 // Lấy thông tin user hiện tại — cần đăng nhập (accessToken trong cookie).
 router.get('/me', protectedRoute, getMe)
+
+// Tự cập nhật hồ sơ cá nhân (trang Profile).
+router.patch('/me', protectedRoute, validate(updateProfileSchema), updateMe)
 
 // Đổi mật khẩu — controller/service đã có sẵn từ trước nhưng chưa từng được gắn route.
 router.patch(

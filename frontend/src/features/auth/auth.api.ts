@@ -1,6 +1,8 @@
 import api from '@/lib/api'
 import type { ApiResponse } from '@/lib/http'
 import type {
+  ChangePasswordPayload,
+  ChangePasswordResponse,
   ForgotPasswordPayload,
   ForgotPasswordResponse,
   ResetPasswordPayload,
@@ -9,6 +11,7 @@ import type {
   SignInResponse,
   SignUpPayload,
   SignUpResponse,
+  UpdateProfilePayload,
   UserInfo,
   VerifyEmailPayload,
   VerifyEmailResponse,
@@ -99,5 +102,25 @@ export const authApi = {
       skipAuthRedirect: true,
     })
     return res.data.data.userInfo
+  },
+
+  /** Tự cập nhật hồ sơ cá nhân (trang Profile). */
+  updateProfile: async (payload: UpdateProfilePayload): Promise<UserInfo> => {
+    const res = await api.patch<ApiResponse<{ userInfo: UserInfo }>>(
+      '/auth/me',
+      payload,
+    )
+    return res.data.data.userInfo
+  },
+
+  /** Đổi mật khẩu khi đã đăng nhập (trang Profile). */
+  changePassword: async (
+    payload: ChangePasswordPayload,
+  ): Promise<ChangePasswordResponse> => {
+    const res = await api.patch<ChangePasswordResponse>(
+      '/auth/change-password',
+      payload,
+    )
+    return res.data
   },
 }

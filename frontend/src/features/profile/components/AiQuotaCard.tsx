@@ -1,5 +1,3 @@
-import React from 'react';
-
 export function AiQuotaCard() {
   return (
     <section className="bg-white rounded-3xl p-6 shadow-sm border border-[#c7c4d7]/30">

@@ -54,3 +54,18 @@ export const resetPasswordSchema = z
   })
 
 export type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>
+
+// Schema validate form đổi mật khẩu khi đã đăng nhập (trang Profile). Độ dài tối thiểu
+// khớp policy backend (passwordSchema trong common.validation.js).
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, 'Vui lòng nhập mật khẩu hiện tại.'),
+    newPassword: z.string().min(6, 'Mật khẩu phải có ít nhất 6 ký tự.'),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: 'Mật khẩu xác nhận không khớp.',
+    path: ['confirmPassword'],
+  })
+
+export type ChangePasswordFormValues = z.infer<typeof changePasswordSchema>

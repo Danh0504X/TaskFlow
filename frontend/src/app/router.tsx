@@ -19,6 +19,7 @@ import ArchivedProjectsPage from '@/features/projects/pages/ArchivedProjectsPage
 import MyTasksPage from '@/features/tasks/pages/MyTasksPage'
 import { useAuthStore } from '@/features/auth/authStore'
 import { ProfilePage } from '@/features/profile/pages/ProfilePage'
+import { ChangePasswordPage } from '@/features/profile/pages/ChangePasswordPage'
 // Chặn truy cập trang cần đăng nhập.
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const user = useAuthStore((state) => state.user)
@@ -50,6 +51,7 @@ const router = createBrowserRouter([
       { path: 'projects/archived', element: <ArchivedProjectsPage /> },
       { path: 'tasks', element: <MyTasksPage /> },
       { path: 'profile', element: <ProfilePage /> },
+      { path: 'profile/change-password', element: <ChangePasswordPage /> },
     ],
   },
   {

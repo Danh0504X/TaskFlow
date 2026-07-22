@@ -42,6 +42,14 @@ export const changePasswordSchema = z
   })
   .strict()
 
+// PATCH /auth/me — tự cập nhật hồ sơ cá nhân. Chỉ cho sửa fullName (email cố định,
+// avatar/role/status do backend hoặc admin quản lý).
+export const updateProfileSchema = z
+  .object({
+    fullName: fullNameSchema,
+  })
+  .strict()
+
 // POST /email/verify-email
 export const verifyEmailSchema = z
   .object({

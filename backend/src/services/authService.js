@@ -297,6 +297,19 @@ const changePassword = async (userId, { currentPassword, newPassword }) => {
   return { message: 'Password changed successfully' }
 }
 
+// Tự cập nhật hồ sơ cá nhân (hiện chỉ cho sửa fullName — xem updateProfileSchema).
+const updateProfile = async (userId, { fullName }) => {
+  const user = await User.findById(userId)
+  if (!user) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'User not found')
+  }
+
+  user.fullName = fullName
+  await user.save()
+
+  return buildUserInfo(user)
+}
+
 const signInWithGoogle = async ({ accessToken }) => {
   let googlePayload
   try {
@@ -398,5 +411,6 @@ export const authService = {
   signOut,
   refreshToken,
   changePassword,
+  updateProfile,
   getMe,
 }

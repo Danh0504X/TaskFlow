@@ -1,4 +1,3 @@
-import React from 'react';
 import { AvatarCard } from '../components/AvatarCard';
 import { AiQuotaCard } from '../components/AiQuotaCard';
 import { PersonalInfoForm } from '../components/PersonalInfoForm';

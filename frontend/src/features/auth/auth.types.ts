@@ -45,6 +45,17 @@ export interface ResetPasswordPayload {
   confirmPassword: string
 }
 
+/** PATCH /auth/me — tự cập nhật hồ sơ cá nhân (trang Profile). */
+export interface UpdateProfilePayload {
+  fullName: string
+}
+
+/** PATCH /auth/change-password — đổi mật khẩu khi đã đăng nhập. */
+export interface ChangePasswordPayload {
+  currentPassword: string
+  newPassword: string
+}
+
 // ----- Response nhận về -----
 
 /** Trả về từ /auth/sign-in và /auth/google. Token được set qua httpOnly cookie. */
@@ -75,3 +86,8 @@ export interface ForgotPasswordResponse {
 }
 
 export type ResetPasswordResponse = ForgotPasswordResponse
+
+/** Trả về từ /auth/change-password: message chung, không có data. */
+export interface ChangePasswordResponse {
+  message: string
+}

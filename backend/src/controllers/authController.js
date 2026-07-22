@@ -98,6 +98,15 @@ export const getMe = asyncHandler(async (req, res) => {
   })
 })
 
+// Tự cập nhật hồ sơ cá nhân (trang Profile).
+export const updateMe = asyncHandler(async (req, res) => {
+  const userInfo = await authService.updateProfile(req.user._id, req.body)
+  res.status(StatusCodes.OK).json({
+    message: 'Profile updated successfully',
+    data: { userInfo },
+  })
+})
+
 export const googleSignIn = asyncHandler(async (req, res) => {
   const result = await authService.signInWithGoogle(req.body)
   const { accessToken, refreshToken, fullName } = result.data
