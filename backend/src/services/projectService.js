@@ -8,6 +8,7 @@ import ApiError from '../utils/ApiError.js'
 import { env } from '../config/environment.js'
 import { EMAIL_PURPOSE, EMAIL_REGEX } from '../utils/constants.js'
 import { emailService } from './email/emailService.js'
+import { JwtProvider } from '../providers/JwtProvider.js'
 
 // Các enum hợp lệ (khớp với models/projects.js).
 const PROJECT_STATUSES = ['ACTIVE', 'COMPLETED', 'CANCELLED']
@@ -128,7 +129,8 @@ const inviteMembers = async (projectId, inviterId, invites = []) => {
 
     const user = await User.findOne({ email }).select('fullName').lean()
     if (!user) {
-      results.push({ email, status: 'FAILED', reason: 'Không tìm thấy tài khoản với email này' })
+      // Thành viên chưa có tài khoản -> Đánh dấu là ADDED_NEW để gửi link đăng ký
+      results.push({ email, status: 'ADDED_NEW' })
       continue
     }
 
@@ -136,18 +138,17 @@ const inviteMembers = async (projectId, inviterId, invites = []) => {
       (member) => member.userId.toString() === user._id.toString(),
     )
 
-    if (existingMember && existingMember.status !== 'REMOVED') {
+    if (existingMember && existingMember.status === 'ACTIVE') {
       results.push({ email, status: 'FAILED', reason: 'Người dùng đã là thành viên của project' })
       continue
     }
 
     if (existingMember) {
-      // Từng bị xóa khỏi project -> thêm lại làm MEMBER.
       existingMember.role = 'MEMBER'
-      existingMember.status = 'ACTIVE'
+      existingMember.status = 'PENDING'
       existingMember.joinedAt = new Date()
     } else {
-      project.members.push({ userId: user._id, role: 'MEMBER', status: 'ACTIVE' })
+      project.members.push({ userId: user._id, role: 'MEMBER', status: 'PENDING' })
     }
 
     results.push({ email, status: 'ADDED', userId: user._id.toString(), fullName: user.fullName })
@@ -155,30 +156,52 @@ const inviteMembers = async (projectId, inviterId, invites = []) => {
 
   await project.save()
 
-  // Gửi email thông báo cho các thành viên vừa thêm thành công — không chặn
-  // response nếu gửi email lỗi (member đã được thêm vào DB thành công rồi).
+  // Gửi email thông báo cho các thành viên
   await Promise.all(
     results
-      .filter((result) => result.status === 'ADDED')
-      .map((result) =>
-        emailService
-          .sendEmailByTemplate({
-            to: result.email,
-            template: EMAIL_PURPOSE.PROJECT_INVITE,
-            data: {
-              inviterName: inviter?.fullName,
-              projectName: project.name,
-              projectUrl: `${env.FRONTEND_URL}/projects/${project._id}`,
-            },
-          })
-          .catch((error) => {
-            console.error('🔥 Gửi email mời thành viên thất bại:', error.message)
-          }),
-      ),
+      .filter((result) => result.status === 'ADDED' || result.status === 'ADDED_NEW')
+      .map(async (result) => {
+        try {
+          if (result.status === 'ADDED') {
+            const inviteToken = await JwtProvider.generateToken(
+              { projectId: project._id.toString(), userId: result.userId, email: result.email },
+              env.ACCESS_TOKEN_SECRET,
+              '7d',
+            )
+            await emailService.sendEmailByTemplate({
+              to: result.email,
+              template: EMAIL_PURPOSE.PROJECT_INVITE,
+              data: {
+                inviterName: inviter?.fullName,
+                projectName: project.name,
+                projectUrl: `${env.FRONTEND_URL}/projects/${project._id}/invitation?token=${inviteToken}`,
+              },
+            })
+          } else {
+            // Chưa có tài khoản -> Gửi link đăng ký kèm token mời
+            const inviteToken = await JwtProvider.generateToken(
+              { projectId: project._id.toString(), email: result.email },
+              env.ACCESS_TOKEN_SECRET,
+              '7d',
+            )
+            await emailService.sendEmailByTemplate({
+              to: result.email,
+              template: EMAIL_PURPOSE.PROJECT_INVITE,
+              data: {
+                inviterName: inviter?.fullName,
+                projectName: project.name,
+                projectUrl: `${env.FRONTEND_URL}/register?token=${inviteToken}`,
+              },
+            })
+          }
+        } catch (error) {
+          console.error('🔥 Gửi email mời thành viên thất bại:', error.message)
+        }
+      }),
   )
 
   return {
-    added: results.filter((result) => result.status === 'ADDED'),
+    added: results.filter((result) => result.status === 'ADDED' || result.status === 'ADDED_NEW'),
     skipped: results.filter((result) => result.status === 'FAILED'),
   }
 }
@@ -327,6 +350,99 @@ const leaveProject = async (projectId, userId) => {
   }
 }
 
+// Chấp nhận lời mời tham gia dự án.
+const acceptInvitation = async (projectId, userId, token) => {
+  ensureValidObjectId(projectId, 'project id')
+  ensureValidObjectId(userId, 'user id')
+
+  if (!token) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Mã xác nhận lời mời không được để trống')
+  }
+
+  // Xác thực token
+  let decoded
+  try {
+    decoded = await JwtProvider.verifyToken(token, env.ACCESS_TOKEN_SECRET)
+  } catch (error) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Mã xác nhận lời mời không hợp lệ hoặc đã hết hạn')
+  }
+
+  // Kiểm tra thông tin trong token khớp với request
+  if (decoded.projectId !== projectId || decoded.userId !== userId) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Thông tin xác nhận lời mời không khớp')
+  }
+
+  const project = await Project.findOne({ _id: projectId, isDeleted: false })
+  if (!project) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Project not found')
+  }
+
+  const member = project.members.find(
+    (m) => m.userId.toString() === userId.toString()
+  )
+
+  if (!member || member.status !== 'PENDING') {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Lời mời không tồn tại hoặc đã được xử lý')
+  }
+
+  member.status = 'ACTIVE'
+  member.joinedAt = new Date()
+
+  await project.save()
+
+  // Trả về DTO sau khi đã populate
+  const updatedProject = await Project.findById(projectId)
+    .populate({ path: 'members.userId', select: 'fullName avatarUrl' })
+
+  return toProjectDTO(updatedProject)
+}
+
+// Từ chối lời mời tham gia dự án.
+const declineInvitation = async (projectId, userId, token) => {
+  ensureValidObjectId(projectId, 'project id')
+  ensureValidObjectId(userId, 'user id')
+
+  if (!token) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Mã xác nhận lời mời không được để trống')
+  }
+
+  let decoded
+  try {
+    decoded = await JwtProvider.verifyToken(token, env.ACCESS_TOKEN_SECRET)
+  } catch (error) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Mã xác nhận lời mời không hợp lệ hoặc đã hết hạn')
+  }
+
+  if (decoded.projectId !== projectId || decoded.userId !== userId) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Thông tin xác nhận lời mời không khớp')
+  }
+
+  const project = await Project.findOne({ _id: projectId, isDeleted: false })
+  if (!project) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Project not found')
+  }
+
+  const member = project.members.find(
+    (m) => m.userId.toString() === userId.toString()
+  )
+
+  if (!member || member.status !== 'PENDING') {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Lời mời không tồn tại hoặc đã được xử lý')
+  }
+
+  // Xóa khỏi danh sách thành viên dự án
+  project.members = project.members.filter(
+    (m) => m.userId.toString() !== userId.toString()
+  )
+
+  await project.save()
+
+  const updatedProject = await Project.findById(projectId)
+    .populate({ path: 'members.userId', select: 'fullName avatarUrl' })
+
+  return toProjectDTO(updatedProject)
+}
+
 export const projectService = {
   createProject,
   inviteMembers,
@@ -335,5 +451,7 @@ export const projectService = {
   updateProject,
   deleteProject,
   leaveProject,
+  acceptInvitation,
+  declineInvitation,
 }
 

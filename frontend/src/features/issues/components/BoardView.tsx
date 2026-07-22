@@ -211,8 +211,8 @@ const BoardView = ({
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4 py-3.5 px-5 bg-white/70 backdrop-blur-md rounded-2xl border border-line/30 shadow-sm">
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3 py-2.5 px-4 bg-white/70 backdrop-blur-md rounded-2xl border border-line/30 shadow-sm">
         <SearchInput
           containerClassName="max-w-md"
           value={query}

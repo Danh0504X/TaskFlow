@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FolderKanban, Plus, RotateCcw } from 'lucide-react'
+import { FolderKanban, Plus, RotateCcw, Archive } from 'lucide-react'
 import Spinner from '@/components/ui/Spinner'
 import SearchInput from '@/components/ui/SearchInput'
-import ConfirmDialog from '@/components/ui/ConfirmDialog'
+import Modal from '@/components/ui/Modal'
+import Button from '@/components/ui/Button'
+import { useAuthStore } from '@/features/auth/authStore'
 import type { Project } from '../project.types'
 import { useProjects } from '../hooks/useProjects'
-import { useDeleteProject } from '../hooks/useProjectMutations'
+import { useDeleteProject, usePermanentDeleteProject } from '../hooks/useProjectMutations'
 import ProjectCard from './ProjectCard'
 import ProjectEditModal from './ProjectEditModal'
 
@@ -18,8 +20,10 @@ import ProjectEditModal from './ProjectEditModal'
  */
 const ProjectsView = () => {
   const navigate = useNavigate()
+  const currentUser = useAuthStore((state) => state.user)
   const { data: projects, isLoading, isError, refetch, isFetching } = useProjects()
   const deleteMutation = useDeleteProject()
+  const permanentDeleteMutation = usePermanentDeleteProject()
 
   const [query, setQuery] = useState('')
   const [editing, setEditing] = useState<Project | null>(null)
@@ -32,9 +36,19 @@ const ProjectsView = () => {
       (project.key ?? '').toLowerCase().includes(normalizedQuery),
   )
 
-  const confirmDelete = () => {
+  const createdProjects = filteredProjects.filter((p) => p.createdBy === currentUser?._id)
+  const joinedProjects = filteredProjects.filter((p) => p.createdBy !== currentUser?._id)
+
+  const handleArchive = () => {
     if (!deleting) return
     deleteMutation.mutate(deleting._id, {
+      onSuccess: () => setDeleting(null),
+    })
+  }
+
+  const handlePermanentDelete = () => {
+    if (!deleting) return
+    permanentDeleteMutation.mutate(deleting._id, {
       onSuccess: () => setDeleting(null),
     })
   }
@@ -49,13 +63,22 @@ const ProjectsView = () => {
           </p>
         </div>
 
-        <button
-          onClick={() => navigate('/projects/new')}
-          className="flex items-center gap-2 px-4 py-2.5 bg-brand text-white rounded-xl text-sm font-bold shadow-lg shadow-brand/20 hover:bg-brand-light transition-all active:scale-95 self-start sm:self-auto"
-        >
-          <Plus size={16} />
-          <span>Tạo dự án mới</span>
-        </button>
+        <div className="flex items-center gap-3 self-start sm:self-auto">
+          <button
+            onClick={() => navigate('/projects/archived')}
+            className="flex items-center gap-2 px-4 py-2.5 bg-white text-ink border border-line/30 rounded-xl text-sm font-bold hover:bg-slate-50 transition-all active:scale-95"
+          >
+            <Archive size={16} className="text-muted" />
+            <span>Dự án đã lưu trữ</span>
+          </button>
+          <button
+            onClick={() => navigate('/projects/new')}
+            className="flex items-center gap-2 px-4 py-2.5 bg-brand text-white rounded-xl text-sm font-bold shadow-lg shadow-brand/20 hover:bg-brand-light transition-all active:scale-95"
+          >
+            <Plus size={16} />
+            <span>Tạo dự án mới</span>
+          </button>
+        </div>
       </header>
 
       {!isLoading && !isError && projects && projects.length > 0 && (
@@ -105,24 +128,52 @@ const ProjectsView = () => {
                 <span>Tạo dự án đầu tiên</span>
               </button>
             </div>
-          ) : filteredProjects.length === 0 ? (
-            <div className="border border-dashed border-line/35 rounded-3xl py-16 text-center text-subtle text-xs font-medium">
-              Không tìm thấy dự án nào khớp với "{query}".
-            </div>
           ) : (
-            <>
-              {isFetching && <p className="text-xs text-subtle -mt-2">Đang cập nhật...</p>}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredProjects.map((project) => (
-                  <ProjectCard
-                    key={project._id}
-                    project={project}
-                    onEdit={setEditing}
-                    onDelete={setDeleting}
-                  />
-                ))}
+            <div className="space-y-10">
+              {isFetching && <p className="text-xs text-subtle -mb-4">Đang cập nhật...</p>}
+              
+              {/* Dự án bạn đã tạo */}
+              <div className="space-y-4">
+                <h3 className="text-xs font-extrabold text-ink uppercase tracking-wider border-b border-line/10 pb-2">
+                  Dự án bạn đã tạo ({createdProjects.length})
+                </h3>
+                {createdProjects.length === 0 ? (
+                  <p className="text-xs text-subtle italic py-1">Bạn chưa tự tạo dự án nào.</p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {createdProjects.map((project) => (
+                      <ProjectCard
+                        key={project._id}
+                        project={project}
+                        onEdit={setEditing}
+                        onDelete={setDeleting}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
-            </>
+
+              {/* Dự án bạn đã tham gia */}
+              <div className="space-y-4">
+                <h3 className="text-xs font-extrabold text-ink uppercase tracking-wider border-b border-line/10 pb-2">
+                  Tất cả dự án bạn đã tham gia ({joinedProjects.length})
+                </h3>
+                {joinedProjects.length === 0 ? (
+                  <p className="text-xs text-subtle italic py-1">Bạn chưa tham gia dự án nào khác.</p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {joinedProjects.map((project) => (
+                      <ProjectCard
+                        key={project._id}
+                        project={project}
+                        onEdit={setEditing}
+                        onDelete={setDeleting}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           )}
         </>
       )}
@@ -130,17 +181,51 @@ const ProjectsView = () => {
       {/* Modal Sửa */}
       <ProjectEditModal open={!!editing} onClose={() => setEditing(null)} project={editing} />
 
-      {/* Dialog xác nhận xoá */}
-      <ConfirmDialog
+      {/* Modal xác nhận lưu trữ hoặc xoá vĩnh viễn */}
+      <Modal
         open={!!deleting}
-        title="Xoá project"
-        message={`Bạn có chắc muốn xoá project "${deleting?.name}"? Hành động này không thể hoàn tác.`}
-        confirmText="Xoá"
-        danger
-        loading={deleteMutation.isPending}
-        onConfirm={confirmDelete}
         onClose={() => setDeleting(null)}
-      />
+        title="Xử lý dự án"
+        tone="danger"
+        layout="compact"
+        footer={
+          <>
+            <Button
+              variant="secondary"
+              onClick={() => setDeleting(null)}
+              disabled={deleteMutation.isPending || permanentDeleteMutation.isPending}
+            >
+              Hủy
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleArchive}
+              loading={deleteMutation.isPending}
+              disabled={permanentDeleteMutation.isPending}
+            >
+              Lưu trữ
+            </Button>
+            <Button
+              variant="danger"
+              onClick={handlePermanentDelete}
+              loading={permanentDeleteMutation.isPending}
+              disabled={deleteMutation.isPending}
+            >
+              Xóa vĩnh viễn
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-2">
+          <p className="text-sm text-ink font-semibold">
+            Bạn muốn xử lý dự án "{deleting?.name}" như thế nào?
+          </p>
+          <ul className="text-xs text-muted list-disc list-inside space-y-1.5 leading-relaxed">
+            <li><strong>Lưu trữ dự án:</strong> Dự án sẽ được chuyển vào mục lưu trữ tạm thời và có thể khôi phục lại sau này.</li>
+            <li><strong>Xóa vĩnh viễn:</strong> Dự án và mọi dữ liệu liên quan sẽ bị xóa hoàn toàn, không thể hoàn tác.</li>
+          </ul>
+        </div>
+      </Modal>
     </div>
   )
 }

@@ -1,10 +1,26 @@
-import { useState, type FocusEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useState, useEffect, type FocusEvent } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { motion, AnimatePresence } from 'motion/react'
 import { useGoogleLogin } from '@react-oauth/google'
 import { ArrowRight, Mail } from 'lucide-react'
+
+const decodeJWT = (token: string) => {
+  try {
+    const base64Url = token.split('.')[1]
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    )
+    return JSON.parse(jsonPayload)
+  } catch (error) {
+    return null
+  }
+}
 
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
@@ -28,12 +44,15 @@ import {
 // Form đăng ký 2 bước: (1) Họ tên + Email, (2) Mật khẩu + Xác nhận.
 const RegisterForm = () => {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const inviteToken = searchParams.get('token')
   const signUpMutation = useSignUp()
   const checkEmailMutation = useCheckEmail()
   const googleMutation = useGoogleSignIn()
 
   const [step, setStep] = useState<1 | 2>(1)
   const [serverError, setServerError] = useState('')
+  const [decodedEmail, setDecodedEmail] = useState('')
 
   const {
     register,
@@ -41,11 +60,22 @@ const RegisterForm = () => {
     trigger,
     setError,
     getValues,
+    setValue,
     formState: { errors, dirtyFields },
   } = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     mode: 'onChange',
   })
+
+  useEffect(() => {
+    if (inviteToken) {
+      const decoded = decodeJWT(inviteToken)
+      if (decoded?.email) {
+        setDecodedEmail(decoded.email)
+        setValue('email', decoded.email)
+      }
+    }
+  }, [inviteToken, setValue])
 
   // register email riêng để vừa giữ onBlur gốc của react-hook-form,
   // vừa gắn thêm việc kiểm tra email tồn tại ngay khi rời khỏi ô email.
@@ -54,6 +84,7 @@ const RegisterForm = () => {
   // Kiểm tra email đã có trong hệ thống chưa (chỉ chạy khi định dạng hợp lệ).
   // Trả về true nếu email còn dùng được (chưa ai đăng ký).
   const verifyEmailAvailable = async () => {
+    if (decodedEmail) return true
     const isEmailValid = await trigger('email')
     if (!isEmailValid) return false
 
@@ -96,8 +127,11 @@ const RegisterForm = () => {
         fullName: data.fullName,
         email: data.email,
         password: data.password,
+        inviteToken: inviteToken ?? undefined,
       })
-      navigate('/verify-email', { state: { email: data.email } })
+      navigate('/verify-email', {
+        state: { email: data.email, inviteToken: inviteToken ?? undefined },
+      })
     } catch (err) {
       setServerError(getApiErrorMessage(err, 'Đăng ký thất bại, vui lòng thử lại'))
     }
@@ -176,7 +210,12 @@ const RegisterForm = () => {
                 onBlur={handleEmailBlur}
                 type="email"
                 placeholder="john@example.com"
-                className={cn('mt-1.5', inputClass)}
+                disabled={!!decodedEmail}
+                className={cn(
+                  'mt-1.5',
+                  inputClass,
+                  decodedEmail && 'opacity-60 bg-slate-100 cursor-not-allowed'
+                )}
               />
               {errors.email && (
                 <p className={errorClass}>{errors.email.message}</p>

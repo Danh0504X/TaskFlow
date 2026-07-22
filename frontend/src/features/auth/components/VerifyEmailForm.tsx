@@ -10,8 +10,24 @@ import { errorClass, primaryButtonClass } from '../auth.styles'
 const codeInputClass =
   'h-12 w-full rounded-xl border border-line/80 bg-white/50 px-4 text-center text-lg tracking-[0.5em] text-ink backdrop-blur-md transition placeholder:text-base placeholder:tracking-normal placeholder:text-subtle outline-none focus:border-transparent focus:ring-2 focus:ring-brand/70'
 
+const decodeJWT = (token: string) => {
+  try {
+    const base64Url = token.split('.')[1]
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    )
+    return JSON.parse(jsonPayload)
+  } catch (error) {
+    return null
+  }
+}
+
 // Form xác thực email: nhập mã 6 số, gửi lại mã, quay lại đăng nhập.
-const VerifyEmailForm = ({ email }: { email: string }) => {
+const VerifyEmailForm = ({ email, inviteToken }: { email: string; inviteToken?: string }) => {
   const navigate = useNavigate()
   const verifyMutation = useVerifyEmail()
   const resendMutation = useResendCode()
@@ -20,14 +36,23 @@ const VerifyEmailForm = ({ email }: { email: string }) => {
   const [error, setError] = useState('')
   const [info, setInfo] = useState('')
 
+  const decoded = inviteToken ? decodeJWT(inviteToken) : null
+  const projectId = decoded?.projectId
+
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setError('')
     setInfo('')
     verifyMutation.mutate(
-      { email, code },
+      { email, code, inviteToken },
       {
-        onSuccess: () => navigate('/', { replace: true }),
+        onSuccess: () => {
+          if (projectId) {
+            navigate(`/projects/${projectId}`, { replace: true })
+          } else {
+            navigate('/', { replace: true })
+          }
+        },
         onError: (err) =>
           setError(getApiErrorMessage(err, 'Mã không đúng hoặc đã hết hạn')),
       },

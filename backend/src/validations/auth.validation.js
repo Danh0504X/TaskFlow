@@ -7,6 +7,7 @@ export const signUpSchema = z
     fullName: fullNameSchema,
     email: emailSchema,
     password: passwordSchema,
+    inviteToken: z.string().optional(),
   })
   .strict()
 
@@ -46,6 +47,7 @@ export const verifyEmailSchema = z
   .object({
     email: emailSchema,
     code: z.string().trim().regex(/^\d{6}$/, 'Verification code must be 6 digits'),
+    inviteToken: z.string().optional(),
   })
   .strict()
 

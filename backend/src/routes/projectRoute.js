@@ -7,6 +7,8 @@ import {
   updateProject,
   deleteProject,
   leaveProject,
+  acceptInvitation,
+  declineInvitation,
 } from '../controllers/projectController.js'
 import { protectedRoute } from '../middlewares/authMiddleware.js'
 import { authorizeProjectRole } from '../middlewares/projectAuthMiddleware.js'
@@ -57,6 +59,17 @@ router.post(
   '/:projectId/leave',
   authorizeProjectRole('OWNER', 'MEMBER'),
   leaveProject,
+)
+
+// Chấp nhận / từ chối lời mời: chỉ cần đăng nhập (status: PENDING nên không check role)
+router.post(
+  '/:projectId/invitation/accept',
+  acceptInvitation,
+)
+
+router.post(
+  '/:projectId/invitation/decline',
+  declineInvitation,
 )
 
 // Nested routes: sprint & issue luôn nằm trong 1 project.

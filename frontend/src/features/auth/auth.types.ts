@@ -25,11 +25,13 @@ export interface SignUpPayload {
   email: string
   password: string
   fullName: string
+  inviteToken?: string
 }
 
 export interface VerifyEmailPayload {
   email: string
   code: string
+  inviteToken?: string
 }
 
 export interface ForgotPasswordPayload {

@@ -13,6 +13,7 @@ import type { DragEndEvent, DragOverEvent, DragStartEvent } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import Spinner from '@/components/ui/Spinner'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
+import Button from '@/components/ui/Button'
 import IssueTypeIcon from '@/components/ui/IssueTypeIcon'
 import IssuePriorityBadge from '@/components/ui/IssuePriorityBadge'
 import { DroppableContainer } from '@/components/ui/dnd/DroppableContainer'
@@ -27,9 +28,10 @@ import { formatDate, toDateInputValue } from '@/lib/format'
 import type { Issue, UpdateIssuePayload } from '@/features/issues/issue.types'
 import { useProject } from '../hooks/useProject'
 import { useSprints } from '@/features/sprints/hooks/useSprints'
-import { useCreateSprint, useDeleteSprint, useStartSprint } from '@/features/sprints/hooks/useSprintMutations'
+import { useCreateSprint, useDeleteSprint } from '@/features/sprints/hooks/useSprintMutations'
 import { SPRINT_STATUS, type Sprint } from '@/features/sprints/sprint.types'
 import PlannedSprintCardHeader from '@/features/sprints/components/PlannedSprintCardHeader'
+import SprintFormModal from '@/features/sprints/components/SprintFormModal'
 
 interface BacklogViewProps {
   projectId: string
@@ -57,8 +59,7 @@ const IssueRow = ({
   return (
     <div
       onClick={() => onSelectIssue(issue.key)}
-      className="flex flex-wrap items-center justify-between gap-4 p-3.5 bg-white border border-line/15 rounded-2xl hover:bg-slate-50/50 transition-all cursor-pointer select-none"
-    >
+      className="flex flex-wrap items-center justify-between gap-4 p-3 bg-white border border-line/15 rounded-2xl hover:bg-slate-50/50 transition-all cursor-pointer select-none"    >
       <div className="flex items-center gap-3 flex-1 min-w-0">
         <IssueTypeIcon type={issue.type} size={14} />
         <span className="text-xs font-bold text-brand flex-shrink-0">{issue.key}</span>
@@ -91,7 +92,7 @@ const IssueRow = ({
  * đụng `status` (giữ nguyên trạng thái — Jira-style). Sprint đang chạy chỉ không có nút
  * sửa/xóa/start (những thao tác đó vẫn ở Backlog/Board tương ứng); chỉ OWNER kéo-thả được,
  * MEMBER chỉ xem.
- *  *
+ *
  * Cơ chế kéo-thả mượt như Board: state `localIssues` được cập nhật ngay trong `onDragOver`
  * (di chuyển card qua container khác / đổi vị trí ngay khi đang kéo, chưa cần thả), kèm
  * `DragOverlay` cho card nổi theo con trỏ — cùng pattern với `BoardView.tsx`, chỉ khác là
@@ -104,14 +105,13 @@ const BacklogView = ({ projectId, onSelectIssue, onGoToBoard }: BacklogViewProps
   const { data: issues, isLoading: issuesLoading } = useProjectIssues(projectId)
   const updateIssueMutation = useUpdateIssue(projectId, { silent: true })
   const createMutation = useCreateSprint(projectId)
-  const startMutation = useStartSprint(projectId)
   const deleteMutation = useDeleteSprint(projectId)
 
   const [openContainers, setOpenContainers] = useState<Record<string, boolean>>({})
-  const [editingSprintId, setEditingSprintId] = useState<string | null>(null)
+  const [editingSprint, setEditingSprint] = useState<Sprint | null>(null)
   const [deletingSprint, setDeletingSprint] = useState<Sprint | null>(null)
-  const [startWarningSprint, setStartWarningSprint] = useState<Sprint | null>(null)
 
+  const [startingSprint, setStartingSprint] = useState<Sprint | null>(null)
   const userMemberRecord = project?.members?.find((m) => m.userId === currentUser?._id)
   const isOwner = userMemberRecord?.role === 'OWNER'
 
@@ -198,7 +198,7 @@ const BacklogView = ({ projectId, onSelectIssue, onGoToBoard }: BacklogViewProps
     if (lastOverId.current === overId) return
     lastOverId.current = overId
 
-const activeIssue = localIssues.find((i) => i._id === activeIdStr)
+    const activeIssue = localIssues.find((i) => i._id === activeIdStr)
     if (!activeIssue) return
 
     const targetContainer = resolveTargetContainer(overId)
@@ -219,10 +219,10 @@ const activeIssue = localIssues.find((i) => i._id === activeIdStr)
       return prev.map((item) =>
         item._id === activeIdStr
           ? {
-              ...item,
-              orderIndex: newOrder,
-              sprintId: targetContainer === BACKLOG_CONTAINER_ID ? null : targetContainer,
-            }
+            ...item,
+            orderIndex: newOrder,
+            sprintId: targetContainer === BACKLOG_CONTAINER_ID ? null : targetContainer,
+          }
           : item,
       )
     })
@@ -254,7 +254,7 @@ const activeIssue = localIssues.find((i) => i._id === activeIdStr)
     lastOverId.current = null
   }
 
-    const handleDragCancel = () => {
+  const handleDragCancel = () => {
     // Reset lại localIssues nếu kéo bị hủy bỏ (vd nhấn Esc).
     setLocalIssues(taskIssues)
     setActiveId(null)
@@ -264,31 +264,52 @@ const activeIssue = localIssues.find((i) => i._id === activeIdStr)
 
   const activeIssue = localIssues.find((i) => i._id === activeId)
 
-  const handleStartClick = (sprint: Sprint) => {
-    const count = issuesOf(sprint._id).length
-    if (count === 0) {
-      setStartWarningSprint(sprint)
-      return
+  // Bấm "Bắt đầu" chỉ mở modal xác nhận (SprintFormModal mode="start") — không start thẳng nữa.
+  const handleStartClick = (sprint: Sprint) => setStartingSprint(sprint)
+
+  // Tên sprint mới không trùng dù đã xoá sprint ở giữa: lấy số lớn nhất trong các tên dạng
+  // "Sprint X" hiện có (kể cả sprint đã ACTIVE/COMPLETED, chỉ loại sprint đã xoá mềm — vốn
+  // không còn trong `sprints`) rồi +1; nếu không parse được tên nào thì fallback = tổng số
+  // sprint hiện có + 1.
+  const nextSprintName = (allSprints: Sprint[]): string => {
+    const parsedNumbers = allSprints
+      .map((s) => /^Sprint (\d+)$/i.exec(s.name.trim())?.[1])
+      .filter((n): n is string => !!n)
+      .map(Number)
+    if (parsedNumbers.length > 0) {
+      return `Sprint ${Math.max(...parsedNumbers) + 1}`
     }
-    startMutation.mutate(sprint._id)
+    return `Sprint ${allSprints.length + 1}`
   }
 
-  // Tạo sprint NGAY khi bấm nút — không qua modal. Tên mặc định "Sprint N" theo thứ tự,
-  // ngày mặc định bắt đầu hôm nay và kết thúc sau 2 tuần; người dùng chỉnh lại trực tiếp
-  // trong khung (tự vào chế độ sửa ngay sau khi tạo xong).
-  const handleCreateSprint = () => {
-    const start = new Date()
-    const end = new Date()
-    end.setDate(end.getDate() + 14)
-
-    createMutation.mutate(
-      {
-        name: `Sprint ${(sprints?.length ?? 0) + 1}`,
-        startDate: toDateInputValue(start.toISOString()),
-        endDate: toDateInputValue(end.toISOString()),
-      },
-      { onSuccess: (created) => setEditingSprintId(created._id) },
+  // Ngày mặc định cho sprint mới: chưa có sprint PLANNED nào -> bắt đầu hôm nay; đã có thì
+  // nối tiếp ngay sau sprint PLANNED có endDate muộn nhất (mỗi sprint mặc định 2 tuần).
+  const nextSprintDates = (existingPlanned: Sprint[]): { start: Date; end: Date } => {
+    if (existingPlanned.length === 0) {
+      const start = new Date()
+      const end = new Date(start)
+      end.setDate(end.getDate() + 14)
+      return { start, end }
+    }
+    const latest = existingPlanned.reduce((acc, s) =>
+      new Date(s.endDate).getTime() > new Date(acc.endDate).getTime() ? s : acc,
     )
+    const start = new Date(latest.endDate)
+    const end = new Date(start)
+    end.setDate(end.getDate() + 14)
+    return { start, end }
+  }
+
+  // Tạo sprint NGAY khi bấm nút — không qua modal, không bước xác nhận, không tự mở gì
+  // thêm sau khi tạo xong (sprint mới chỉ đơn giản xuất hiện trong danh sách).
+  const handleCreateSprint = () => {
+    const { start, end } = nextSprintDates(plannedSprints)
+
+    createMutation.mutate({
+      name: nextSprintName(sprints ?? []),
+      startDate: toDateInputValue(start.toISOString()),
+      endDate: toDateInputValue(end.toISOString()),
+    })
   }
 
   if (sprintsLoading || issuesLoading) {
@@ -300,20 +321,7 @@ const activeIssue = localIssues.find((i) => i._id === activeIdStr)
   }
 
   return (
-    <div className="space-y-6">
-      {isOwner && (
-        <div className="flex justify-end">
-          <button
-            onClick={handleCreateSprint}
-            disabled={createMutation.isPending}
-            className="flex items-center gap-2 px-4 py-2.5 bg-brand text-white rounded-xl text-xs font-bold shadow-lg shadow-brand/20 hover:bg-brand-light transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
-          >
-            <Plus size={15} />
-            <span>Tạo sprint</span>
-          </button>
-        </div>
-      )}
-
+    <div className="space-y-5">
       <DndContext
         sensors={activeSensors}
         collisionDetection={pointerWithin}
@@ -385,17 +393,15 @@ const activeIssue = localIssues.find((i) => i._id === activeIdStr)
               className="bg-white border border-line/30 rounded-3xl p-6 shadow-sm"
             >
               <PlannedSprintCardHeader
-                projectId={projectId}
                 sprint={sprint}
                 issueCount={sprintIssues.length}
                 isOwner={isOwner}
                 isOpen={isOpen(sprint._id)}
                 onToggleOpen={() => toggleOpen(sprint._id)}
-                isEditing={editingSprintId === sprint._id}
-                onToggleEdit={() => setEditingSprintId((prev) => (prev === sprint._id ? null : sprint._id))}
                 hasActiveSprint={!!activeSprint}
                 onStartClick={() => handleStartClick(sprint)}
-                startPending={startMutation.isPending}
+                startPending={!!startingSprint}
+                onEditClick={() => setEditingSprint(sprint)}
                 onDeleteClick={() => setDeletingSprint(sprint)}
               />
 
@@ -437,17 +443,32 @@ const activeIssue = localIssues.find((i) => i._id === activeIdStr)
                 <p className="text-xs text-muted mt-1 font-medium">{backlogIssues.length} công việc chưa lên kế hoạch</p>
               </div>
             </div>
+
+            {isOwner && (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleCreateSprint}
+                loading={createMutation.isPending}
+                title="Tạo sprint mới"
+              >
+                <Plus size={14} />
+                <span>Tạo sprint</span>
+              </Button>
+            )}
           </div>
 
           {isOpen(BACKLOG_CONTAINER_ID) && (
-            <div className="space-y-2.5 min-h-[50px]">
-              <SortableContext items={backlogIssues.map((i) => i._id)} strategy={verticalListSortingStrategy}>
-                {backlogIssues.map((issue) => (
-                  <SortableItem key={issue._id} id={issue._id} disabled={!isOwner}>
-                    <IssueRow issue={issue} projectId={projectId} isOwner={isOwner} onSelectIssue={onSelectIssue} />
-                  </SortableItem>
-                ))}
-              </SortableContext>
+            <div className="space-y-2.5">
+              <div className="space-y-2.5 min-h-[50px] max-h-72 overflow-y-auto pr-1 scrollbar-thin">
+                <SortableContext items={backlogIssues.map((i) => i._id)} strategy={verticalListSortingStrategy}>
+                  {backlogIssues.map((issue) => (
+                    <SortableItem key={issue._id} id={issue._id} disabled={!isOwner}>
+                      <IssueRow issue={issue} projectId={projectId} isOwner={isOwner} onSelectIssue={onSelectIssue} />
+                    </SortableItem>
+                  ))}
+                </SortableContext>
+              </div>
               {isOwner && (
                 <QuickAddIssue
                   projectId={projectId}
@@ -459,13 +480,13 @@ const activeIssue = localIssues.find((i) => i._id === activeIdStr)
           )}
         </DroppableContainer>
 
-                <DragOverlay adjustScale={false}>
+        <DragOverlay adjustScale={false}>
           {activeId && activeIssue ? (
             <div
               style={activeWidth ? { width: activeWidth } : undefined}
               className="opacity-95 shadow-xl cursor-grabbing select-none pointer-events-none"
             >
-              <IssueRow issue={activeIssue} projectId={projectId} isOwner={isOwner} onSelectIssue={() => {}} />
+              <IssueRow issue={activeIssue} projectId={projectId} isOwner={isOwner} onSelectIssue={() => { }} />
             </div>
           ) : null}
         </DragOverlay>
@@ -491,18 +512,25 @@ const activeIssue = localIssues.find((i) => i._id === activeIdStr)
         onClose={() => setDeletingSprint(null)}
       />
 
-      <ConfirmDialog
-        open={!!startWarningSprint}
-        title="Sprint chưa có công việc nào"
-        message={`Sprint "${startWarningSprint?.name}" hiện chưa có công việc nào. Bạn vẫn muốn bắt đầu?`}
-        confirmText="Vẫn bắt đầu"
-        loading={startMutation.isPending}
-        onConfirm={() => {
-          if (!startWarningSprint) return
-          startMutation.mutate(startWarningSprint._id, { onSuccess: () => setStartWarningSprint(null) })
-        }}
-        onClose={() => setStartWarningSprint(null)}
-      />
+      {startingSprint && (
+        <SprintFormModal
+          key={`start-${startingSprint._id}`}
+          mode="start"
+          projectId={projectId}
+          sprint={startingSprint}
+          onClose={() => setStartingSprint(null)}
+        />
+      )}
+
+      {editingSprint && (
+        <SprintFormModal
+          key={`edit-${editingSprint._id}`}
+          mode="edit"
+          projectId={projectId}
+          sprint={editingSprint}
+          onClose={() => setEditingSprint(null)}
+        />
+      )}
     </div>
   )
 }
