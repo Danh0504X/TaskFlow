@@ -33,9 +33,9 @@ export function ChangePasswordPage() {
   };
 
   return (
-    <div className="p-8 lg:p-12 max-w-[760px] mx-auto w-full h-full overflow-y-auto">
-      <header className="mb-10">
-        <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-[#464554] text-sm mb-2">
+    <div className="p-6 lg:p-8 max-w-[640px] mx-auto w-full h-full overflow-y-auto">
+      <header className="mb-6">
+        <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-[#464554] text-sm mb-1.5">
           <button
             type="button"
             onClick={() => navigate('/profile')}
@@ -46,70 +46,70 @@ export function ChangePasswordPage() {
           <span className="material-symbols-outlined text-[16px]">chevron_right</span>
           <span className="text-[#121c2a] font-medium">Đổi mật khẩu</span>
         </nav>
-        <h2 className="text-3xl font-bold text-[#121c2a] tracking-tight">
+        <h2 className="text-2xl font-bold text-[#121c2a] tracking-tight">
           Đổi mật khẩu
         </h2>
       </header>
 
-      <section className="bg-white rounded-3xl p-8 shadow-sm border border-[#c7c4d7]/30">
-        <form className="grid grid-cols-1 gap-6" onSubmit={handleSubmit(onSubmit)} noValidate>
+      <section className="bg-white rounded-2xl p-6 shadow-sm border border-[#c7c4d7]/30">
+        <form className="grid grid-cols-1 gap-4" onSubmit={handleSubmit(onSubmit)} noValidate>
           <div>
-            <label className="block text-xs font-bold text-[#464554] mb-2 uppercase tracking-wide">
+            <label className="block text-xs font-bold text-[#464554] mb-1.5 uppercase tracking-wide">
               Mật khẩu hiện tại
             </label>
             <input
-              className="w-full px-4 py-3 bg-[#f8f9ff] rounded-xl border border-[#c7c4d7] focus:border-[#4648d4] focus:ring-4 focus:ring-[#4648d4]/10 outline-none transition-all text-base text-[#121c2a]"
+              className="w-full px-3.5 py-2.5 bg-[#f8f9ff] rounded-lg border border-[#c7c4d7] focus:border-[#4648d4] focus:ring-4 focus:ring-[#4648d4]/10 outline-none transition-all text-sm text-[#121c2a]"
               placeholder="••••••••"
               type="password"
               {...register('currentPassword')}
             />
             {errors.currentPassword && (
-              <p className="text-xs text-red-600 mt-1.5">{errors.currentPassword.message}</p>
+              <p className="text-xs text-red-600 mt-1">{errors.currentPassword.message}</p>
             )}
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-[#464554] mb-2 uppercase tracking-wide">
+              <label className="block text-xs font-bold text-[#464554] mb-1.5 uppercase tracking-wide">
                 Mật khẩu mới
               </label>
               <input
-                className="w-full px-4 py-3 bg-[#f8f9ff] rounded-xl border border-[#c7c4d7] focus:border-[#4648d4] focus:ring-4 focus:ring-[#4648d4]/10 outline-none transition-all text-base text-[#121c2a]"
+                className="w-full px-3.5 py-2.5 bg-[#f8f9ff] rounded-lg border border-[#c7c4d7] focus:border-[#4648d4] focus:ring-4 focus:ring-[#4648d4]/10 outline-none transition-all text-sm text-[#121c2a]"
                 placeholder="••••••••"
                 type="password"
                 {...register('newPassword')}
               />
               {errors.newPassword && (
-                <p className="text-xs text-red-600 mt-1.5">{errors.newPassword.message}</p>
+                <p className="text-xs text-red-600 mt-1">{errors.newPassword.message}</p>
               )}
             </div>
             <div>
-              <label className="block text-xs font-bold text-[#464554] mb-2 uppercase tracking-wide">
+              <label className="block text-xs font-bold text-[#464554] mb-1.5 uppercase tracking-wide">
                 Xác nhận mật khẩu
               </label>
               <input
-                className="w-full px-4 py-3 bg-[#f8f9ff] rounded-xl border border-[#c7c4d7] focus:border-[#4648d4] focus:ring-4 focus:ring-[#4648d4]/10 outline-none transition-all text-base text-[#121c2a]"
+                className="w-full px-3.5 py-2.5 bg-[#f8f9ff] rounded-lg border border-[#c7c4d7] focus:border-[#4648d4] focus:ring-4 focus:ring-[#4648d4]/10 outline-none transition-all text-sm text-[#121c2a]"
                 placeholder="••••••••"
                 type="password"
                 {...register('confirmPassword')}
               />
               {errors.confirmPassword && (
-                <p className="text-xs text-red-600 mt-1.5">{errors.confirmPassword.message}</p>
+                <p className="text-xs text-red-600 mt-1">{errors.confirmPassword.message}</p>
               )}
             </div>
           </div>
 
-          <div className="pt-6 border-t border-[#c7c4d7]/30 flex justify-end gap-3">
+          <div className="pt-5 border-t border-[#c7c4d7]/30 flex justify-end gap-2.5">
             <button
               type="button"
               onClick={() => navigate('/profile')}
-              className="px-6 py-2.5 rounded-xl text-[#121c2a] font-semibold hover:bg-[#e6eeff] transition-colors focus:ring-2 focus:ring-offset-2 focus:ring-[#c7c4d7] outline-none"
+              className="px-4 py-2 rounded-lg text-sm text-[#121c2a] font-semibold hover:bg-[#e6eeff] transition-colors focus:ring-2 focus:ring-offset-2 focus:ring-[#c7c4d7] outline-none"
             >
               Hủy
             </button>
             <button
               type="submit"
               disabled={changePasswordMutation.isPending}
-              className="px-6 py-2.5 bg-[#4648d4] hover:bg-[#6063ee] text-white rounded-xl font-semibold transition-colors focus:ring-2 focus:ring-offset-2 focus:ring-[#4648d4] outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-[#4648d4] hover:bg-[#6063ee] text-white text-sm rounded-lg font-semibold transition-colors focus:ring-2 focus:ring-offset-2 focus:ring-[#4648d4] outline-none disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {changePasswordMutation.isPending ? 'Đang xử lý...' : 'Cập nhật mật khẩu'}
             </button>

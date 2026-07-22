@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { FolderKanban, Plus, RotateCcw, Archive } from 'lucide-react'
 import Spinner from '@/components/ui/Spinner'
@@ -10,7 +10,8 @@ import { useAuthStore } from '@/features/auth/authStore'
 import type { Project } from '../project.types'
 import { useProjects } from '../hooks/useProjects'
 import { useDeleteProject, useLeaveProject, usePermanentDeleteProject } from '../hooks/useProjectMutations'
-import ProjectCard from './ProjectCard'
+import { getRecentProjectIds } from '../recentProjects'
+import ProjectGridSection from './ProjectGridSection'
 import ProjectEditModal from './ProjectEditModal'
 
 /** Owner là member có role OWNER trong project — chỉ owner được sửa/lưu trữ/xoá dự án. */
@@ -43,8 +44,21 @@ const ProjectsView = () => {
       (project.key ?? '').toLowerCase().includes(normalizedQuery),
   )
 
-  const createdProjects = filteredProjects.filter((p) => p.createdBy === currentUser?._id)
-  const joinedProjects = filteredProjects.filter((p) => p.createdBy !== currentUser?._id)
+  // OWNER (đã tạo) / MEMBER (đã tham gia) xác định theo role thật trong members, không phải
+  // theo createdBy — nhất quán với logic phân quyền sửa/xoá/rời dự án.
+  const createdProjects = filteredProjects.filter((p) => isProjectOwner(p, currentUser?._id))
+  const joinedProjects = filteredProjects.filter((p) => !isProjectOwner(p, currentUser?._id))
+
+  // Dự án gần đây: lấy theo thứ tự vừa truy cập (localStorage, xem recentProjects.ts),
+  // đối chiếu lại với danh sách project thật + đang lọc theo ô tìm kiếm.
+  const recentProjects = useMemo(() => {
+    if (!currentUser) return []
+    const recentIds = getRecentProjectIds(currentUser._id)
+    const projectById = new Map(filteredProjects.map((p) => [p._id, p]))
+    return recentIds
+      .map((id) => projectById.get(id))
+      .filter((p): p is Project => Boolean(p))
+  }, [currentUser, filteredProjects])
 
   const handleArchive = () => {
     if (!deleting) return
@@ -143,54 +157,43 @@ const ProjectsView = () => {
               </button>
             </div>
           ) : (
-            <div className="space-y-10">
+            <div className="space-y-8">
               {isFetching && <p className="text-xs text-subtle -mb-4">Đang cập nhật...</p>}
-              
-              {/* Dự án bạn đã tạo */}
-              <div className="space-y-4">
-                <h3 className="text-xs font-extrabold text-ink uppercase tracking-wider border-b border-line/10 pb-2">
-                  Dự án bạn đã tạo ({createdProjects.length})
-                </h3>
-                {createdProjects.length === 0 ? (
-                  <p className="text-xs text-subtle italic py-1">Bạn chưa tự tạo dự án nào.</p>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {createdProjects.map((project) => (
-                      <ProjectCard
-                        key={project._id}
-                        project={project}
-                        isOwner={isProjectOwner(project, currentUser?._id)}
-                        onEdit={setEditing}
-                        onDelete={setDeleting}
-                        onLeave={setLeaving}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
 
-              {/* Dự án bạn đã tham gia */}
-              <div className="space-y-4">
-                <h3 className="text-xs font-extrabold text-ink uppercase tracking-wider border-b border-line/10 pb-2">
-                  Tất cả dự án bạn đã tham gia ({joinedProjects.length})
-                </h3>
-                {joinedProjects.length === 0 ? (
-                  <p className="text-xs text-subtle italic py-1">Bạn chưa tham gia dự án nào khác.</p>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {joinedProjects.map((project) => (
-                      <ProjectCard
-                        key={project._id}
-                        project={project}
-                        isOwner={isProjectOwner(project, currentUser?._id)}
-                        onEdit={setEditing}
-                        onDelete={setDeleting}
-                        onLeave={setLeaving}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
+              {recentProjects.length > 0 && (
+                <ProjectGridSection
+                  title="Dự án gần đây"
+                  projects={recentProjects}
+                  emptyText="Chưa có dự án nào được truy cập gần đây."
+                  isOwner={(project) => isProjectOwner(project, currentUser?._id)}
+                  onEdit={setEditing}
+                  onDelete={setDeleting}
+                  onLeave={setLeaving}
+                  limit={4}
+                  allowExpand={false}
+                />
+              )}
+
+              <ProjectGridSection
+                title="Dự án bạn đã tạo"
+                projects={createdProjects}
+                emptyText="Bạn chưa tự tạo dự án nào."
+                isOwner={(project) => isProjectOwner(project, currentUser?._id)}
+                onEdit={setEditing}
+                onDelete={setDeleting}
+                onLeave={setLeaving}
+                limit={4}
+              />
+
+              <ProjectGridSection
+                title="Tất cả dự án bạn đã tham gia"
+                projects={joinedProjects}
+                emptyText="Bạn chưa tham gia dự án nào khác."
+                isOwner={(project) => isProjectOwner(project, currentUser?._id)}
+                onEdit={setEditing}
+                onDelete={setDeleting}
+                onLeave={setLeaving}
+              />
             </div>
           )}
         </>

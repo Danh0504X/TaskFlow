@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { ArrowLeft, Plus, UserPlus } from 'lucide-react'
@@ -17,6 +17,7 @@ import ProjectListTab from '../components/ProjectListTab'
 import KanbanBoardContainer from '../components/KanbanBoardContainer'
 import ScrumBoardContainer from '../components/ScrumBoardContainer'
 import BacklogView from '../components/BacklogView'
+import { recordProjectVisit } from '../recentProjects'
 
 type WorkspaceTab = 'SUMMARY' | 'LIST' | 'BOARD' | 'BACKLOG'
 
@@ -91,6 +92,13 @@ const ProjectWorkspacePage = () => {
   // tốn thêm request, chỉ để tra ra issue đầy đủ cho panel chi tiết theo key đã chọn.
   const { data: issues, isLoading: issuesLoading } = useProjectIssues(project?._id)
   const selectedIssue = issues?.find((issue) => issue.key === selectedIssueKey) ?? null
+
+  // Ghi nhận lượt truy cập -> phục vụ mục "Dự án gần đây" ở trang danh sách project.
+  useEffect(() => {
+    if (currentUser && project) {
+      recordProjectVisit(currentUser._id, project._id)
+    }
+  }, [currentUser, project])
 
   if (isLoading) {
     return (
