@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Calendar, Pencil, Trash2, Users } from 'lucide-react'
+import { Calendar, LogOut, Pencil, Trash2, Users } from 'lucide-react'
 import { formatDate } from '@/lib/format'
 import type { Project } from '../project.types'
 import ProjectStatusBadge from './ProjectStatusBadge'
@@ -7,12 +7,15 @@ import ProjectMethodologyBadge from './ProjectMethodologyBadge'
 
 interface ProjectCardProps {
   project: Project
+  /** Chỉ OWNER mới được sửa/lưu trữ/xoá; MEMBER chỉ có thể rời dự án. */
+  isOwner: boolean
   onEdit: (project: Project) => void
   onDelete: (project: Project) => void
+  onLeave: (project: Project) => void
 }
 
 /** Thẻ hiển thị 1 project trong lưới danh sách — trình bày thuần, nhận data & callback. */
-const ProjectCard = ({ project, onEdit, onDelete }: ProjectCardProps) => {
+const ProjectCard = ({ project, isOwner, onEdit, onDelete, onLeave }: ProjectCardProps) => {
   return (
     <div className="group bg-white border border-line/30 rounded-3xl p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:border-brand/30 transition-all flex flex-col gap-4">
       <div className="flex items-start justify-between gap-3">
@@ -53,20 +56,32 @@ const ProjectCard = ({ project, onEdit, onDelete }: ProjectCardProps) => {
         </div>
 
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button
-            onClick={() => onEdit(project)}
-            className="p-1.5 text-muted hover:text-brand hover:bg-brand/5 rounded-lg transition-all"
-            aria-label="Sửa project"
-          >
-            <Pencil size={14} />
-          </button>
-          <button
-            onClick={() => onDelete(project)}
-            className="p-1.5 text-muted hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-            aria-label="Xoá project"
-          >
-            <Trash2 size={14} />
-          </button>
+          {isOwner ? (
+            <>
+              <button
+                onClick={() => onEdit(project)}
+                className="p-1.5 text-muted hover:text-brand hover:bg-brand/5 rounded-lg transition-all"
+                aria-label="Sửa project"
+              >
+                <Pencil size={14} />
+              </button>
+              <button
+                onClick={() => onDelete(project)}
+                className="p-1.5 text-muted hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                aria-label="Xoá project"
+              >
+                <Trash2 size={14} />
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => onLeave(project)}
+              className="p-1.5 text-muted hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+              aria-label="Rời dự án"
+            >
+              <LogOut size={14} />
+            </button>
+          )}
         </div>
       </div>
     </div>

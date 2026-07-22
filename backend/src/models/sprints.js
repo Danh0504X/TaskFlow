@@ -6,7 +6,6 @@ const sprintSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'project',
       required: true,
-      index: true,
     },
 
     name: {
@@ -77,8 +76,10 @@ sprintSchema.index({ projectId: 1, orderIndex: 1 })
 
 // Chặn race-condition: mỗi project chỉ được có tối đa 1 sprint ACTIVE (chưa xóa mềm)
 // tại một thời điểm, thực thi ở tầng DB thay vì chỉ dựa vào check read-then-write ở service.
+// Không cần đưa "status" vào key vì partialFilterExpression đã cố định status = 'ACTIVE'
+// trong tập document mà index này áp dụng, nên chỉ projectId là đủ để đảm bảo tính duy nhất.
 sprintSchema.index(
-  { projectId: 1, status: 1 },
+  { projectId: 1 },
   { unique: true, partialFilterExpression: { status: 'ACTIVE', isDeleted: false } },
 )
 

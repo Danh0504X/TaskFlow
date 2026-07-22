@@ -5,12 +5,17 @@ import Spinner from '@/components/ui/Spinner'
 import SearchInput from '@/components/ui/SearchInput'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { useAuthStore } from '@/features/auth/authStore'
 import type { Project } from '../project.types'
 import { useProjects } from '../hooks/useProjects'
-import { useDeleteProject, usePermanentDeleteProject } from '../hooks/useProjectMutations'
+import { useDeleteProject, useLeaveProject, usePermanentDeleteProject } from '../hooks/useProjectMutations'
 import ProjectCard from './ProjectCard'
 import ProjectEditModal from './ProjectEditModal'
+
+/** Owner là member có role OWNER trong project — chỉ owner được sửa/lưu trữ/xoá dự án. */
+const isProjectOwner = (project: Project, currentUserId?: string) =>
+  project.members.some((member) => member.userId === currentUserId && member.role === 'OWNER')
 
 /**
  * Container quản lý màn hình danh sách Projects:
@@ -24,10 +29,12 @@ const ProjectsView = () => {
   const { data: projects, isLoading, isError, refetch, isFetching } = useProjects()
   const deleteMutation = useDeleteProject()
   const permanentDeleteMutation = usePermanentDeleteProject()
+  const leaveMutation = useLeaveProject()
 
   const [query, setQuery] = useState('')
   const [editing, setEditing] = useState<Project | null>(null)
   const [deleting, setDeleting] = useState<Project | null>(null)
+  const [leaving, setLeaving] = useState<Project | null>(null)
 
   const normalizedQuery = query.trim().toLowerCase()
   const filteredProjects = (projects ?? []).filter(
@@ -50,6 +57,13 @@ const ProjectsView = () => {
     if (!deleting) return
     permanentDeleteMutation.mutate(deleting._id, {
       onSuccess: () => setDeleting(null),
+    })
+  }
+
+  const handleLeave = () => {
+    if (!leaving) return
+    leaveMutation.mutate(leaving._id, {
+      onSuccess: () => setLeaving(null),
     })
   }
 
@@ -145,8 +159,10 @@ const ProjectsView = () => {
                       <ProjectCard
                         key={project._id}
                         project={project}
+                        isOwner={isProjectOwner(project, currentUser?._id)}
                         onEdit={setEditing}
                         onDelete={setDeleting}
+                        onLeave={setLeaving}
                       />
                     ))}
                   </div>
@@ -166,8 +182,10 @@ const ProjectsView = () => {
                       <ProjectCard
                         key={project._id}
                         project={project}
+                        isOwner={isProjectOwner(project, currentUser?._id)}
                         onEdit={setEditing}
                         onDelete={setDeleting}
+                        onLeave={setLeaving}
                       />
                     ))}
                   </div>
@@ -226,6 +244,18 @@ const ProjectsView = () => {
           </ul>
         </div>
       </Modal>
+
+      {/* Modal xác nhận rời dự án (dành cho MEMBER, không có quyền lưu trữ/xoá) */}
+      <ConfirmDialog
+        open={!!leaving}
+        title="Rời khỏi dự án"
+        message={`Bạn có chắc chắn muốn rời khỏi dự án "${leaving?.name}"? Sau khi rời đi, tất cả các công việc đang được gán cho bạn sẽ được chuyển về trạng thái 'Chưa phân công'.`}
+        confirmText="Rời dự án"
+        danger
+        loading={leaveMutation.isPending}
+        onConfirm={handleLeave}
+        onClose={() => setLeaving(null)}
+      />
     </div>
   )
 }
