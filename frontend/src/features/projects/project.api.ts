@@ -11,54 +11,20 @@ import type {
 // Lớp gọi API cho project. Mọi endpoint nằm dưới prefix /projects.
 // Backend luôn trả { message, data } -> ta bóc lấy `data` trả về cho hook dùng.
 export const projectApi = {
-  /** GET /projects — danh sách project user tham gia. */
+  /** GET /projects — danh sách project user tham gia (backend đã lọc isDeleted: false). */
   getMyProjects: async (): Promise<Project[]> => {
     const res = await api.get<ApiResponse<Project[]>>('/projects')
-    const backendProjects = res.data.data
-
-    const cachedStr = localStorage.getItem('taskflow_projects')
-    const cachedProjects: Project[] = cachedStr ? JSON.parse(cachedStr) : []
-
-    const merged = [...cachedProjects]
-
-    backendProjects.forEach((bp) => {
-      const idx = merged.findIndex((cp) => cp._id === bp._id)
-      if (idx > -1) {
-        merged[idx] = {
-          ...merged[idx],
-          ...bp,
-          isDeleted: merged[idx].isDeleted, // Giữ nguyên trạng thái đã lưu trữ
-        }
-      } else {
-        merged.push({
-          ...bp,
-          isDeleted: false,
-        })
-      }
-    })
-
-    localStorage.setItem('taskflow_projects', JSON.stringify(merged))
-    return merged.filter((p) => !p.isDeleted)
+    return res.data.data
   },
 
-  /** GET /projects/archived — danh sách project đã lưu trữ trong local cache. */
+  /** GET /projects/archived — danh sách project đã lưu trữ mà user là OWNER. */
   getArchivedProjects: async (): Promise<Project[]> => {
-    const cachedStr = localStorage.getItem('taskflow_projects')
-    const cachedProjects: Project[] = cachedStr ? JSON.parse(cachedStr) : []
-    return cachedProjects.filter((p) => p.isDeleted)
+    const res = await api.get<ApiResponse<Project[]>>('/projects/archived')
+    return res.data.data
   },
 
   /** GET /projects/:id — chi tiết 1 project. */
   getById: async (projectId: string): Promise<Project> => {
-    const cachedStr = localStorage.getItem('taskflow_projects')
-    const cachedProjects: Project[] = cachedStr ? JSON.parse(cachedStr) : []
-    const cached = cachedProjects.find((p) => p._id === projectId)
-    
-    // Nếu tìm thấy dự án trong cache local (kể cả đã lưu trữ/xóa mềm), ta trả về luôn
-    if (cached) {
-      return cached
-    }
-
     const res = await api.get<ApiResponse<Project>>(`/projects/${projectId}`)
     return res.data.data
   },
@@ -83,46 +49,19 @@ export const projectApi = {
 
   /** DELETE /projects/:id — xoá mềm (Lưu trữ) project. */
   remove: async (projectId: string): Promise<Project> => {
-    await api.delete<ApiResponse<Project>>(`/projects/${projectId}`)
-
-    const cachedStr = localStorage.getItem('taskflow_projects')
-    const cachedProjects: Project[] = cachedStr ? JSON.parse(cachedStr) : []
-    const updated = cachedProjects.map((p) => {
-      if (p._id === projectId) {
-        return { ...p, isDeleted: true }
-      }
-      return p
-    })
-    localStorage.setItem('taskflow_projects', JSON.stringify(updated))
-    return updated.find((p) => p._id === projectId)!
+    const res = await api.delete<ApiResponse<Project>>(`/projects/${projectId}`)
+    return res.data.data
   },
 
   /** PATCH /projects/:id/restore — khôi phục project từ trạng thái lưu trữ. */
   restore: async (projectId: string): Promise<Project> => {
-    const cachedStr = localStorage.getItem('taskflow_projects')
-    const cachedProjects: Project[] = cachedStr ? JSON.parse(cachedStr) : []
-    const updated = cachedProjects.map((p) => {
-      if (p._id === projectId) {
-        return { ...p, isDeleted: false }
-      }
-      return p
-    })
-    localStorage.setItem('taskflow_projects', JSON.stringify(updated))
-    return updated.find((p) => p._id === projectId)!
+    const res = await api.patch<ApiResponse<Project>>(`/projects/${projectId}/restore`)
+    return res.data.data
   },
 
-  /** DELETE /projects/:id/permanent — xoá vĩnh viễn project khỏi local cache và gọi API BE. */
+  /** DELETE /projects/:id/permanent — xoá vĩnh viễn (hard delete) project, không thể hoàn tác. */
   deletePermanently: async (projectId: string): Promise<void> => {
-    try {
-      await api.delete(`/projects/${projectId}`)
-    } catch (e) {
-      // Bỏ qua nếu BE đã xóa
-    }
-
-    const cachedStr = localStorage.getItem('taskflow_projects')
-    const cachedProjects: Project[] = cachedStr ? JSON.parse(cachedStr) : []
-    const updated = cachedProjects.filter((p) => p._id !== projectId)
-    localStorage.setItem('taskflow_projects', JSON.stringify(updated))
+    await api.delete(`/projects/${projectId}/permanent`)
   },
 
   /** POST /projects/:id/members/invite — mời thành viên bằng email. */

@@ -93,6 +93,13 @@ const issueSchema = new mongoose.Schema(
       default: false,
       index: true,
     },
+
+    // Mốc thời gian xóa mềm — khớp với `Project.deletedAt` khi bị cascade-xóa cùng project,
+    // giúp phân biệt với issue tự xóa riêng lẻ khi project được khôi phục.
+    deletedAt: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,

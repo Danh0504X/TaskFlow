@@ -6,6 +6,9 @@ import {
   getProjectById,
   updateProject,
   deleteProject,
+  getArchivedProjects,
+  restoreProject,
+  permanentlyDeleteProject,
   leaveProject,
   acceptInvitation,
   declineInvitation,
@@ -25,6 +28,10 @@ router.post('/', createProject)
 
 // Lấy danh sách project mà user tham gia.
 router.get('/', getMyProjects)
+
+// Danh sách project đã lưu trữ (isDeleted: true) mà user là OWNER.
+// Phải đứng TRƯỚC route "/:projectId" bên dưới, nếu không "archived" sẽ bị hiểu nhầm là :projectId.
+router.get('/archived', getArchivedProjects)
 
 // Xem chi tiết: OWNER / MEMBER.
 router.get(
@@ -53,6 +60,14 @@ router.delete(
   authorizeProjectRole('OWNER'),
   deleteProject,
 )
+
+// Khôi phục project đã lưu trữ: chỉ OWNER. Không dùng authorizeProjectRole vì project lúc
+// này isDeleted:true (middleware đó luôn lọc isDeleted:false) — quyền OWNER được check
+// trong service sau khi tìm project theo đúng isDeleted:true.
+router.patch('/:projectId/restore', restoreProject)
+
+// Xóa vĩnh viễn (hard delete): chỉ OWNER. Cùng lý do trên, quyền check trong service.
+router.delete('/:projectId/permanent', permanentlyDeleteProject)
 
 // Rời dự án: OWNER / MEMBER.
 router.post(

@@ -102,6 +102,13 @@ const projectSchema = new mongoose.Schema(
       default: false,
       index: true,
     },
+
+    // Mốc thời gian xóa mềm (dùng để khôi phục đúng các sprint/issue đã bị cascade-xóa
+    // cùng lượt với project, phân biệt với sprint/issue người dùng tự xóa từ trước đó).
+    deletedAt: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,

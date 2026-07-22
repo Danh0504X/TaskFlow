@@ -66,6 +66,37 @@ export const deleteProject = asyncHandler(async (req, res) => {
   })
 })
 
+// Lấy danh sách project đã lưu trữ (isDeleted: true) mà user hiện tại là OWNER.
+export const getArchivedProjects = asyncHandler(async (req, res) => {
+  const result = await projectService.getArchivedProjects(req.user._id)
+
+  res.status(StatusCodes.OK).json({
+    message: 'Get archived projects successfully',
+    data: result,
+  })
+})
+
+// Khôi phục project đã lưu trữ (isDeleted: true -> false).
+export const restoreProject = asyncHandler(async (req, res) => {
+  const { projectId } = req.params
+  const result = await projectService.restoreProject(projectId, req.user._id)
+
+  res.status(StatusCodes.OK).json({
+    message: 'Project restored successfully',
+    data: result,
+  })
+})
+
+// Xóa vĩnh viễn project (hard delete, không thể hoàn tác).
+export const permanentlyDeleteProject = asyncHandler(async (req, res) => {
+  const { projectId } = req.params
+  await projectService.permanentlyDeleteProject(projectId, req.user._id)
+
+  res.status(StatusCodes.OK).json({
+    message: 'Project permanently deleted',
+  })
+})
+
 // Rời khỏi dự án.
 export const leaveProject = asyncHandler(async (req, res) => {
   const { projectId } = req.params

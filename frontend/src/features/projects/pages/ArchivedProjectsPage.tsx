@@ -103,12 +103,9 @@ const ArchivedProjectsPage = () => {
                             <div className="w-8 h-8 rounded-lg bg-slate-100 border border-line/20 flex items-center justify-center text-muted font-bold text-xs shrink-0">
                               {(project.key || project.name).slice(0, 2).toUpperCase()}
                             </div>
-                            <button
-                              onClick={() => navigate(`/projects/${project._id}`)}
-                              className="text-sm font-bold text-ink hover:text-brand hover:underline text-left outline-none"
-                            >
+                            <span className="text-sm font-bold text-ink" title="Khôi phục để xem chi tiết dự án">
                               {project.name}
-                            </button>
+                            </span>
                           </div>
                         </td>
                         <td className="px-6 py-4">

@@ -286,13 +286,31 @@ const updateProject = async (projectId, body = {}) => {
   return project
 }
 
+// Kiểm tra userId có phải OWNER (member ACTIVE) của project hay không.
+// Dùng cho các API restore/permanent-delete vì project lúc đó thường đã isDeleted:true
+// nên không thể tái sử dụng middleware `authorizeProjectRole` (middleware đó luôn lọc
+// isDeleted:false trước khi tìm project).
+const ensureIsOwner = (project, userId) => {
+  const member = project.members.find(
+    (m) => m.userId.toString() === userId.toString() && m.status === 'ACTIVE',
+  )
+
+  if (!member || member.role !== 'OWNER') {
+    throw new ApiError(StatusCodes.FORBIDDEN, 'Only the project owner can perform this action')
+  }
+}
+
 // Xóa mềm project (đồng thời cascade soft-delete sprint/issue thuộc project).
+// Ghi cùng 1 mốc `deletedAt` cho project và các sprint/issue bị cascade -> dùng để khôi phục
+// đúng nhóm này sau này, không đụng tới sprint/issue người dùng đã tự xóa từ trước.
 const deleteProject = async (projectId) => {
   ensureValidObjectId(projectId, 'project id')
 
+  const deletedAt = new Date()
+
   const project = await Project.findOneAndUpdate(
     { _id: projectId, isDeleted: false },
-    { isDeleted: true },
+    { isDeleted: true, deletedAt },
     { new: true },
   )
 
@@ -302,11 +320,72 @@ const deleteProject = async (projectId) => {
 
   // Cascade soft-delete các sprint và issue thuộc project.
   await Promise.all([
-    Sprint.updateMany({ projectId, isDeleted: false }, { isDeleted: true }),
-    Issue.updateMany({ projectId, isDeleted: false }, { isDeleted: true }),
+    Sprint.updateMany({ projectId, isDeleted: false }, { isDeleted: true, deletedAt }),
+    Issue.updateMany({ projectId, isDeleted: false }, { isDeleted: true, deletedAt }),
   ])
 
   return project
+}
+
+// Khôi phục project đã lưu trữ (isDeleted: true -> false). Chỉ OWNER được thực hiện.
+// Cascade khôi phục các sprint/issue có cùng `deletedAt` với project (tức bị xóa cùng lượt
+// cascade lúc archive) — sprint/issue người dùng tự xóa riêng trước đó (deletedAt khác) giữ nguyên.
+const restoreProject = async (projectId, userId) => {
+  ensureValidObjectId(projectId, 'project id')
+  ensureValidObjectId(userId, 'user id')
+
+  const project = await Project.findOne({ _id: projectId, isDeleted: true })
+  if (!project) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Archived project not found')
+  }
+
+  ensureIsOwner(project, userId)
+
+  const deletedAt = project.deletedAt
+
+  project.isDeleted = false
+  project.deletedAt = null
+  await project.save()
+
+  if (deletedAt) {
+    await Promise.all([
+      Sprint.updateMany({ projectId, isDeleted: true, deletedAt }, { isDeleted: false, deletedAt: null }),
+      Issue.updateMany({ projectId, isDeleted: true, deletedAt }, { isDeleted: false, deletedAt: null }),
+    ])
+  }
+
+  return project
+}
+
+// Xóa vĩnh viễn (hard delete) project khỏi database, cùng toàn bộ sprint/issue thuộc project
+// (kể cả sprint/issue đã bị xóa mềm riêng lẻ trước đó). Chỉ OWNER được thực hiện. Không thể hoàn tác.
+const permanentlyDeleteProject = async (projectId, userId) => {
+  ensureValidObjectId(projectId, 'project id')
+  ensureValidObjectId(userId, 'user id')
+
+  const project = await Project.findById(projectId)
+  if (!project) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Project not found')
+  }
+
+  ensureIsOwner(project, userId)
+
+  await Promise.all([
+    Sprint.deleteMany({ projectId }),
+    Issue.deleteMany({ projectId }),
+  ])
+
+  await Project.deleteOne({ _id: projectId })
+}
+
+// Danh sách project đã lưu trữ mà user hiện tại là OWNER (chỉ owner mới khôi phục/xóa được).
+const getArchivedProjects = async (userId) => {
+  return Project.find({
+    isDeleted: true,
+    members: { $elemMatch: { userId, role: 'OWNER', status: 'ACTIVE' } },
+  })
+    .sort({ updatedAt: -1 })
+    .lean()
 }
 
 const leaveProject = async (projectId, userId) => {
@@ -450,6 +529,9 @@ export const projectService = {
   getProjectById,
   updateProject,
   deleteProject,
+  restoreProject,
+  permanentlyDeleteProject,
+  getArchivedProjects,
   leaveProject,
   acceptInvitation,
   declineInvitation,
