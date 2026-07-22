@@ -64,5 +64,21 @@ export const projectApi = {
     const res = await api.post<{ message: string }>(`/projects/${projectId}/leave`)
     return res.data
   },
+
+  /** POST /projects/:id/invitation/accept — chấp nhận lời mời tham gia dự án. */
+  acceptInvitation: async (
+    projectId: string,
+    token: string,
+  ): Promise<void> => {
+    await api.post(`/projects/${projectId}/invitation/accept`, { token })
+  },
+
+  /** POST /projects/:id/invitation/decline — từ chối lời mời tham gia dự án. */
+  declineInvitation: async (
+    projectId: string,
+    token: string,
+  ): Promise<void> => {
+    await api.post(`/projects/${projectId}/invitation/decline`, { token })
+  },
 }
 

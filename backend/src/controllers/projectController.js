@@ -77,3 +77,28 @@ export const leaveProject = asyncHandler(async (req, res) => {
   })
 })
 
+// Chấp nhận lời mời tham gia dự án.
+export const acceptInvitation = asyncHandler(async (req, res) => {
+  const { projectId } = req.params
+  const { token } = req.body
+  const result = await projectService.acceptInvitation(projectId, req.user._id, token)
+
+  res.status(StatusCodes.OK).json({
+    message: 'Joined project successfully',
+    data: result,
+  })
+})
+
+// Từ chối lời mời tham gia dự án.
+export const declineInvitation = asyncHandler(async (req, res) => {
+  const { projectId } = req.params
+  const { token } = req.body
+  const result = await projectService.declineInvitation(projectId, req.user._id, token)
+
+  res.status(StatusCodes.OK).json({
+    message: 'Declined project invitation successfully',
+    data: result,
+  })
+})
+
+

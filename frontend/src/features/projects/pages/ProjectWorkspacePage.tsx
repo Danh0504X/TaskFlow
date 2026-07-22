@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
-import { ArrowLeft, Plus } from 'lucide-react'
+import { ArrowLeft, Plus, UserPlus } from 'lucide-react'
+import { useAuthStore } from '@/features/auth/authStore'
+import ProjectInviteModal from '../components/ProjectInviteModal'
 import Spinner from '@/components/ui/Spinner'
 import { cn } from '@/lib/cn'
 import ProjectMethodologyBadge from '@/features/projects/components/ProjectMethodologyBadge'
@@ -79,6 +81,11 @@ const ProjectWorkspacePage = () => {
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('SUMMARY')
   const [selectedIssueKey, setSelectedIssueKey] = useState<string | null>(null)
   const [isCreateIssueOpen, setIsCreateIssueOpen] = useState(false)
+  const [isInviteOpen, setIsInviteOpen] = useState(false)
+
+  const currentUser = useAuthStore((state) => state.user)
+  const userMemberRecord = project?.members?.find((m) => m.userId === currentUser?._id)
+  const isOwner = userMemberRecord?.role === 'OWNER'
 
   // Dùng chung cache với các tab Summary/List/Board/Backlog (cùng queryKey) -> không
   // tốn thêm request, chỉ để tra ra issue đầy đủ cho panel chi tiết theo key đã chọn.
@@ -125,13 +132,24 @@ const ProjectWorkspacePage = () => {
             <ProjectMethodologyBadge methodology={project.methodology} />
           </div>
 
-          <button
-            onClick={() => setIsCreateIssueOpen(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-brand text-white rounded-xl text-xs font-bold shadow-md shadow-brand/20 hover:bg-brand-light transition-all active:scale-95 shrink-0"
-          >
-            <Plus size={14} />
-            <span>Thêm issue</span>
-          </button>
+          <div className="flex items-center gap-2.5 shrink-0">
+            {isOwner && (
+              <button
+                onClick={() => setIsInviteOpen(true)}
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-white text-ink border border-line/30 rounded-xl text-xs font-bold hover:bg-slate-50 transition-all active:scale-95"
+              >
+                <UserPlus size={14} className="text-muted" />
+                <span>Thêm thành viên</span>
+              </button>
+            )}
+            <button
+              onClick={() => setIsCreateIssueOpen(true)}
+              className="flex items-center gap-1.5 px-3.5 py-2 bg-brand text-white rounded-xl text-xs font-bold shadow-md shadow-brand/20 hover:bg-brand-light transition-all active:scale-95"
+            >
+              <Plus size={14} />
+              <span>Thêm issue</span>
+            </button>
+          </div>
         </div>
 
         <WorkspaceTabs items={getTabItems(project.methodology)} value={activeTab} onChange={setActiveTab} />
@@ -192,6 +210,12 @@ const ProjectWorkspacePage = () => {
         onClose={() => setIsCreateIssueOpen(false)}
         projectId={project._id}
         issues={issues ?? []}
+      />
+
+      <ProjectInviteModal
+        open={isInviteOpen}
+        onClose={() => setIsInviteOpen(false)}
+        projectId={project._id}
       />
     </div>
   )

@@ -5,8 +5,10 @@ import VerifyEmailForm from '../components/VerifyEmailForm'
 const VerifyEmailPage = () => {
   const location = useLocation()
 
-  // Email được truyền sang từ trang đăng ký.
-  const email = (location.state as { email?: string } | null)?.email
+  // Email và inviteToken được truyền sang từ trang đăng ký.
+  const state = location.state as { email?: string; inviteToken?: string } | null
+  const email = state?.email
+  const inviteToken = state?.inviteToken
 
   // Vào thẳng trang này mà không có email (không qua bước đăng ký) -> về login.
   if (!email) return <Navigate to="/login" replace />
@@ -23,7 +25,7 @@ const VerifyEmailPage = () => {
         </p>
       </header>
 
-      <VerifyEmailForm email={email} />
+      <VerifyEmailForm email={email} inviteToken={inviteToken} />
     </AuthLayout>
   )
 }

@@ -132,6 +132,42 @@ const verifyEmailAndLogin = async (body) => {
   user.isEmailVerified = true
   await user.save()
 
+  // Xử lý tự động tham gia dự án nếu có inviteToken từ email mời
+  const { inviteToken } = body
+  if (inviteToken) {
+    try {
+      const decoded = await JwtProvider.verifyToken(inviteToken, env.ACCESS_TOKEN_SECRET)
+      if (
+        decoded &&
+        decoded.projectId &&
+        decoded.email &&
+        decoded.email.toLowerCase() === email.toLowerCase()
+      ) {
+        const Project = (await import('../models/projects.js')).default
+        const project = await Project.findOne({ _id: decoded.projectId, isDeleted: false })
+        if (project) {
+          const existingMember = project.members.find(
+            (m) => m.userId.toString() === user._id.toString()
+          )
+          if (!existingMember) {
+            project.members.push({
+              userId: user._id,
+              role: 'MEMBER',
+              status: 'ACTIVE',
+            })
+            await project.save()
+          } else if (existingMember.status !== 'ACTIVE') {
+            existingMember.status = 'ACTIVE'
+            existingMember.role = 'MEMBER'
+            await project.save()
+          }
+        }
+      }
+    } catch (err) {
+      console.error('🔥 Tự động gia nhập dự án thất bại:', err.message)
+    }
+  }
+
   // Token dùng 1 lần -> xoá ngay sau khi xác thực thành công
   await emailTokenService.deleteEmailToken({
     email,

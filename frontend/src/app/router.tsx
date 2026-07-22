@@ -14,6 +14,7 @@ import ResetPasswordPage from '@/features/auth/pages/ResetPasswordPage'
 import ProjectsPage from '@/features/projects/pages/ProjectsPage'
 import ProjectWorkspacePage from '@/features/projects/pages/ProjectWorkspacePage'
 import ProjectSetupWizard from '@/features/projects/pages/ProjectSetupWizard'
+import InvitationPage from '@/features/projects/pages/InvitationPage'
 import MyTasksPage from '@/features/tasks/pages/MyTasksPage'
 import { useAuthStore } from '@/features/auth/authStore'
 
@@ -44,6 +45,7 @@ const router = createBrowserRouter([
       { path: 'projects', element: <ProjectsPage /> },
       { path: 'projects/new', element: <ProjectSetupWizard /> },
       { path: 'projects/:projectId', element: <ProjectWorkspacePage /> },
+      { path: 'projects/:projectId/invitation', element: <InvitationPage /> },
       { path: 'tasks', element: <MyTasksPage /> },
     ],
   },
