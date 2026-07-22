@@ -118,4 +118,30 @@ export const useDeclineInvitation = () => {
   })
 }
 
+export const useRestoreProject = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: projectApi.restore,
+    onSuccess: (project) => {
+      qc.invalidateQueries({ queryKey: projectKeys.lists() })
+      qc.invalidateQueries({ queryKey: ['archived-projects'] })
+      toast.success(`Đã khôi phục dự án "${project.name}" thành công.`)
+    },
+    onError: (error) => toast.error(getApiErrorMessage(error)),
+  })
+}
+
+export const usePermanentDeleteProject = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: projectApi.deletePermanently,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: projectKeys.lists() })
+      qc.invalidateQueries({ queryKey: ['archived-projects'] })
+      toast.success('Đã xóa vĩnh viễn dự án thành công.')
+    },
+    onError: (error) => toast.error(getApiErrorMessage(error)),
+  })
+}
+
 
