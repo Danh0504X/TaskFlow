@@ -71,6 +71,7 @@ export const useDeleteProject = () => {
     mutationFn: (id: string) => projectApi.remove(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: projectKeys.lists() })
+      qc.invalidateQueries({ queryKey: ['archived-projects'] })
       toast.success('Đã xoá project')
     },
     onError: (error) => toast.error(getApiErrorMessage(error)),

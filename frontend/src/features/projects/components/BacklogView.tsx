@@ -84,20 +84,6 @@ const IssueRow = ({
   )
 }
 
-/**
- * Backlog thật (thay ProjectBacklogTab.tsx cũ — nơi từng giả lập theo `status` issue thay
- * vì dùng Sprint thật). Gồm: 1 khối "Sprint đang chạy" (pin nổi bật) nếu có, N khối sprint
- * PLANNED (sửa/xóa/start), và 1 khối Backlog. Cả 3 loại khung đều kéo-thả qua lại được với
- * nhau (kể cả kéo issue ra khỏi sprint đang chạy) — chỉ đổi `sprintId`/`orderIndex`, KHÔNG
- * đụng `status` (giữ nguyên trạng thái — Jira-style). Sprint đang chạy chỉ không có nút
- * sửa/xóa/start (những thao tác đó vẫn ở Backlog/Board tương ứng); chỉ OWNER kéo-thả được,
- * MEMBER chỉ xem.
- *
- * Cơ chế kéo-thả mượt như Board: state `localIssues` được cập nhật ngay trong `onDragOver`
- * (di chuyển card qua container khác / đổi vị trí ngay khi đang kéo, chưa cần thả), kèm
- * `DragOverlay` cho card nổi theo con trỏ — cùng pattern với `BoardView.tsx`, chỉ khác là
- * container phân biệt theo `sprintId` thay vì `status`.
- */
 const BacklogView = ({ projectId, onSelectIssue, onGoToBoard }: BacklogViewProps) => {
   const currentUser = useAuthStore((state) => state.user)
   const { data: project } = useProject(projectId)

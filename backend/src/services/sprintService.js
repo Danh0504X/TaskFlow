@@ -293,69 +293,39 @@ const completeSprint = async (projectId, sprintId, project, userId, body = {}) =
 
   let createdSprint = null
 
-  // Thực thi việc chuyển issue + đóng sprint. `sprintFirst=true` dùng cho fallback không
-  // transaction: ghi sprint.save() TRƯỚC để nếu update issue lỗi giữa chừng, trạng thái
-  // tệ nhất là "sprint COMPLETED nhưng vài issue kẹt sprintId cũ" (sửa tay được), thay vì
-  // "sprint vẫn ACTIVE nhưng issue đã biến mất khỏi nó" (phá vỡ bất biến mà Board dựa vào).
-  const runResolution = async (options = {}, sprintFirst = false) => {
-    const moveIssues = async () => {
-      if (incompleteIssues.length === 0) return
+  // Chuyển issue dở dang theo resolution đã chọn.
+  const moveIssues = async (options) => {
+    if (incompleteIssues.length === 0) return
 
-      if (resolution === 'BACKLOG') {
-        await moveIssuesToBacklog(projectId, sprintId, options)
-      } else if (resolution === 'MOVE_TO_SPRINT') {
-        await Issue.updateMany(
-          { projectId, sprintId, status: { $ne: 'DONE' }, isDeleted: false },
-          { sprintId: targetSprintId },
-          options,
-        )
-      } else if (resolution === 'NEW_SPRINT') {
-        createdSprint = await createSprint(projectId, userId, newSprint, project, options)
-        await Issue.updateMany(
-          { projectId, sprintId, status: { $ne: 'DONE' }, isDeleted: false },
-          { sprintId: createdSprint._id },
-          options,
-        )
-      }
-    }
-
-    const closeSprint = async () => {
-      sprint.status = 'COMPLETED'
-      await sprint.save(options)
-    }
-
-    if (sprintFirst) {
-      await closeSprint()
-      await moveIssues()
-    } else {
-      await moveIssues()
-      await closeSprint()
+    if (resolution === 'BACKLOG') {
+      await moveIssuesToBacklog(projectId, sprintId, options)
+    } else if (resolution === 'MOVE_TO_SPRINT') {
+      await Issue.updateMany(
+        { projectId, sprintId, status: { $ne: 'DONE' }, isDeleted: false },
+        { sprintId: targetSprintId },
+        options,
+      )
+    } else if (resolution === 'NEW_SPRINT') {
+      createdSprint = await createSprint(projectId, userId, newSprint, project, options)
+      await Issue.updateMany(
+        { projectId, sprintId, status: { $ne: 'DONE' }, isDeleted: false },
+        { sprintId: createdSprint._id },
+        options,
+      )
     }
   }
 
-  let transactionOk = false
+  // MongoDB Atlas luôn chạy dạng replica set nên transaction luôn khả dụng: move issue
+  // + đóng sprint được gộp thành 1 giao dịch atomic, lỗi giữa chừng thì rollback toàn bộ.
   const session = await mongoose.startSession()
   try {
-    session.startTransaction()
-    await runResolution({ session })
-    await session.commitTransaction()
-    transactionOk = true
-  } catch (err) {
-    await session.abortTransaction().catch(() => {})
-    const transactionUnsupported =
-      err?.code === 20 ||
-      /Transaction numbers/i.test(err?.message || '') ||
-      /replica set/i.test(err?.message || '')
-    if (!transactionUnsupported) {
-      throw err
-    }
+    await session.withTransaction(async () => {
+      await moveIssues({ session })
+      sprint.status = 'COMPLETED'
+      await sprint.save({ session })
+    })
   } finally {
     session.endSession()
-  }
-
-  if (!transactionOk) {
-    // Môi trường không hỗ trợ transaction (MongoDB standalone) -> ghi tuần tự, sprint trước.
-    await runResolution({}, true)
   }
 
   return { sprint, movedCount: incompleteIssues.length, newSprint: createdSprint }

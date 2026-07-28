@@ -7,7 +7,7 @@ import { corsOptions } from './config/cors.js'
 import { connectDB } from './lib/db.js'
 import { errorHandlingMiddleware } from './middlewares/errorHandlingMiddleware.js'
 import apiRoutes from './routes/api.js'
- 
+
 const START_SERVER = () => {
   const app = express()
 
@@ -17,9 +17,6 @@ const START_SERVER = () => {
   app.use(express.urlencoded({ extended: true, limit: '100kb' }))
   app.use(cookieParser())
 
-  // API trả dữ liệu động (đặc biệt là /auth/me) -> cấm trình duyệt cache.
-  // Thiếu header này khiến browser tự phục vụ lại response cũ (vd 410 đã hết hạn)
-  // từ disk cache cho request GET giống hệt ngay sau đó, dù cookie đã được refresh.
   app.use('/api', (req, res, next) => {
     res.set('Cache-Control', 'no-store')
     next()
@@ -36,13 +33,13 @@ const START_SERVER = () => {
   })
 }
 
-// Kết nối database trước, kết nối thành công mới khởi động server
-;(async () => {
-  try {
-    await connectDB()
-    START_SERVER()
-  } catch (error) {
-    console.error('❌ Failed to start server:', error)
-    process.exit(1)
-  }
-})()
+  // Kết nối database trước, kết nối thành công mới khởi động server
+  ; (async () => {
+    try {
+      await connectDB()
+      START_SERVER()
+    } catch (error) {
+      console.error('❌ Failed to start server:', error)
+      process.exit(1)
+    }
+  })()

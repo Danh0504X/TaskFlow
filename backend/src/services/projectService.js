@@ -69,7 +69,7 @@ const resolveProjectKey = (key, name) => {
   return normalized
 }
 
-// Không có methodology -> mặc định KANBAN (đơn giản nhất, không cần cấu hình Sprint).
+
 const resolveMethodology = (methodology) => {
   if (!methodology) return 'KANBAN'
   if (!PROJECT_METHODOLOGIES.includes(methodology)) {
