@@ -4,7 +4,9 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { ArrowLeft, Plus, UserPlus } from 'lucide-react'
 import { useAuthStore } from '@/features/auth/authStore'
 import ProjectInviteModal from '../components/ProjectInviteModal'
+import ProjectMembersModal from '../components/ProjectMembersModal'
 import Spinner from '@/components/ui/Spinner'
+import Avatar from '@/components/ui/Avatar'
 import { cn } from '@/lib/cn'
 import ProjectMethodologyBadge from '@/features/projects/components/ProjectMethodologyBadge'
 import IssueDetailPanel from '@/features/issues/components/IssueDetailPanel'
@@ -83,6 +85,7 @@ const ProjectWorkspacePage = () => {
   const [selectedIssueKey, setSelectedIssueKey] = useState<string | null>(null)
   const [isCreateIssueOpen, setIsCreateIssueOpen] = useState(false)
   const [isInviteOpen, setIsInviteOpen] = useState(false)
+  const [isMembersModalOpen, setIsMembersModalOpen] = useState(false)
 
   const currentUser = useAuthStore((state) => state.user)
   const userMemberRecord = project?.members?.find((m) => m.userId === currentUser?._id)
@@ -138,6 +141,34 @@ const ProjectWorkspacePage = () => {
             </div>
             <h1 className="text-lg md:text-xl font-bold text-ink tracking-tight truncate">{project.name}</h1>
             <ProjectMethodologyBadge methodology={project.methodology} />
+
+            {/* Avatar Stack Thành viên */}
+            {project.members && project.members.length > 0 && (
+              <div 
+                onClick={() => setIsMembersModalOpen(true)}
+                className="flex items-center -space-x-1.5 cursor-pointer hover:opacity-90 transition-opacity ml-1.5 shrink-0"
+                title="Xem danh sách thành viên"
+              >
+                {project.members
+                  .filter((m) => m.status !== 'REMOVED')
+                  .sort((a, b) => (a.role === 'OWNER' ? -1 : b.role === 'OWNER' ? 1 : 0))
+                  .slice(0, 4)
+                  .map((member) => (
+                    <Avatar
+                      key={member.userId}
+                      src={member.user?.avatarUrl}
+                      name={member.user?.fullName || 'Thành viên'}
+                      size={24}
+                      className="border-2 border-white shadow-sm ring-1 ring-slate-100/50"
+                    />
+                  ))}
+                {project.members.filter((m) => m.status !== 'REMOVED').length > 4 && (
+                  <div className="w-6 h-6 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center text-[9px] font-bold text-slate-600 shadow-sm ring-1 ring-slate-100/50 shrink-0">
+                    +{project.members.filter((m) => m.status !== 'REMOVED').length - 4}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-2.5 shrink-0">
@@ -224,6 +255,12 @@ const ProjectWorkspacePage = () => {
         open={isInviteOpen}
         onClose={() => setIsInviteOpen(false)}
         projectId={project._id}
+      />
+
+      <ProjectMembersModal
+        open={isMembersModalOpen}
+        onClose={() => setIsMembersModalOpen(false)}
+        members={project.members}
       />
     </div>
   )
