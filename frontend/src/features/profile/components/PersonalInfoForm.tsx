@@ -1,13 +1,31 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useAuthStore } from '@/features/auth/authStore';
 import { useUpdateProfile } from '@/features/auth/hooks/useAuthMutations';
+// Import component Modal và kiểu dữ liệu ModalTone từ thư mục ui
+import Modal, { type ModalTone } from '@/components/ui/Modal';
 
 export function PersonalInfoForm() {
   const user = useAuthStore((state) => state.user);
   const updateProfileMutation = useUpdateProfile();
   const [fullName, setFullName] = useState(user?.fullName ?? '');
 
-  // Đồng bộ lại input khi userInfo trong store đổi (vd sau khi lưu thành công).
+  // 1. Tạo state để quản lý cấu hình của Modal thông báo
+  const [modalConfig, setModalConfig] = useState<{
+    open: boolean;
+    tone: ModalTone;
+    title: string;
+    message: string;
+  }>({
+    open: false,
+    tone: 'brand',
+    title: '',
+    message: '',
+  });
+
+  // Hàm tiện ích để đóng Modal
+  const closeModal = () => setModalConfig((prev) => ({ ...prev, open: false }));
+
+  // Đồng bộ lại input khi userInfo trong store đổi
   useEffect(() => {
     setFullName(user?.fullName ?? '');
   }, [user?.fullName]);
@@ -22,7 +40,34 @@ export function PersonalInfoForm() {
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!isDirty) return;
-    updateProfileMutation.mutate({ fullName: trimmedName });
+
+    // 2. Gọi hàm mutate và truyền cấu hình xử lý Thành công / Thất bại
+    updateProfileMutation.mutate(
+      { fullName: trimmedName },
+      {
+        onSuccess: () => {
+          // Hiển thị Modal màu xanh ngọc (success) khi lưu thành công
+          setModalConfig({
+            open: true,
+            tone: 'success',
+            title: 'Cập nhật thành công',
+            message: 'Thông tin cá nhân của bạn đã được lưu lại trên hệ thống.',
+          });
+        },
+        onError: (error: any) => {
+          // Hiển thị Modal màu đỏ (danger) khi có lỗi từ server
+          // Lấy thông báo lỗi từ API, hoặc dùng câu thông báo mặc định
+          const errorMessage = error?.response?.data?.message || error?.message || 'Họ và tên chỉ được chứa chữ cái và khoảng trắng.';
+          
+          setModalConfig({
+            open: true,
+            tone: 'danger',
+            title: 'Lỗi cập nhật',
+            message: errorMessage,
+          });
+        },
+      }
+    );
   };
 
   return (
@@ -76,6 +121,27 @@ export function PersonalInfoForm() {
           </button>
         </div>
       </form>
+
+      {/* 3. Khai báo component Modal ở cuối phần giao diện */}
+      <Modal
+        open={modalConfig.open}
+        onClose={closeModal}
+        title={modalConfig.title}
+        tone={modalConfig.tone}
+        layout="compact"
+        footer={
+          <button
+            onClick={closeModal}
+            className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-200 transition-colors"
+          >
+            Đóng
+          </button>
+        }
+      >
+        <p className="text-sm text-[#464554] leading-relaxed">
+          {modalConfig.message}
+        </p>
+      </Modal>
     </section>
   );
 }
