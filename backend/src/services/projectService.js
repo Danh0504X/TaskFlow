@@ -206,19 +206,42 @@ const inviteMembers = async (projectId, inviterId, invites = []) => {
   }
 }
 
-// Lấy danh sách project mà user là member (chưa bị xóa mềm và chưa rời đi).
+// Lấy danh sách project mà user là member ACTIVE (đã chấp nhận lời mời, chưa rời đi).
+// Project mà user còn PENDING (chưa chấp nhận) không xuất hiện ở đây -> xem getMyInvitations.
 const getMyProjects = async (userId) => {
   return Project.find({
-    members: {
-      $elemMatch: {
-        userId,
-        status: { $ne: 'REMOVED' },
-      },
-    },
+    members: { $elemMatch: { userId, status: 'ACTIVE' } },
     isDeleted: false,
   })
     .sort({ updatedAt: -1 })
     .lean()
+}
+
+// Lấy danh sách lời mời tham gia dự án đang chờ user hiện tại xử lý (status PENDING).
+const getMyInvitations = async (userId) => {
+  const projects = await Project.find({
+    isDeleted: false,
+    members: { $elemMatch: { userId, status: 'PENDING' } },
+  })
+    .select('name key methodology members createdBy')
+    .populate({ path: 'createdBy', select: 'fullName avatarUrl' })
+    .sort({ updatedAt: -1 })
+    .lean()
+
+  return projects.map((project) => {
+    const member = project.members.find((m) => m.userId.toString() === userId.toString())
+
+    return {
+      projectId: project._id,
+      name: project.name,
+      key: project.key,
+      methodology: project.methodology,
+      invitedBy: project.createdBy
+        ? { fullName: project.createdBy.fullName, avatarUrl: project.createdBy.avatarUrl ?? null }
+        : null,
+      invitedAt: member.joinedAt,
+    }
+  })
 }
 
 // Lấy chi tiết 1 project. Populate `members.userId` (fullName/avatarUrl) -> frontend dùng
@@ -430,25 +453,27 @@ const leaveProject = async (projectId, userId) => {
 }
 
 // Chấp nhận lời mời tham gia dự án.
+// `token` chỉ bắt buộc khi chấp nhận qua link email (xác thực đúng lời mời được gửi tới
+// đúng email/project). Khi chấp nhận trực tiếp trong app (modal "Lời mời của tôi"), user đã
+// đăng nhập nên bỏ qua bước xác thực token -> việc kiểm tra `member.status === 'PENDING'`
+// bên dưới (khớp với đúng userId đang đăng nhập) đã đủ đảm bảo chỉ đúng người được mời mới
+// chấp nhận được.
 const acceptInvitation = async (projectId, userId, token) => {
   ensureValidObjectId(projectId, 'project id')
   ensureValidObjectId(userId, 'user id')
 
-  if (!token) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'Mã xác nhận lời mời không được để trống')
-  }
+  if (token) {
+    let decoded
+    try {
+      decoded = await JwtProvider.verifyToken(token, env.ACCESS_TOKEN_SECRET)
+    } catch (error) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'Mã xác nhận lời mời không hợp lệ hoặc đã hết hạn')
+    }
 
-  // Xác thực token
-  let decoded
-  try {
-    decoded = await JwtProvider.verifyToken(token, env.ACCESS_TOKEN_SECRET)
-  } catch (error) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'Mã xác nhận lời mời không hợp lệ hoặc đã hết hạn')
-  }
-
-  // Kiểm tra thông tin trong token khớp với request
-  if (decoded.projectId !== projectId || decoded.userId !== userId) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'Thông tin xác nhận lời mời không khớp')
+    // Kiểm tra thông tin trong token khớp với request
+    if (decoded.projectId !== projectId || decoded.userId !== userId) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'Thông tin xác nhận lời mời không khớp')
+    }
   }
 
   const project = await Project.findOne({ _id: projectId, isDeleted: false })
@@ -476,24 +501,22 @@ const acceptInvitation = async (projectId, userId, token) => {
   return toProjectDTO(updatedProject)
 }
 
-// Từ chối lời mời tham gia dự án.
+// Từ chối lời mời tham gia dự án. `token` optional -- xem giải thích ở acceptInvitation.
 const declineInvitation = async (projectId, userId, token) => {
   ensureValidObjectId(projectId, 'project id')
   ensureValidObjectId(userId, 'user id')
 
-  if (!token) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'Mã xác nhận lời mời không được để trống')
-  }
+  if (token) {
+    let decoded
+    try {
+      decoded = await JwtProvider.verifyToken(token, env.ACCESS_TOKEN_SECRET)
+    } catch (error) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'Mã xác nhận lời mời không hợp lệ hoặc đã hết hạn')
+    }
 
-  let decoded
-  try {
-    decoded = await JwtProvider.verifyToken(token, env.ACCESS_TOKEN_SECRET)
-  } catch (error) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'Mã xác nhận lời mời không hợp lệ hoặc đã hết hạn')
-  }
-
-  if (decoded.projectId !== projectId || decoded.userId !== userId) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'Thông tin xác nhận lời mời không khớp')
+    if (decoded.projectId !== projectId || decoded.userId !== userId) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'Thông tin xác nhận lời mời không khớp')
+    }
   }
 
   const project = await Project.findOne({ _id: projectId, isDeleted: false })
@@ -526,6 +549,7 @@ export const projectService = {
   createProject,
   inviteMembers,
   getMyProjects,
+  getMyInvitations,
   getProjectById,
   updateProject,
   deleteProject,

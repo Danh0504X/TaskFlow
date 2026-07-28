@@ -5,6 +5,7 @@ import type {
   InviteMemberInput,
   InviteMembersResponse,
   Project,
+  ProjectInvitation,
   UpdateProjectPayload,
 } from './project.types'
 
@@ -14,6 +15,12 @@ export const projectApi = {
   /** GET /projects — danh sách project user tham gia (backend đã lọc isDeleted: false). */
   getMyProjects: async (): Promise<Project[]> => {
     const res = await api.get<ApiResponse<Project[]>>('/projects')
+    return res.data.data
+  },
+
+  /** GET /projects/invitations — danh sách lời mời tham gia dự án đang chờ user hiện tại xử lý. */
+  getMyInvitations: async (): Promise<ProjectInvitation[]> => {
+    const res = await api.get<ApiResponse<ProjectInvitation[]>>('/projects/invitations')
     return res.data.data
   },
 
@@ -82,20 +89,18 @@ export const projectApi = {
     return res.data
   },
 
-  /** POST /projects/:id/invitation/accept — chấp nhận lời mời tham gia dự án. */
-  acceptInvitation: async (
-    projectId: string,
-    token: string,
-  ): Promise<void> => {
-    await api.post(`/projects/${projectId}/invitation/accept`, { token })
+  /**
+   * POST /projects/:id/invitation/accept — chấp nhận lời mời tham gia dự án.
+   * `token` chỉ cần khi chấp nhận qua link email; bỏ trống khi chấp nhận trực tiếp trong app
+   * (modal "Lời mời của tôi") vì backend đã xác định user qua phiên đăng nhập.
+   */
+  acceptInvitation: async (projectId: string, token?: string): Promise<void> => {
+    await api.post(`/projects/${projectId}/invitation/accept`, token ? { token } : {})
   },
 
-  /** POST /projects/:id/invitation/decline — từ chối lời mời tham gia dự án. */
-  declineInvitation: async (
-    projectId: string,
-    token: string,
-  ): Promise<void> => {
-    await api.post(`/projects/${projectId}/invitation/decline`, { token })
+  /** POST /projects/:id/invitation/decline — từ chối lời mời tham gia dự án. `token` optional, xem acceptInvitation. */
+  declineInvitation: async (projectId: string, token?: string): Promise<void> => {
+    await api.post(`/projects/${projectId}/invitation/decline`, token ? { token } : {})
   },
 }
 

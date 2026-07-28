@@ -13,3 +13,11 @@ export const useProjects = () => {
     queryFn: projectApi.getMyProjects,
   })
 }
+
+/** Danh sách lời mời tham gia dự án đang chờ user hiện tại xử lý. */
+export const useProjectInvitations = () => {
+  return useQuery({
+    queryKey: projectKeys.invitations(),
+    queryFn: projectApi.getMyInvitations,
+  })
+}
