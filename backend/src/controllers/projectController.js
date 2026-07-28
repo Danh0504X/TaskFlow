@@ -33,6 +33,16 @@ export const getMyProjects = asyncHandler(async (req, res) => {
   })
 })
 
+// Lấy danh sách lời mời tham gia dự án đang chờ user hiện tại xử lý.
+export const getMyInvitations = asyncHandler(async (req, res) => {
+  const result = await projectService.getMyInvitations(req.user._id)
+
+  res.status(StatusCodes.OK).json({
+    message: 'Get pending invitations successfully',
+    data: result,
+  })
+})
+
 // Lấy chi tiết 1 project theo projectId.
 export const getProjectById = asyncHandler(async (req, res) => {
   const { projectId } = req.params

@@ -95,11 +95,12 @@ export const useLeaveProject = () => {
 export const useAcceptInvitation = () => {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ projectId, token }: { projectId: string; token: string }) =>
+    mutationFn: ({ projectId, token }: { projectId: string; token?: string }) =>
       projectApi.acceptInvitation(projectId, token),
     onSuccess: (_, { projectId }) => {
       qc.invalidateQueries({ queryKey: projectKeys.lists() })
       qc.invalidateQueries({ queryKey: projectKeys.detail(projectId) })
+      qc.invalidateQueries({ queryKey: projectKeys.invitations() })
       toast.success('Chấp nhận lời mời tham gia dự án thành công')
     },
     onError: (error) => toast.error(getApiErrorMessage(error)),
@@ -109,10 +110,11 @@ export const useAcceptInvitation = () => {
 export const useDeclineInvitation = () => {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ projectId, token }: { projectId: string; token: string }) =>
+    mutationFn: ({ projectId, token }: { projectId: string; token?: string }) =>
       projectApi.declineInvitation(projectId, token),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: projectKeys.lists() })
+      qc.invalidateQueries({ queryKey: projectKeys.invitations() })
       toast.success('Đã từ chối lời mời tham gia dự án')
     },
     onError: (error) => toast.error(getApiErrorMessage(error)),

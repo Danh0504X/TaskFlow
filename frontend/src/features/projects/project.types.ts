@@ -99,3 +99,13 @@ export interface InviteMembersResponse {
   added: InviteMemberResult[]
   skipped: InviteMemberResult[]
 }
+
+/** 1 lời mời tham gia dự án đang chờ user hiện tại xử lý (GET /projects/invitations). */
+export interface ProjectInvitation {
+  projectId: string
+  name: string
+  key: string
+  methodology: ProjectMethodology
+  invitedBy: { fullName: string; avatarUrl: string | null } | null
+  invitedAt: string
+}

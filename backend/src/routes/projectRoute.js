@@ -3,6 +3,7 @@ import {
   createProject,
   inviteMembers,
   getMyProjects,
+  getMyInvitations,
   getProjectById,
   updateProject,
   deleteProject,
@@ -32,6 +33,10 @@ router.get('/', getMyProjects)
 // Danh sách project đã lưu trữ (isDeleted: true) mà user là OWNER.
 // Phải đứng TRƯỚC route "/:projectId" bên dưới, nếu không "archived" sẽ bị hiểu nhầm là :projectId.
 router.get('/archived', getArchivedProjects)
+
+// Danh sách lời mời tham gia dự án đang chờ user hiện tại xử lý (status PENDING).
+// Cùng lý do trên: phải đứng TRƯỚC route "/:projectId".
+router.get('/invitations', getMyInvitations)
 
 // Xem chi tiết: OWNER / MEMBER.
 router.get(

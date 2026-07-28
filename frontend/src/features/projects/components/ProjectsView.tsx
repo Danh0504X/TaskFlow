@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FolderKanban, Plus, RotateCcw, Archive } from 'lucide-react'
+import { FolderKanban, Plus, RotateCcw, Archive, Mail } from 'lucide-react'
 import Spinner from '@/components/ui/Spinner'
 import SearchInput from '@/components/ui/SearchInput'
 import Modal from '@/components/ui/Modal'
@@ -8,11 +8,12 @@ import Button from '@/components/ui/Button'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { useAuthStore } from '@/features/auth/authStore'
 import type { Project } from '../project.types'
-import { useProjects } from '../hooks/useProjects'
+import { useProjectInvitations, useProjects } from '../hooks/useProjects'
 import { useDeleteProject, useLeaveProject, usePermanentDeleteProject } from '../hooks/useProjectMutations'
 import { getRecentProjectIds } from '../recentProjects'
 import ProjectGridSection from './ProjectGridSection'
 import ProjectEditModal from './ProjectEditModal'
+import ProjectInvitationsModal from './ProjectInvitationsModal'
 
 /** Owner là member có role OWNER trong project — chỉ owner được sửa/lưu trữ/xoá dự án. */
 const isProjectOwner = (project: Project, currentUserId?: string) =>
@@ -28,6 +29,7 @@ const ProjectsView = () => {
   const navigate = useNavigate()
   const currentUser = useAuthStore((state) => state.user)
   const { data: projects, isLoading, isError, refetch, isFetching } = useProjects()
+  const { data: invitations } = useProjectInvitations()
   const deleteMutation = useDeleteProject()
   const permanentDeleteMutation = usePermanentDeleteProject()
   const leaveMutation = useLeaveProject()
@@ -36,6 +38,9 @@ const ProjectsView = () => {
   const [editing, setEditing] = useState<Project | null>(null)
   const [deleting, setDeleting] = useState<Project | null>(null)
   const [leaving, setLeaving] = useState<Project | null>(null)
+  const [showInvitations, setShowInvitations] = useState(false)
+
+  const invitationCount = invitations?.length ?? 0
 
   const normalizedQuery = query.trim().toLowerCase()
   const filteredProjects = (projects ?? []).filter(
@@ -92,6 +97,18 @@ const ProjectsView = () => {
         </div>
 
         <div className="flex items-center gap-3 self-start sm:self-auto">
+          <button
+            onClick={() => setShowInvitations(true)}
+            className="relative flex items-center gap-2 px-4 py-2.5 bg-white text-ink border border-line/30 rounded-xl text-sm font-bold hover:bg-slate-50 transition-all active:scale-95"
+          >
+            <Mail size={16} className="text-muted" />
+            <span>Lời mời</span>
+            {invitationCount > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1 text-[10px] font-bold text-white">
+                {invitationCount}
+              </span>
+            )}
+          </button>
           <button
             onClick={() => navigate('/projects/archived')}
             className="flex items-center gap-2 px-4 py-2.5 bg-white text-ink border border-line/30 rounded-xl text-sm font-bold hover:bg-slate-50 transition-all active:scale-95"
@@ -198,6 +215,9 @@ const ProjectsView = () => {
           )}
         </>
       )}
+
+      {/* Modal danh sách lời mời tham gia dự án đang chờ xử lý */}
+      <ProjectInvitationsModal open={showInvitations} onClose={() => setShowInvitations(false)} />
 
       {/* Modal Sửa */}
       <ProjectEditModal open={!!editing} onClose={() => setEditing(null)} project={editing} />
