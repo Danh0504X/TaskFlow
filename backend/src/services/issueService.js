@@ -28,10 +28,10 @@ const toIssueDTO = (issue, projectKey) => {
 
   const assignee = obj.assigneeId && typeof obj.assigneeId === 'object'
     ? {
-        _id: obj.assigneeId._id,
-        fullName: obj.assigneeId.fullName,
-        avatarUrl: obj.assigneeId.avatarUrl ?? null,
-      }
+      _id: obj.assigneeId._id,
+      fullName: obj.assigneeId.fullName,
+      avatarUrl: obj.assigneeId.avatarUrl ?? null,
+    }
     : undefined
 
   const epicName = obj.parentIssueId && typeof obj.parentIssueId === 'object'
@@ -90,15 +90,24 @@ const ensureParentIssueInProject = async (projectId, parentIssueId, currentIssue
 // "khóa board khi không có sprint đang chạy" — trước đây chỉ là ý tưởng UI, không có ở BE.
 const ensureIssueStatusChangeAllowed = async (project, issue) => {
   if (!project || project.methodology !== 'SCRUM') return
-
-  if (!issue.sprintId) {
+  // 1. Xác định sprintId thực tế để kiểm tra
+  let targetSprintId = issue.sprintId
+  // NẾU ĐÂY LÀ SUB-TASK: Lấy sprintId từ Issue cha thay vì chính nó
+  if (issue.type === 'SUBTASK' && issue.parentIssueId) {
+    const parentIssue = await Issue.findOne({ _id: issue.parentIssueId, isDeleted: false }).lean()
+    if (parentIssue) {
+      targetSprintId = parentIssue.sprintId
+    }
+  }
+  // 2. Kiểm tra xem có Sprint nào được gán không
+  if (!targetSprintId) {
     throw new ApiError(
       StatusCodes.CONFLICT,
       'Issue đang ở Backlog — cần đưa vào sprint đang chạy trước khi đổi trạng thái',
     )
   }
-
-  const sprint = await Sprint.findOne({ _id: issue.sprintId, isDeleted: false }).lean()
+  // 3. Kiểm tra xem Sprint đó có đang hoạt động (ACTIVE) không
+  const sprint = await Sprint.findOne({ _id: targetSprintId, isDeleted: false }).lean()
   if (!sprint || sprint.status !== 'ACTIVE') {
     throw new ApiError(
       StatusCodes.CONFLICT,
@@ -109,7 +118,7 @@ const ensureIssueStatusChangeAllowed = async (project, issue) => {
 
 // Tạo issue trong project.
 const createIssue = async (projectId, userId, body = {}) => {
-    ensureValidObjectId(projectId, 'project id')
+  ensureValidObjectId(projectId, 'project id')
 
   const {
     title,
@@ -139,7 +148,7 @@ const createIssue = async (projectId, userId, body = {}) => {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid issue priority')
   }
 
-// Không gửi sprintId -> issue vào Backlog (mặc định, phù hợp cả Scrum lẫn Kanban).
+  // Không gửi sprintId -> issue vào Backlog (mặc định, phù hợp cả Scrum lẫn Kanban).
   // Có gửi sprintId -> tạo thẳng vào sprint đó, miễn là sprint thuộc đúng project và còn
   // "mở" (PLANNED/ACTIVE) — dùng cho quick-add ngay trong 1 sprint cụ thể (Backlog) hoặc
   // trực tiếp trên Board (sprint đang ACTIVE). Không tự suy luận sprint nếu client không
