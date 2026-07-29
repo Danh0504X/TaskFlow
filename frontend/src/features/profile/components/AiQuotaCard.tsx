@@ -1,36 +1,40 @@
+import { Zap } from 'lucide-react'
+import { motion } from 'motion/react'
+import { fadeUpItem } from '@/lib/motion'
+
+// Chưa có API hạn mức AI thật cho user thường (khác với bảng "Hạn mức & xếp hạng" bên khu
+// Admin, vốn quản lý toàn hệ thống) — số liệu dưới đây là placeholder tĩnh chờ nối API.
+const USED = 5
+const LIMIT = 15
+const remainingPct = Math.round(((LIMIT - USED) / LIMIT) * 100)
+
 export function AiQuotaCard() {
   return (
-    <section className="bg-surface rounded-2xl p-5 shadow-sm border border-[#c7c4d7]/30">
+    <motion.section variants={fadeUpItem} className="bg-surface border border-hairline rounded-lg p-5">
       <div className="flex items-center justify-between mb-3">
-        <h4 className="text-xs font-bold text-[#121c2a] uppercase tracking-wider">
-          Hạn mức AI
-        </h4>
-        <span
-          className="material-symbols-outlined text-[18px] text-[#4648d4]"
-          style={{ fontVariationSettings: '"FILL" 1' }}
-        >
-          bolt
-        </span>
+        <h4 className="text-[11px] font-semibold text-subtle uppercase tracking-wide">Hạn mức AI</h4>
+        <div className="w-7 h-7 rounded-lg bg-pastel-yellow text-pastel-yellow-ink flex items-center justify-center">
+          <Zap size={14} />
+        </div>
       </div>
+
       <div className="space-y-3">
         <div className="flex justify-between items-end">
-          <span className="text-2xl font-bold text-[#121c2a] leading-none">
-            5 <span className="text-sm font-normal text-[#464554]">/ 15 lượt</span>
+          <span className="text-2xl font-semibold text-ink leading-none">
+            {USED} <span className="text-sm font-normal text-subtle">/ {LIMIT} lượt</span>
           </span>
-          <span className="text-xs font-bold text-[#4648d4]">
-            Còn lại 67%
-          </span>
+          <span className="text-xs font-bold text-brand">Còn lại {remainingPct}%</span>
         </div>
-        <div className="w-full h-2 bg-[#e6eeff] rounded-full overflow-hidden">
+
+        <div className="w-full h-2 bg-canvas rounded-full overflow-hidden">
           <div
-            className="h-full bg-[#4648d4] rounded-full transition-all duration-1000 ease-out"
-            style={{ width: '33.33%' }}
-          ></div>
+            className="h-full bg-brand rounded-full transition-all duration-1000 ease-out"
+            style={{ width: `${(USED / LIMIT) * 100}%` }}
+          />
         </div>
-        <p className="text-xs text-[#464554] leading-relaxed">
-          Hạn mức sẽ được làm mới vào lúc 00:00 ngày mai. Nâng cấp để nhận lượt dùng không giới hạn.
-        </p>
+
+        <p className="text-xs text-subtle leading-relaxed">Hạn mức sẽ được làm mới vào lúc 00:00 ngày mai.</p>
       </div>
-    </section>
-  );
+    </motion.section>
+  )
 }

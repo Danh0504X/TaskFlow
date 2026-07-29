@@ -1,32 +1,27 @@
-import Avatar from '@/components/ui/Avatar';
-import { useAuthStore } from '@/features/auth/authStore';
+import { motion } from 'motion/react'
+import Avatar from '@/components/ui/Avatar'
+import Badge from '@/components/ui/Badge'
+import { useAuthStore } from '@/features/auth/authStore'
+import { fadeUpItem } from '@/lib/motion'
 
 export function AvatarCard() {
-  const user = useAuthStore((state) => state.user);
+  const user = useAuthStore((state) => state.user)
 
-  if (!user) return null;
+  if (!user) return null
 
-  const roleLabel = user.role === 'admin' ? 'Quản trị viên' : 'Thành viên hệ thống';
+  const isAdmin = user.role === 'admin'
 
   return (
-    <section className="bg-surface rounded-2xl p-6 flex flex-col items-center text-center shadow-sm border border-[#c7c4d7]/30">
-      <div className="mb-4">
-        <Avatar
-          src={user.avatarUrl}
-          name={user.fullName}
-          size={88}
-          className="ring-4 ring-[#e1e0ff]"
-        />
-      </div>
-      <h3 className="text-base font-bold text-[#121c2a] mb-0.5">
-        {user.fullName}
-      </h3>
-      <p className="text-[#464554] text-sm mb-3">
-        {user.email}
-      </p>
-      <span className="px-3 py-1 bg-[#dee9fc] text-[#4648d4] rounded-full text-[11px] font-semibold tracking-wide">
-        {roleLabel}
-      </span>
-    </section>
-  );
+    <motion.section
+      variants={fadeUpItem}
+      className="bg-surface border border-hairline rounded-lg p-6 flex flex-col items-center text-center"
+    >
+      <Avatar src={user.avatarUrl} name={user.fullName} size={88} className="ring-4 ring-brand/15" />
+      <h3 className="text-base font-semibold text-ink mt-4">{user.fullName}</h3>
+      <p className="text-subtle text-sm mt-0.5 truncate max-w-full">{user.email}</p>
+      <Badge color={isAdmin ? 'blue' : 'slate'} className="mt-3">
+        {isAdmin ? 'Quản trị viên' : 'Thành viên hệ thống'}
+      </Badge>
+    </motion.section>
+  )
 }
