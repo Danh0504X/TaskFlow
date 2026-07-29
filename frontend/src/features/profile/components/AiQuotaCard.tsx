@@ -1,6 +1,6 @@
 export function AiQuotaCard() {
   return (
-    <section className="bg-white rounded-2xl p-5 shadow-sm border border-[#c7c4d7]/30">
+    <section className="bg-surface rounded-2xl p-5 shadow-sm border border-[#c7c4d7]/30">
       <div className="flex items-center justify-between mb-3">
         <h4 className="text-xs font-bold text-[#121c2a] uppercase tracking-wider">
           Hạn mức AI

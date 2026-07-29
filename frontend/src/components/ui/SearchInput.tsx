@@ -14,7 +14,7 @@ const SearchInput = ({ containerClassName, className, ...rest }: SearchInputProp
       <input
         type="text"
         className={cn(
-          'w-full bg-slate-50 border border-line/20 rounded-xl py-2 pl-10 pr-4 text-xs font-semibold focus:ring-2 focus:ring-brand/20 outline-none transition-all placeholder:text-subtle',
+          'w-full bg-surface border border-hairline rounded-lg py-2 pl-10 pr-4 text-xs font-semibold focus:ring-2 focus:ring-brand/20 outline-none transition-all placeholder:text-subtle',
           className,
         )}
         {...rest}

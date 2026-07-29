@@ -26,7 +26,7 @@ const Avatar = ({ src, name, size = 20, className }: AvatarProps) => {
         src={src}
         alt={name}
         style={style}
-        className={cn('rounded-full object-cover border border-white shadow-sm shrink-0', className)}
+        className={cn('rounded-full object-cover border border-surface shadow-sm shrink-0', className)}
       />
     )
   }
@@ -35,7 +35,7 @@ const Avatar = ({ src, name, size = 20, className }: AvatarProps) => {
     <div
       style={style}
       className={cn(
-        'rounded-full bg-brand/10 text-brand flex items-center justify-center font-bold shrink-0',
+        'rounded-full bg-pastel-blue text-pastel-blue-ink flex items-center justify-center font-semibold shrink-0',
         className,
       )}
     >

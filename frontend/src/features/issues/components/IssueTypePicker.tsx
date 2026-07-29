@@ -35,7 +35,7 @@ const IssueTypePicker = ({ value, onChange, onOpenChange }: IssueTypePickerProps
           toggle()
         }}
         title="Chọn loại issue"
-        className="flex items-center gap-1.5 px-2.5 py-2.5 border border-line/25 rounded-2xl bg-slate-50 hover:border-brand/30 hover:bg-slate-100 transition-all shrink-0"
+        className="flex items-center gap-1.5 px-2.5 py-2.5 border border-hairline rounded-lg bg-canvas hover:border-ink/25 transition-colors shrink-0"
       >
         <IssueTypeIcon type={value} size={14} />
         <ChevronDown size={12} className="text-muted" />
@@ -47,7 +47,7 @@ const IssueTypePicker = ({ value, onChange, onOpenChange }: IssueTypePickerProps
             ref={dropdownRef}
             onClick={(e) => e.stopPropagation()}
             style={{ position: 'fixed', top: coords.top, left: coords.left, width: DROPDOWN_WIDTH }}
-            className="z-50 bg-white border border-line/20 rounded-2xl shadow-lg py-1.5"
+            className="z-50 bg-surface border border-hairline rounded-lg shadow-lg py-1.5"
           >
             {OPTIONS.map((opt) => (
               <button
@@ -57,7 +57,7 @@ const IssueTypePicker = ({ value, onChange, onOpenChange }: IssueTypePickerProps
                   onChange(opt.value)
                   close()
                 }}
-                className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-ink hover:bg-slate-50 transition-all"
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-ink hover:bg-canvas transition-colors"
               >
                 <IssueTypeIcon type={opt.value} size={14} />
                 <span className="flex-1 text-left">{opt.label}</span>

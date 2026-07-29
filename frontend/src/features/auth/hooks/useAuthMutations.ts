@@ -60,10 +60,10 @@ export const useUpdateProfile = () => {
   return useMutation({
     mutationFn: authApi.updateProfile,
     onSuccess: (userInfo) => {
+      // Chỉ giữ lại logic cập nhật state, đã xóa toast.success
       setUser(userInfo)
-      toast.success('Cập nhật thông tin thành công')
-    },
-    onError: (error) => toast.error(getApiErrorMessage(error, 'Cập nhật thất bại')),
+    }
+    // Đã xóa hàm onError gọi toast.error ở đây
   })
 }
 

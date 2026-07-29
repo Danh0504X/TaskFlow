@@ -118,7 +118,7 @@ const CompleteSprintModal = ({
           </p>
 
           <div className="space-y-2.5">
-            <label className="flex items-start gap-2.5 p-3 border border-line/25 rounded-xl cursor-pointer hover:bg-slate-50/60 transition-all">
+            <label className="flex items-start gap-2.5 p-3 border border-line/25 rounded-xl cursor-pointer hover:bg-surface/60 transition-all">
               <input
                 type="radio"
                 className="mt-0.5"
@@ -131,7 +131,7 @@ const CompleteSprintModal = ({
               </div>
             </label>
 
-            <label className="flex items-start gap-2.5 p-3 border border-line/25 rounded-xl cursor-pointer hover:bg-slate-50/60 transition-all">
+            <label className="flex items-start gap-2.5 p-3 border border-line/25 rounded-xl cursor-pointer hover:bg-surface/60 transition-all">
               <input
                 type="radio"
                 className="mt-0.5"
@@ -147,7 +147,7 @@ const CompleteSprintModal = ({
                   <select
                     value={targetSprintId}
                     onChange={(e) => setTargetSprintId(e.target.value)}
-                    className="mt-2 w-full bg-slate-50 border border-line/25 rounded-lg px-3 py-2 text-xs font-semibold"
+                    className="mt-2 w-full bg-surface border border-line/25 rounded-lg px-3 py-2 text-xs font-semibold"
                   >
                     <option value="">-- Chọn sprint đích --</option>
                     {plannedSprints.map((s) => (
@@ -160,7 +160,7 @@ const CompleteSprintModal = ({
               </div>
             </label>
 
-            <label className="flex items-start gap-2.5 p-3 border border-line/25 rounded-xl cursor-pointer hover:bg-slate-50/60 transition-all">
+            <label className="flex items-start gap-2.5 p-3 border border-line/25 rounded-xl cursor-pointer hover:bg-surface/60 transition-all">
               <input
                 type="radio"
                 className="mt-0.5"
@@ -176,20 +176,20 @@ const CompleteSprintModal = ({
                       placeholder="Tên sprint mới"
                       value={newSprintName}
                       onChange={(e) => setNewSprintName(e.target.value)}
-                      className="w-full bg-slate-50 border border-line/25 rounded-lg px-3 py-2 text-xs font-semibold"
+                      className="w-full bg-surface border border-line/25 rounded-lg px-3 py-2 text-xs font-semibold"
                     />
                     <div className="grid grid-cols-2 gap-2">
                       <input
                         type="date"
                         value={newSprintStart}
                         onChange={(e) => setNewSprintStart(e.target.value)}
-                        className="w-full bg-slate-50 border border-line/25 rounded-lg px-3 py-2 text-xs font-semibold"
+                        className="w-full bg-surface border border-line/25 rounded-lg px-3 py-2 text-xs font-semibold"
                       />
                       <input
                         type="date"
                         value={newSprintEnd}
                         onChange={(e) => setNewSprintEnd(e.target.value)}
-                        className="w-full bg-slate-50 border border-line/25 rounded-lg px-3 py-2 text-xs font-semibold"
+                        className="w-full bg-surface border border-line/25 rounded-lg px-3 py-2 text-xs font-semibold"
                       />
                     </div>
                   </div>

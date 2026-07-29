@@ -22,7 +22,7 @@ const Tabs = <T extends string>({ items, value, onChange, className, layoutGroup
   const reduceMotion = useReducedMotion()
 
   return (
-    <div className={cn('flex gap-1.5 p-1.5 bg-slate-100/80 rounded-xl border border-line/30', className)}>
+    <div className={cn('flex gap-1.5 p-1.5 bg-canvas rounded-lg border border-hairline', className)}>
       {items.map((item) => {
         const isActive = value === item.value
         return (
@@ -32,13 +32,13 @@ const Tabs = <T extends string>({ items, value, onChange, className, layoutGroup
             onClick={() => onChange(item.value)}
             className={cn(
               'relative px-4 py-2 rounded-lg text-xs font-bold transition-colors',
-              isActive ? 'text-brand' : 'text-muted hover:text-ink hover:bg-white/40',
+              isActive ? 'text-brand' : 'text-muted hover:text-ink hover:bg-surface/40',
             )}
           >
             {isActive && (
               <motion.span
                 layoutId={layoutGroupId}
-                className="absolute inset-0 bg-white rounded-lg shadow-sm"
+                className="absolute inset-0 bg-surface rounded-lg shadow-sm"
                 transition={reduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 420, damping: 34 }}
               />
             )}

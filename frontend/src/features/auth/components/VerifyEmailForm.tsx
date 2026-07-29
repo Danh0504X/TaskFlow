@@ -8,7 +8,7 @@ import { errorClass, primaryButtonClass } from '../auth.styles'
 
 // Ô nhập mã: cùng phong cách input chung nhưng căn giữa + giãn ký tự cho dễ đọc.
 const codeInputClass =
-  'h-12 w-full rounded-xl border border-line/80 bg-white/50 px-4 text-center text-lg tracking-[0.5em] text-ink backdrop-blur-md transition placeholder:text-base placeholder:tracking-normal placeholder:text-subtle outline-none focus:border-transparent focus:ring-2 focus:ring-brand/70'
+  'h-12 w-full rounded-lg border border-hairline bg-surface px-4 text-center text-lg tracking-[0.5em] text-ink transition-colors placeholder:text-base placeholder:tracking-normal placeholder:text-subtle outline-none focus:border-ink/25 focus:ring-2 focus:ring-brand/20'
 
 const decodeJWT = (token: string) => {
   try {
@@ -87,7 +87,7 @@ const VerifyEmailForm = ({ email, inviteToken }: { email: string; inviteToken?: 
       />
 
       {error && <p className={errorClass}>{error}</p>}
-      {info && <p className="ml-1 mt-1.5 text-xs text-green-600">{info}</p>}
+      {info && <p className="ml-1 mt-1.5 text-xs text-pastel-green-ink">{info}</p>}
 
       <Button
         type="submit"

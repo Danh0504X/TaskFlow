@@ -1,8 +1,9 @@
 import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { X, ChevronDown } from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
+import Button from '@/components/ui/Button'
 import { issueFormSchema, type IssueFormValues } from '../issue.schema'
 import {
   ISSUE_PRIORITY,
@@ -20,6 +21,8 @@ interface IssueCreateModalProps {
   /** Issue hiện có của project — dùng để gợi ý Epic/Task cha phù hợp với type đang chọn. */
   issues: Issue[]
 }
+
+const FORM_ID = 'issue-create-form'
 
 // Chỉ cho tạo Task/Epic từ modal này — Bug và Subtask chưa được hỗ trợ ở Board/Backlog.
 const typeOptions = [
@@ -42,7 +45,9 @@ const priorityOptions = [
 ]
 
 const fieldInputClass =
-  'w-full bg-slate-50 border border-line/20 rounded-2xl px-4 py-3 text-xs font-semibold focus:ring-2 focus:ring-brand/20 outline-none transition-all placeholder:text-subtle'
+  'w-full bg-surface border border-hairline rounded-lg px-4 py-3 text-xs font-medium focus:ring-2 focus:ring-brand/15 focus:border-ink/20 outline-none transition-all placeholder:text-subtle'
+const fieldLabelClass = 'text-xs font-semibold text-ink uppercase tracking-wider'
+const fieldErrorClass = 'text-[10px] text-pastel-red-ink font-medium'
 
 const defaultValues: IssueFormValues = {
   title: '',
@@ -98,25 +103,25 @@ const IssueCreateModal = ({ open, onClose, projectId, issues }: IssueCreateModal
   })
 
   return (
-    <Modal open={open} onClose={onClose}>
-      <button
-        type="button"
-        onClick={onClose}
-        className="absolute right-4 top-4 p-1.5 hover:bg-slate-100 rounded-xl text-muted hover:text-ink transition-all"
-        aria-label="Đóng"
-      >
-        <X size={18} />
-      </button>
-
-      <div className="text-center mb-6">
-        <h2 className="text-xl font-extrabold text-brand tracking-tight">Thêm issue</h2>
-        <p className="text-muted mt-1.5 text-xs font-semibold">Tạo mới một công việc trong dự án.</p>
-      </div>
-
-      <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Thêm issue"
+      footer={
+        <>
+          <Button type="button" variant="secondary" onClick={onClose} disabled={createMutation.isPending}>
+            Huỷ
+          </Button>
+          <Button type="submit" form={FORM_ID} variant="primary" loading={createMutation.isPending}>
+            Tạo issue
+          </Button>
+        </>
+      }
+    >
+      <form id={FORM_ID} onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
         <div className="space-y-1.5">
-          <label htmlFor="issue-title" className="text-xs font-extrabold text-ink uppercase tracking-wider">
-            Tiêu đề <span className="text-red-500">*</span>
+          <label htmlFor="issue-title" className={fieldLabelClass}>
+            Tiêu đề <span className="text-pastel-red-ink">*</span>
           </label>
           <input
             id="issue-title"
@@ -126,13 +131,11 @@ const IssueCreateModal = ({ open, onClose, projectId, issues }: IssueCreateModal
             autoFocus
             {...register('title')}
           />
-          {errors.title?.message && (
-            <p className="text-[10px] text-red-500 font-semibold">{errors.title.message}</p>
-          )}
+          {errors.title?.message && <p className={fieldErrorClass}>{errors.title.message}</p>}
         </div>
 
         <div className="space-y-1.5">
-          <label htmlFor="issue-description" className="text-xs font-extrabold text-ink uppercase tracking-wider">
+          <label htmlFor="issue-description" className={fieldLabelClass}>
             Mô tả
           </label>
           <textarea
@@ -142,14 +145,12 @@ const IssueCreateModal = ({ open, onClose, projectId, issues }: IssueCreateModal
             className={`${fieldInputClass} resize-none`}
             {...register('description')}
           />
-          {errors.description?.message && (
-            <p className="text-[10px] text-red-500 font-semibold">{errors.description.message}</p>
-          )}
+          {errors.description?.message && <p className={fieldErrorClass}>{errors.description.message}</p>}
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <label htmlFor="issue-type" className="text-xs font-extrabold text-ink uppercase tracking-wider">
+            <label htmlFor="issue-type" className={fieldLabelClass}>
               Loại
             </label>
             <div className="relative">
@@ -169,7 +170,7 @@ const IssueCreateModal = ({ open, onClose, projectId, issues }: IssueCreateModal
           </div>
 
           <div className="space-y-1.5">
-            <label htmlFor="issue-priority" className="text-xs font-extrabold text-ink uppercase tracking-wider">
+            <label htmlFor="issue-priority" className={fieldLabelClass}>
               Độ ưu tiên
             </label>
             <div className="relative">
@@ -191,7 +192,7 @@ const IssueCreateModal = ({ open, onClose, projectId, issues }: IssueCreateModal
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <label htmlFor="issue-status" className="text-xs font-extrabold text-ink uppercase tracking-wider">
+            <label htmlFor="issue-status" className={fieldLabelClass}>
               Trạng thái
             </label>
             <div className="relative">
@@ -212,7 +213,7 @@ const IssueCreateModal = ({ open, onClose, projectId, issues }: IssueCreateModal
 
           {showParentField && (
             <div className="space-y-1.5">
-              <label htmlFor="issue-parent" className="text-xs font-extrabold text-ink uppercase tracking-wider">
+              <label htmlFor="issue-parent" className={fieldLabelClass}>
                 Epic cha
               </label>
               <div className="relative">
@@ -230,32 +231,12 @@ const IssueCreateModal = ({ open, onClose, projectId, issues }: IssueCreateModal
                 </select>
                 <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-muted" size={14} />
               </div>
-              {errors.parentIssueId?.message && (
-                <p className="text-[10px] text-red-500 font-semibold">{errors.parentIssueId.message}</p>
-              )}
+              {errors.parentIssueId?.message && <p className={fieldErrorClass}>{errors.parentIssueId.message}</p>}
               {parentOptions.length === 0 && (
-                <p className="text-[10px] text-subtle font-semibold">Chưa có Epic nào trong dự án.</p>
+                <p className="text-[10px] text-subtle font-medium">Chưa có Epic nào trong dự án.</p>
               )}
             </div>
           )}
-        </div>
-
-        <div className="flex justify-end gap-2.5 pt-4 mt-2 border-t border-line/10">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={createMutation.isPending}
-            className="px-4 py-2.5 hover:bg-slate-100 border border-line/30 rounded-xl text-xs font-bold text-muted hover:text-ink transition-all disabled:opacity-45 disabled:pointer-events-none"
-          >
-            Huỷ
-          </button>
-          <button
-            type="submit"
-            disabled={createMutation.isPending}
-            className="px-6 py-2.5 bg-brand text-white hover:bg-brand-light rounded-xl text-xs font-bold shadow-lg shadow-brand/15 transition-all disabled:opacity-45 disabled:pointer-events-none"
-          >
-            {createMutation.isPending ? 'Đang tạo...' : 'Tạo issue'}
-          </button>
         </div>
       </form>
     </Modal>

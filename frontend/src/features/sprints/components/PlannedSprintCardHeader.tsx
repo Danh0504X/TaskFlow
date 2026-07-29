@@ -34,7 +34,7 @@ const PlannedSprintCardHeader = ({
       <div className="flex items-start gap-3 flex-1 min-w-0">
         <button
           onClick={onToggleOpen}
-          className="p-1 mt-0.5 rounded hover:bg-slate-100 text-muted transition-all shrink-0"
+          className="p-1 mt-0.5 rounded hover:bg-canvas text-muted transition-all shrink-0"
         >
           {isOpen ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
         </button>
@@ -56,7 +56,7 @@ const PlannedSprintCardHeader = ({
           <button
             onClick={onStartClick}
             disabled={hasActiveSprint || startPending}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-lg text-[11px] font-bold hover:bg-emerald-100 transition-all disabled:opacity-40 disabled:pointer-events-none"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-pastel-green text-pastel-green-ink rounded-lg text-[11px] font-bold hover:bg-pastel-green/70 transition-all disabled:opacity-40 disabled:pointer-events-none"
             title={hasActiveSprint ? 'Dự án đã có sprint đang chạy' : 'Bắt đầu sprint này'}
           >
             <Play size={12} />
@@ -64,14 +64,14 @@ const PlannedSprintCardHeader = ({
           </button>
           <button
             onClick={onEditClick}
-            className="p-1.5 rounded-lg hover:bg-slate-100 text-muted hover:text-ink transition-all"
+            className="p-1.5 rounded-lg hover:bg-canvas text-muted hover:text-ink transition-all"
             aria-label="Sửa sprint"
           >
             <Pencil size={14} />
           </button>
           <button
             onClick={onDeleteClick}
-            className="p-1.5 rounded-lg hover:bg-red-50 text-muted hover:text-red-600 transition-all"
+            className="p-1.5 rounded-lg hover:bg-pastel-red text-muted hover:text-pastel-red-ink transition-all"
             aria-label="Xóa sprint"
           >
             <Trash2 size={14} />

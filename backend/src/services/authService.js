@@ -200,7 +200,9 @@ const signIn = async (body) => {
   const login = email.toLowerCase().trim()
   const user = await User.findOne({ email: login })
 
-  if (!user || user.authProvider !== 'local' || !user.passwordHash) {
+  // BỎ KIỂM TRA authProvider !== 'local'. 
+  // Bất kỳ tài khoản nào (Local hay Google) chỉ cần ĐÃ CÓ passwordHash đều được phép đăng nhập bằng mật khẩu.
+  if (!user || !user.passwordHash) {
     throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid email or password')
   }
 
@@ -225,6 +227,7 @@ const signIn = async (body) => {
     },
   }
 }
+
 
 const signOut = async (refreshToken) => {
   if (refreshToken) {
@@ -279,24 +282,24 @@ const changePassword = async (userId, { currentPassword, newPassword }) => {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found')
   }
 
-  if (user.authProvider !== 'local' || !user.passwordHash) {
-    throw new ApiError(
-      StatusCodes.BAD_REQUEST,
-      'Password can only be changed for local accounts',
-    )
+  // TRƯỜNG HỢP 1: Tài khoản ĐÃ có mật khẩu -> Bắt buộc kiểm tra mật khẩu hiện tại
+  if (user.passwordHash) {
+    if (!currentPassword) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'Current password is required')
+    }
+    const isPasswordValid = await bcrypt.compare(currentPassword, user.passwordHash)
+    if (!isPasswordValid) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'Incorrect current password')
+    }
   }
+  // TRƯỜNG HỢP 2: Tài khoản CHƯA có mật khẩu (tài khoản Google) -> Bỏ qua kiểm tra mật khẩu cũ
 
-  const isPasswordValid = await bcrypt.compare(currentPassword, user.passwordHash)
-  if (!isPasswordValid) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'Incorrect current password')
-  }
-
+  // Tiến hành mã hóa và lưu mật khẩu mới
   user.passwordHash = await bcrypt.hash(newPassword, 10)
   await user.save()
 
-  return { message: 'Password changed successfully' }
+  return { message: 'Password updated successfully' }
 }
-
 // Tự cập nhật hồ sơ cá nhân (hiện chỉ cho sửa fullName — xem updateProfileSchema).
 const updateProfile = async (userId, { fullName }) => {
   const user = await User.findById(userId)

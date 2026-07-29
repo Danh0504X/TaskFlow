@@ -28,10 +28,10 @@ const toIssueDTO = (issue, projectKey) => {
 
   const assignee = obj.assigneeId && typeof obj.assigneeId === 'object'
     ? {
-        _id: obj.assigneeId._id,
-        fullName: obj.assigneeId.fullName,
-        avatarUrl: obj.assigneeId.avatarUrl ?? null,
-      }
+      _id: obj.assigneeId._id,
+      fullName: obj.assigneeId.fullName,
+      avatarUrl: obj.assigneeId.avatarUrl ?? null,
+    }
     : undefined
 
   const epicName = obj.parentIssueId && typeof obj.parentIssueId === 'object'
@@ -90,15 +90,24 @@ const ensureParentIssueInProject = async (projectId, parentIssueId, currentIssue
 // "khóa board khi không có sprint đang chạy" — trước đây chỉ là ý tưởng UI, không có ở BE.
 const ensureIssueStatusChangeAllowed = async (project, issue) => {
   if (!project || project.methodology !== 'SCRUM') return
-
-  if (!issue.sprintId) {
+  // 1. Xác định sprintId thực tế để kiểm tra
+  let targetSprintId = issue.sprintId
+  // NẾU ĐÂY LÀ SUB-TASK: Lấy sprintId từ Issue cha thay vì chính nó
+  if (issue.type === 'SUBTASK' && issue.parentIssueId) {
+    const parentIssue = await Issue.findOne({ _id: issue.parentIssueId, isDeleted: false }).lean()
+    if (parentIssue) {
+      targetSprintId = parentIssue.sprintId
+    }
+  }
+  // 2. Kiểm tra xem có Sprint nào được gán không
+  if (!targetSprintId) {
     throw new ApiError(
       StatusCodes.CONFLICT,
       'Issue đang ở Backlog — cần đưa vào sprint đang chạy trước khi đổi trạng thái',
     )
   }
-
-  const sprint = await Sprint.findOne({ _id: issue.sprintId, isDeleted: false }).lean()
+  // 3. Kiểm tra xem Sprint đó có đang hoạt động (ACTIVE) không
+  const sprint = await Sprint.findOne({ _id: targetSprintId, isDeleted: false }).lean()
   if (!sprint || sprint.status !== 'ACTIVE') {
     throw new ApiError(
       StatusCodes.CONFLICT,
@@ -109,7 +118,7 @@ const ensureIssueStatusChangeAllowed = async (project, issue) => {
 
 // Tạo issue trong project.
 const createIssue = async (projectId, userId, body = {}) => {
-    ensureValidObjectId(projectId, 'project id')
+  ensureValidObjectId(projectId, 'project id')
 
   const {
     title,
@@ -139,7 +148,7 @@ const createIssue = async (projectId, userId, body = {}) => {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid issue priority')
   }
 
-// Không gửi sprintId -> issue vào Backlog (mặc định, phù hợp cả Scrum lẫn Kanban).
+  // Không gửi sprintId -> issue vào Backlog (mặc định, phù hợp cả Scrum lẫn Kanban).
   // Có gửi sprintId -> tạo thẳng vào sprint đó, miễn là sprint thuộc đúng project và còn
   // "mở" (PLANNED/ACTIVE) — dùng cho quick-add ngay trong 1 sprint cụ thể (Backlog) hoặc
   // trực tiếp trên Board (sprint đang ACTIVE). Không tự suy luận sprint nếu client không
@@ -389,28 +398,47 @@ const updateIssueStatus = async (projectId, issueId, body = {}, projectKey, proj
   return toIssueDTO(issue, projectKey)
 }
 
-// Xóa mềm issue (đồng thời xóa mềm các subtask con).
+// Xóa cứng issue (đồng thời xóa cứng các subtask con).
+// Lưu ý: đây là xóa riêng lẻ 1 issue qua UI — khác với cascade xóa mềm issue khi cả
+// project bị archive (xem projectService.deleteProject), vẫn giữ nguyên isDeleted/deletedAt.
 const deleteIssue = async (projectId, issueId) => {
   ensureValidObjectId(projectId, 'project id')
   ensureValidObjectId(issueId, 'issue id')
 
-  const issue = await Issue.findOneAndUpdate(
-    { _id: issueId, projectId, isDeleted: false },
-    { isDeleted: true },
-    { new: true },
-  )
+  const issue = await Issue.findOneAndDelete({ _id: issueId, projectId, isDeleted: false })
 
   if (!issue) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Issue not found')
   }
 
-  // Xóa mềm các issue con (subtask) thuộc issue này.
-  await Issue.updateMany(
-    { projectId, parentIssueId: issueId, isDeleted: false },
-    { isDeleted: true },
-  )
+  // Xóa cứng các issue con (subtask) thuộc issue này.
+  await Issue.deleteMany({ projectId, parentIssueId: issueId, isDeleted: false })
 
   return issue
+}
+
+// Lấy toàn bộ issue được giao cho 1 user, trải trên mọi project (dùng cho trang "Việc của
+// tôi" và Dashboard) — khác các hàm trên, không nhận projectId vì phải gộp nhiều project.
+// `leaveProject` đã tự null hoá assigneeId khi member rời project, nên không cần lọc lại
+// theo membership ở đây: còn assigneeId = userId nghĩa là vẫn còn quyền trên issue đó.
+const getMyIssues = async (userId) => {
+  ensureValidObjectId(userId, 'user id')
+
+  const issues = await Issue.find({ assigneeId: userId, isDeleted: false })
+    .sort({ updatedAt: -1 })
+    .populate({ path: 'projectId', select: 'name key' })
+    .populate([ASSIGNEE_POPULATE, PARENT_ISSUE_POPULATE])
+    .lean()
+
+  return issues
+    // Phòng hờ project đã bị xóa cứng nhưng issue sót lại (không nên xảy ra, xem cascade
+    // ở projectService.permanentlyDeleteProject).
+    .filter((issue) => issue.projectId)
+    .map((issue) => {
+      const project = issue.projectId
+      const dto = toIssueDTO({ ...issue, projectId: project._id }, project.key)
+      return { ...dto, projectName: project.name }
+    })
 }
 
 export const issueService = {
@@ -421,4 +449,5 @@ export const issueService = {
   updateIssue,
   updateIssueStatus,
   deleteIssue,
+  getMyIssues,
 }

@@ -3,6 +3,7 @@ import {
   createBrowserRouter,
   Navigate,
   RouterProvider,
+  useLocation,
 } from 'react-router-dom'
 import MainLayout from '@/components/layout/MainLayout'
 import DashboardPage from '@/features/dashboard/pages/DashboardPage'
@@ -21,12 +22,21 @@ import { useAuthStore } from '@/features/auth/authStore'
 import { ProfilePage } from '@/features/profile/pages/ProfilePage'
 import { ChangePasswordPage } from '@/features/profile/pages/ChangePasswordPage'
 import AdminUsersPage from '@/features/admin/pages/AdminUsersPage'
-
-// Chặn truy cập trang cần đăng nhập.
-const ProtectedRoute = ({ children }: { children: ReactNode }) => {
+import LandingPage from '@/features/landing/pages/LandingPage'
+// Route "/" hiển thị khác nhau tuỳ trạng thái đăng nhập: khách (chưa đăng nhập) xem trang
+// giới thiệu (LandingPage) ngay tại "/"; các đường dẫn con khác dưới "/" (vd /projects) vẫn
+// đá về /login như route được bảo vệ bình thường. Người đã đăng nhập vào thẳng MainLayout
+// (sidebar + Outlet) như cũ — không đổi hành vi cho user đã đăng nhập.
+const RootGate = () => {
   const user = useAuthStore((state) => state.user)
-  if (!user) return <Navigate to="/login" replace />
-  return children
+  const location = useLocation()
+
+  if (!user) {
+    if (location.pathname === '/') return <LandingPage />
+    return <Navigate to="/login" replace />
+  }
+
+  return <MainLayout />
 }
 
 // Chặn truy cập trang dành riêng cho Admin.
@@ -45,13 +55,12 @@ const PublicOnlyRoute = ({ children }: { children: ReactNode }) => {
 }
 
 const router = createBrowserRouter([
+  // Alias công khai tới trang giới thiệu — luôn hiện LandingPage bất kể trạng thái đăng nhập
+  // (khác với "/" vốn đổi nội dung tuỳ theo đã đăng nhập hay chưa, xem RootGate).
+  { path: '/welcome', element: <LandingPage /> },
   {
     path: '/',
-    element: (
-      <ProtectedRoute>
-        <MainLayout />
-      </ProtectedRoute>
-    ),
+    element: <RootGate />,
     children: [
       { index: true, element: <DashboardPage /> },
       { path: 'projects', element: <ProjectsPage /> },

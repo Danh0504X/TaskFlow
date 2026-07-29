@@ -58,7 +58,7 @@ const ProjectInvitationsModal = ({ open, onClose }: ProjectInvitationsModalProps
           return (
             <div
               key={invitation.projectId}
-              className="flex items-center justify-between gap-3 p-3 border border-line/15 rounded-xl bg-slate-50/50"
+              className="flex items-center justify-between gap-3 p-3 border border-line/15 rounded-xl bg-surface/50"
             >
               <div className="min-w-0 space-y-1">
                 <div className="flex items-center gap-2 min-w-0">

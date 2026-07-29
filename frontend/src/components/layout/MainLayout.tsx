@@ -40,21 +40,21 @@ const MainLayout = () => {
   return (
     <AppBackground>
       <div className="min-h-screen flex">
-        <aside className="w-72 bg-white/30 backdrop-blur-xl border-r border-white/25 p-6 flex-col justify-between hidden md:flex sticky top-0 h-screen shrink-0 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
+        <aside className="w-72 bg-surface border-r border-hairline p-6 flex-col justify-between hidden md:flex sticky top-0 h-screen shrink-0">
           <div>
             <div className="flex items-center gap-3 mb-8 px-2">
               <img
                 src={APP_LOGO_URL}
                 alt="TaskFlow AI Logo"
-                className="w-12 h-12 object-contain drop-shadow-[0_2px_8px_rgba(139,92,246,0.12)]"
+                className="w-12 h-12 object-contain"
               />
               <div>
-                <h1 className="font-semibold text-xl text-brand tracking-tight leading-none">TaskFlow</h1>
-                <p className="text-xs text-muted mt-1">AI-Powered Focus</p>
+                <h1 className="font-editorial text-xl font-medium text-ink tracking-tight leading-none">TaskFlow</h1>
+                <p className="text-xs text-subtle mt-1">AI-Powered Focus</p>
               </div>
             </div>
 
-            <nav className="space-y-1.5">
+            <nav className="space-y-1">
               {navItems.map(({ to, label, icon: Icon, end }) => (
                 <NavLink
                   key={to}
@@ -62,10 +62,10 @@ const MainLayout = () => {
                   end={end}
                   className={({ isActive }) =>
                     cn(
-                      'w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-sm font-medium border',
+                      'w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors text-sm font-medium border',
                       isActive
-                        ? 'bg-white/30 backdrop-blur-md border-white/60 text-brand shadow-sm'
-                        : 'text-slate-400 border-transparent hover:bg-white/30 hover:text-brand hover:shadow-sm',
+                        ? 'bg-canvas border-hairline text-ink'
+                        : 'text-muted border-transparent hover:bg-canvas hover:text-ink',
                     )
                   }
                 >
@@ -76,7 +76,7 @@ const MainLayout = () => {
             </nav>
           </div>
 
-          <div className="space-y-3 pt-4 border-t border-white/20">
+          <div className="space-y-3 pt-4 border-t border-hairline">
             <div className="flex items-center gap-3 px-2 py-1">
               <Avatar src={user?.avatarUrl} name={user?.fullName ?? '?'} size={36} />
               <div className="text-left min-w-0">
@@ -88,7 +88,7 @@ const MainLayout = () => {
             <button
               onClick={handleLogout}
               disabled={loading}
-              className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-white/35 rounded-xl text-muted hover:text-red-600 transition-all text-sm font-semibold disabled:opacity-60 hover:shadow-sm"
+              className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-canvas rounded-lg text-muted hover:text-pastel-red-ink transition-colors text-sm font-semibold disabled:opacity-60"
             >
               <LogOut size={16} />
               <span>{loading ? 'Đang đăng xuất...' : 'Đăng xuất'}</span>

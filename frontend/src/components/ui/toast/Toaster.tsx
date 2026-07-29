@@ -2,11 +2,11 @@ import { AnimatePresence, motion } from 'motion/react'
 import { CheckCircle2, XCircle, Info, X } from 'lucide-react'
 import { useToastStore, type ToastType } from './toastStore'
 
-// Màu sắc theo loại toast.
+// Màu sắc theo loại toast — dùng đúng bộ pastel chung của app (khớp priority/status badge).
 const toastStyles: Record<ToastType, string> = {
-  success: 'border-emerald-200 bg-emerald-50 text-emerald-800',
-  error: 'border-red-200 bg-red-50 text-red-800',
-  info: 'border-line/30 bg-white text-ink',
+  success: 'border-transparent bg-pastel-green text-pastel-green-ink',
+  error: 'border-transparent bg-pastel-red text-pastel-red-ink',
+  info: 'border-hairline bg-surface text-ink',
 }
 
 const toastIcons: Record<ToastType, typeof CheckCircle2> = {
@@ -61,7 +61,7 @@ const Toaster = () => {
               exit={{ opacity: 0, scale: 0.9, y: 10, transition: { duration: 0.18 } }}
               transition={{ type: 'spring', stiffness: 380, damping: 32 }}
               style={{ zIndex: 50 - depth }}
-              className={`absolute inset-x-0 bottom-0 flex items-start gap-3 rounded-xl border px-4 py-3 text-sm shadow-lg ${toastStyles[t.type]
+              className={`absolute inset-x-0 bottom-0 flex items-start gap-3 rounded-lg border px-4 py-3 text-sm shadow-md ${toastStyles[t.type]
                 } ${isFront ? 'pointer-events-auto' : 'pointer-events-none'}`}
             >
               <Icon size={18} className="mt-0.5 shrink-0" />

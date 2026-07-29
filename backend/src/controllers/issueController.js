@@ -67,7 +67,7 @@ export const updateIssueStatus = asyncHandler(async (req, res) => {
   })
 })
 
-// Xóa mềm issue.
+// Xóa issue (xóa cứng).
 export const deleteIssue = asyncHandler(async (req, res) => {
   const { projectId, issueId } = req.params
   const result = await issueService.deleteIssue(projectId, issueId)

@@ -37,7 +37,10 @@ export const googleSignInSchema = z
 // PATCH /auth/change-password
 export const changePasswordSchema = z
   .object({
-    currentPassword: z.string().min(1, 'Current password is required'),
+    // Bỏ .min(1) và thay bằng .optional() để hỗ trợ tài khoản chưa có mật khẩu
+    currentPassword: z.string().optional(),
+    
+    // Mật khẩu mới vẫn giữ nguyên quy tắc bảo mật
     newPassword: passwordSchema,
   })
   .strict()

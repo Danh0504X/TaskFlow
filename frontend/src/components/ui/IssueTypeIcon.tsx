@@ -12,12 +12,12 @@ const IssueTypeIcon = ({ type, size = 16, className = '' }: IssueTypeIconProps) 
     case 'EPIC':
       return <Zap className={`text-brand fill-brand ${className}`} size={size} />
     case 'SUBTASK':
-      return <Subtitles className={`text-cyan-500 ${className}`} size={size} />
+      return <Subtitles className={`text-pastel-green-ink ${className}`} size={size} />
     case 'BUG':
-      return <Bug className={`text-red-500 ${className}`} size={size} />
+      return <Bug className={`text-pastel-red-ink ${className}`} size={size} />
     case 'TASK':
     default:
-      return <FileText className={`text-blue-500 ${className}`} size={size} />
+      return <FileText className={`text-pastel-blue-ink ${className}`} size={size} />
   }
 }
 

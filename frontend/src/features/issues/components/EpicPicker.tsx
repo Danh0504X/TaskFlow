@@ -110,7 +110,7 @@ const EpicPicker = ({
                         ref={dropdownRef}
                         onClick={(e) => e.stopPropagation()}
                         style={{ position: 'fixed', top: coords.top, left: coords.left, width: DROPDOWN_WIDTH }}
-                        className="z-50 bg-white border border-line/20 rounded-2xl shadow-lg py-1.5 max-h-72 overflow-y-auto"
+                        className="z-50 bg-surface border border-line/20 rounded-2xl shadow-lg py-1.5 max-h-72 overflow-y-auto"
                     >
                         {creating ? (
                             <div className="p-2.5 space-y-2">
@@ -129,14 +129,14 @@ const EpicPicker = ({
                                     }}
                                     placeholder="Tên epic mới..."
                                     disabled={createMutation.isPending}
-                                    className="w-full bg-slate-50 border border-brand/30 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-ink outline-none focus:ring-2 focus:ring-brand/20 disabled:opacity-60"
+                                    className="w-full bg-surface border border-brand/30 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-ink outline-none focus:ring-2 focus:ring-brand/20 disabled:opacity-60"
                                 />
                                 <div className="flex gap-1.5">
                                     <button
                                         type="button"
                                         onClick={handleCreateEpic}
                                         disabled={!newEpicTitle.trim() || createMutation.isPending}
-                                        className="flex-1 px-2.5 py-1.5 bg-brand text-white rounded-lg text-xs font-bold hover:bg-brand-light transition-all disabled:opacity-50"
+                                        className="flex-1 px-2.5 py-1.5 bg-brand text-canvas rounded-lg text-xs font-bold hover:bg-brand-light transition-all disabled:opacity-50"
                                     >
                                         Tạo epic
                                     </button>
@@ -146,7 +146,7 @@ const EpicPicker = ({
                                             setCreating(false)
                                             setNewEpicTitle('')
                                         }}
-                                        className="px-2.5 py-1.5 text-xs font-semibold text-muted hover:bg-slate-50 rounded-lg transition-all"
+                                        className="px-2.5 py-1.5 text-xs font-semibold text-muted hover:bg-surface rounded-lg transition-all"
                                     >
                                         Huỷ
                                     </button>
@@ -157,7 +157,7 @@ const EpicPicker = ({
                                 <button
                                     type="button"
                                     onClick={() => handleSelect(null)}
-                                    className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-muted hover:bg-slate-50 transition-all"
+                                    className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-muted hover:bg-surface transition-all"
                                 >
                                     <div className="w-6 h-6 rounded-full border border-dashed border-line/50 flex items-center justify-center shrink-0">
                                         <X size={12} />
@@ -173,7 +173,7 @@ const EpicPicker = ({
                                         key={epic._id}
                                         type="button"
                                         onClick={() => handleSelect(epic._id)}
-                                        className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-ink hover:bg-slate-50 transition-all"
+                                        className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-ink hover:bg-surface transition-all"
                                     >
                                         <Layers size={14} className="text-brand shrink-0" />
                                         <span className="flex-1 text-left truncate">{epic.title}</span>

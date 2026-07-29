@@ -212,7 +212,7 @@ const BoardView = ({
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3 py-2.5 px-4 bg-white/70 backdrop-blur-md rounded-2xl border border-line/30 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3 py-2.5 px-4 bg-surface rounded-lg border border-hairline">
         <SearchInput
           containerClassName="max-w-md"
           value={query}
@@ -229,7 +229,7 @@ const BoardView = ({
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
-        <div className="flex gap-6 overflow-x-auto pb-4 scrollbar-thin">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {columns.map((col) => (
             <BoardColumn
               key={col.status}

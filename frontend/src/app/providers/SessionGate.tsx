@@ -33,7 +33,7 @@ const SessionGate = ({ children }: { children: ReactNode }) => {
   // Lần kiểm tra phiên đầu tiên chưa xong -> hiện màn hình chờ.
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-100 text-slate-400">
+      <div className="flex min-h-screen items-center justify-center bg-canvas text-subtle">
         <Spinner className="h-6 w-6" />
       </div>
     )

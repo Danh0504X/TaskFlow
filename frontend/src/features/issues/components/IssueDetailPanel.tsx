@@ -75,13 +75,13 @@ const SubtaskQuickAdd = ({ onSubmit, pending }: SubtaskQuickAddProps) => {
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder="Thêm việc con..."
-        className="flex-1 min-w-0 bg-white border border-line/25 rounded-xl px-3 py-2 text-xs font-semibold text-ink outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand/30 placeholder:text-subtle disabled:opacity-60"
+        className="flex-1 min-w-0 bg-surface border border-hairline rounded-lg px-3 py-2 text-xs font-semibold text-ink outline-none focus:ring-2 focus:ring-brand/15 focus:border-ink/20 placeholder:text-subtle disabled:opacity-60"
       />
       <button
         type="button"
         onClick={commit}
         disabled={!value.trim() || pending}
-        className="p-2 bg-brand/10 text-brand hover:bg-brand hover:text-white rounded-xl transition-all shrink-0 disabled:opacity-40 disabled:hover:bg-brand/10 disabled:hover:text-brand"
+        className="p-2 bg-pastel-blue text-pastel-blue-ink hover:bg-ink hover:text-canvas rounded-lg transition-colors shrink-0 disabled:opacity-40 disabled:hover:bg-pastel-blue disabled:hover:text-pastel-blue-ink"
       >
         <Plus size={14} />
       </button>
@@ -257,26 +257,26 @@ const IssueDetailPanel = ({ issue, projectId, isLoading, onClose, onSelectIssue 
     <>
       <motion.div
         onClick={handleClose}
-        className="fixed inset-0 bg-ink/25 backdrop-blur-sm z-40"
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.18 }}
       />
       <motion.div
-        className="fixed inset-y-0 right-0 w-full sm:w-[480px] md:w-[580px] bg-white border-l border-line/30 shadow-[-24px_0_70px_-20px_rgba(11,28,48,0.35)] z-50 flex flex-col"
+        className="fixed inset-y-0 right-0 w-full sm:w-[480px] md:w-[580px] bg-surface border-l border-hairline shadow-[-24px_0_70px_-20px_rgba(11,28,48,0.35)] z-50 flex flex-col"
         initial={reduceMotion ? false : { x: '100%' }}
         animate={{ x: 0 }}
         exit={reduceMotion ? undefined : { x: '100%' }}
         transition={{ type: 'spring', stiffness: 320, damping: 32 }}
       >
-        <div className="px-6 py-4 border-b border-line/20 flex justify-between items-center bg-slate-50/50 shrink-0">
+        <div className="px-6 py-4 border-b border-hairline flex justify-between items-center bg-canvas shrink-0">
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold text-muted">Issue</span>
             <span className="text-xs text-muted">/</span>
             <span className="text-xs font-extrabold text-brand tracking-wider">{issue?.key}</span>
           </div>
-          <button onClick={handleClose} className="p-1.5 hover:bg-slate-100 rounded-lg text-muted hover:text-ink transition-all">
+          <button onClick={handleClose} className="p-1.5 hover:bg-surface rounded-md text-muted hover:text-ink transition-colors">
             <X size={16} />
           </button>
         </div>
@@ -298,7 +298,7 @@ const IssueDetailPanel = ({ issue, projectId, isLoading, onClose, onSelectIssue 
           <>
             <div className="flex-1 overflow-y-auto p-6 space-y-5 scrollbar-thin">
               <div>
-                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-brand/5 text-brand rounded text-[9px] font-bold uppercase tracking-wider mb-2">
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-pastel-blue text-pastel-blue-ink rounded text-[9px] font-bold uppercase tracking-wider mb-2">
                   <IssueTypeIcon type={issue.type} size={11} />
                   {issue.type}
                 </span>
@@ -309,12 +309,12 @@ const IssueDetailPanel = ({ issue, projectId, isLoading, onClose, onSelectIssue 
                     onChange={(e) => setTitleDraft(e.target.value)}
                     onBlur={commitTitle}
                     onKeyDown={handleTitleKeyDown}
-                    className="w-full text-lg font-extrabold text-ink leading-snug bg-slate-50 border border-brand/30 rounded-xl px-3 py-1.5 outline-none focus:ring-2 focus:ring-brand/20 -mx-3"
+                    className="w-full text-lg font-semibold text-ink leading-snug bg-surface border border-ink/20 rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-brand/15 -mx-3"
                   />
                 ) : (
                   <h2
                     onClick={startEditingTitle}
-                    className={`text-lg font-extrabold text-ink leading-snug rounded-xl px-3 py-1.5 -mx-3 transition-all ${isOwner ? 'cursor-text hover:bg-slate-50' : ''}`}
+                    className={`text-lg font-semibold text-ink leading-snug rounded-lg px-3 py-1.5 -mx-3 transition-colors ${isOwner ? 'cursor-text hover:bg-canvas' : ''}`}
                     title={isOwner ? 'Bấm để đổi tên' : undefined}
                   >
                     {issue.title}
@@ -322,7 +322,7 @@ const IssueDetailPanel = ({ issue, projectId, isLoading, onClose, onSelectIssue 
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-4 p-4 border border-line/15 rounded-2xl bg-slate-50/50">
+              <div className="grid grid-cols-2 gap-4 p-4 border border-hairline rounded-lg bg-canvas">
                 <div className="space-y-1.5">
                   <span className="text-[10px] font-bold text-muted uppercase tracking-wider">Trạng thái</span>
                   <StatusPicker value={status} onChange={setStatus} />
@@ -367,7 +367,7 @@ const IssueDetailPanel = ({ issue, projectId, isLoading, onClose, onSelectIssue 
               {canHaveSubtasks && (
                 <div className="space-y-2.5 pt-1">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-extrabold text-ink uppercase tracking-wider">Việc con</span>
+                    <span className="text-xs font-semibold text-ink uppercase tracking-wider">Việc con</span>
                     {subtasks.length > 0 && (
                       <span className="text-[10px] font-bold text-muted">
                         {doneSubtasks}/{subtasks.length} hoàn thành
@@ -376,9 +376,9 @@ const IssueDetailPanel = ({ issue, projectId, isLoading, onClose, onSelectIssue 
                   </div>
 
                   {subtasks.length > 0 && (
-                    <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                    <div className="h-1.5 rounded-full bg-canvas overflow-hidden">
                       <div
-                        className="h-full bg-brand rounded-full transition-all"
+                        className="h-full bg-pastel-green-ink rounded-full transition-all"
                         style={{ width: `${subtaskProgress}%` }}
                       />
                     </div>
@@ -388,7 +388,7 @@ const IssueDetailPanel = ({ issue, projectId, isLoading, onClose, onSelectIssue 
                     {subtasks.map((subtask) => (
                       <div
                         key={subtask._id}
-                        className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-slate-50 transition-all group"
+                        className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-canvas transition-colors group"
                       >
                         <StatusPicker
                           value={subtask.status}
@@ -427,21 +427,21 @@ const IssueDetailPanel = ({ issue, projectId, isLoading, onClose, onSelectIssue 
                 </div>
               )}
 
-              <div className="space-y-2 pt-4 border-t border-line/10">
-                <label className="text-xs font-extrabold text-ink uppercase tracking-wider block">Mô tả công việc</label>
+              <div className="space-y-2 pt-4 border-t border-hairline">
+                <label className="text-xs font-semibold text-ink uppercase tracking-wider block">Mô tả công việc</label>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={4}
-                  className="w-full bg-slate-50 border border-line/25 rounded-2xl px-4 py-3 text-xs font-semibold focus:ring-2 focus:ring-brand/20 outline-none transition-all resize-none leading-relaxed"
+                  className="w-full bg-surface border border-hairline rounded-lg px-4 py-3 text-xs font-medium focus:ring-2 focus:ring-brand/15 focus:border-ink/20 outline-none transition-all resize-none leading-relaxed"
                 />
               </div>
 
-              <div className="space-y-4 pt-4 border-t border-line/10">
-                <label className="text-xs font-extrabold text-ink uppercase tracking-wider block">Thảo luận & Bình luận</label>
+              <div className="space-y-4 pt-4 border-t border-hairline">
+                <label className="text-xs font-semibold text-ink uppercase tracking-wider block">Thảo luận & Bình luận</label>
                 <div className="space-y-3.5 max-h-40 overflow-y-auto pr-1">
                   {comments.map((c) => (
-                    <div key={c.id} className="flex gap-3 items-start p-2.5 hover:bg-slate-50 rounded-xl transition-all">
+                    <div key={c.id} className="flex gap-3 items-start p-2.5 hover:bg-canvas rounded-lg transition-colors">
                       <Avatar src={c.authorAvatar} name={c.authorName} size={28} />
                       <div className="flex-grow">
                         <div className="flex justify-between items-baseline">
@@ -459,17 +459,17 @@ const IssueDetailPanel = ({ issue, projectId, isLoading, onClose, onSelectIssue 
               </div>
             </div>
 
-            <form onSubmit={handleAddComment} className="p-4 border-t border-line/20 bg-slate-50/50 flex gap-2 items-center shrink-0">
+            <form onSubmit={handleAddComment} className="p-4 border-t border-hairline bg-canvas flex gap-2 items-center shrink-0">
               <input
                 type="text"
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
                 placeholder="Viết phản hồi công việc..."
-                className="flex-grow bg-white border border-line/25 rounded-xl px-4 py-2 text-xs font-semibold focus:ring-2 focus:ring-brand/20 outline-none transition-all placeholder:text-subtle"
+                className="flex-grow bg-surface border border-hairline rounded-lg px-4 py-2 text-xs font-semibold focus:ring-2 focus:ring-brand/15 focus:border-ink/20 outline-none transition-all placeholder:text-subtle"
               />
               <button
                 type="submit"
-                className="p-2 bg-brand text-white hover:bg-brand-light rounded-xl shadow-md shadow-brand/10 transition-all shrink-0 active:scale-95"
+                className="p-2 bg-ink text-canvas hover:bg-[#e4e4e5] rounded-lg transition-colors shrink-0 active:scale-[0.98]"
               >
                 <Send size={14} />
               </button>

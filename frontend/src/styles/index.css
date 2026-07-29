@@ -1,19 +1,35 @@
 @import 'tailwindcss';
 
 /* Theme token màu của brand (Tailwind v4). Đặt 1 chỗ -> đổi 1 nơi là cả app theo.
-   Dùng qua class: text-brand, bg-brand, border-line, text-ink/muted/subtle... */
+   Dùng qua class: text-brand, bg-brand, border-line, text-ink/muted/subtle...
+   Bảng "Warm Charcoal" — dark mode mặc định của toàn app (không phải theme phụ/toggle). */
 @theme {
-  --color-brand: #6b38d4; /* tím chính */
-  --color-brand-light: #8455ef; /* tím nhạt (đầu gradient) */
-  --color-brand-glow: #8b5cf6; /* tím phát sáng (glow/particle) */
-  --color-ink: #0b1c30; /* chữ đậm */
-  --color-muted: #494454; /* chữ phụ */
-  --color-subtle: #a89db8; /* chữ mờ / placeholder */
-  --color-line: #cbc3d7; /* viền */
+  --color-brand: #ececee; /* màu nhấn chính — đổi từ tím sang sáng trung tính, hợp nền tối hơn */
+  --color-brand-light: #ffffff; /* trắng, dùng cho hover của nút/link accent */
+  --color-brand-glow: #ececee; /* đồng bộ, dùng cho glow/particle trang trí */
+  --color-ink: #f4f4f5; /* chữ chính — sáng, đảo từ bản light */
+  --color-muted: #a1a1aa; /* chữ phụ */
+  --color-subtle: #6b6b70; /* chữ mờ / placeholder */
+  --color-line: #34343a; /* viền (bản legacy, giữ tương thích các chỗ chưa migrate sang hairline) */
+
+  /* Bộ token "minimalist-ui" dùng chung toàn app (editorial, warm charcoal monochrome). */
+  --color-canvas: #232326; /* nền trang — sáng hơn bản đầu, không đen thuần */
+  --color-surface: #2c2c30; /* nền card/panel — "nổi" nhẹ lên trên canvas */
+  --color-hairline: #3d3d42; /* viền mảnh trung tính */
+  --color-pastel-red: #3a2020;
+  --color-pastel-red-ink: #f2a3a3;
+  --color-pastel-blue: #1b2a3a;
+  --color-pastel-blue-ink: #8fc5ec;
+  --color-pastel-green: #1a2e22;
+  --color-pastel-green-ink: #8fdba8;
+  --color-pastel-yellow: #332912;
+  --color-pastel-yellow-ink: #eec97a;
+
+  --font-editorial: 'Newsreader', 'Georgia', serif;
 }
 
 :root {
-  color-scheme: light;
+  color-scheme: dark;
 }
 
 /* Luôn dành sẵn chỗ cho thanh cuộn dọc, kể cả khi nội dung chưa đủ dài để cuộn.
@@ -33,11 +49,30 @@ body {
   margin: 0;
 }
 
-/* Giữ màu chữ rõ ràng khi Chrome tự động điền (autofill) */
+/* Giữ màu chữ rõ ràng khi Chrome tự động điền (autofill) — khớp nền tối, tránh field
+   bật sáng trắng đột ngột khi trình duyệt autofill. */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus {
-  -webkit-text-fill-color: #0f172a; /* slate-900 */
-  -webkit-box-shadow: 0 0 0 1000px white inset;
-  caret-color: #0f172a;
+  -webkit-text-fill-color: #f4f4f5;
+  -webkit-box-shadow: 0 0 0 1000px #2c2c30 inset;
+  caret-color: #f4f4f5;
+}
+
+/* Hiệu ứng xuất hiện nhẹ khi mount (dùng cho lưới project) — chỉ transform/opacity,
+   độ trễ cascade truyền qua biến --stagger để các item nối tiếp nhau thay vì bung 1 lượt. */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--stagger, 0) * 60ms);
 }

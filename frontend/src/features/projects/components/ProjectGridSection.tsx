@@ -40,9 +40,9 @@ const ProjectGridSection = ({
   const visibleProjects = expanded ? projects : projects.slice(0, limit)
 
   return (
-    <div className="space-y-3">
-      <h3 className="text-xs font-extrabold text-ink uppercase tracking-wider border-b border-line/10 pb-2">
-        {title} <span className="text-subtle font-semibold normal-case">({projects.length})</span>
+    <div className="space-y-4">
+      <h3 className="text-xs font-semibold text-ink uppercase tracking-wider border-b border-hairline pb-3">
+        {title} <span className="text-subtle font-medium normal-case">({projects.length})</span>
       </h3>
 
       {projects.length === 0 ? (
@@ -50,7 +50,7 @@ const ProjectGridSection = ({
       ) : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {visibleProjects.map((project) => (
+            {visibleProjects.map((project, index) => (
               <ProjectCard
                 key={project._id}
                 project={project}
@@ -58,6 +58,7 @@ const ProjectGridSection = ({
                 onEdit={onEdit}
                 onDelete={onDelete}
                 onLeave={onLeave}
+                staggerIndex={index}
               />
             ))}
           </div>
@@ -66,7 +67,7 @@ const ProjectGridSection = ({
             <div className="flex justify-end">
               <button
                 onClick={() => setExpanded((prev) => !prev)}
-                className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-brand hover:bg-brand/5 rounded-xl transition-all active:scale-95"
+                className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-ink hover:bg-canvas rounded-lg transition-colors"
               >
                 {expanded ? (
                   <>

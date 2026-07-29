@@ -77,7 +77,7 @@ export const issueApi = {
     return res.data.data
   },
 
-  /** DELETE /projects/:projectId/issues/:issueId — xoá mềm issue (kèm xoá mềm subtask con). */
+  /** DELETE /projects/:projectId/issues/:issueId — xoá hẳn issue (kèm xoá hẳn subtask con). */
   remove: async (projectId: string, issueId: string): Promise<Issue> => {
     const res = await api.delete<ApiResponse<Issue>>(
       `/projects/${projectId}/issues/${issueId}`,

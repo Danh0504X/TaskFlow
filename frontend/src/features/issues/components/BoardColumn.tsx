@@ -24,11 +24,11 @@ const BoardColumn = ({ title, status, issues, onSelectIssue, projectId, quickAdd
   return (
     <DroppableContainer
       id={status}
-      className="bg-slate-50/70 border border-line/15 rounded-3xl p-4 flex flex-col h-[640px] w-72 flex-shrink-0"
+      className="bg-canvas border border-hairline rounded-lg p-4 flex flex-col h-[640px] min-w-0"
     >
       <div className="flex items-center gap-2 mb-3 px-1">
-        <h3 className="text-xs font-extrabold text-ink uppercase tracking-wider">{title}</h3>
-        <span className="w-5 h-5 rounded-full bg-white border border-line/20 flex items-center justify-center text-[10px] font-bold text-muted shadow-sm">
+        <h3 className="text-xs font-semibold text-ink uppercase tracking-wider">{title}</h3>
+        <span className="w-5 h-5 rounded-full bg-surface border border-hairline flex items-center justify-center text-[10px] font-semibold text-muted">
           {issues.length}
         </span>
       </div>
@@ -51,7 +51,7 @@ const BoardColumn = ({ title, status, issues, onSelectIssue, projectId, quickAdd
           />
         ) : (
           issues.length === 0 && (
-            <div className="border border-dashed border-line/35 rounded-2xl py-8 text-center text-subtle text-xs font-medium">
+            <div className="border border-dashed border-hairline rounded-lg py-8 text-center text-subtle text-xs font-medium">
               Không có công việc
             </div>
           )

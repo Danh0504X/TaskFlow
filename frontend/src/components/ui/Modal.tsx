@@ -14,7 +14,7 @@ interface ModalProps {
   /** Vùng nút hành động ở chân modal (vd Huỷ / Lưu). */
   footer?: ReactNode
   className?: string
-  /** Sắc thái modal — quyết định màu icon/glow/shadow. Mặc định 'brand' (form tạo/sửa thông thường). */
+  /** Sắc thái modal — quyết định màu icon ở header. Mặc định 'brand' (form tạo/sửa thông thường, trung tính). */
   tone?: ModalTone
   /** Bố cục: 'center' (mặc định, form thường), 'compact' (xác nhận ngắn gọn), 'sheet' (trượt lên từ đáy). */
   layout?: ModalLayout
@@ -22,21 +22,13 @@ interface ModalProps {
   icon?: ReactNode
 }
 
-const toneConfig: Record<ModalTone, { Icon: typeof Sparkles; chip: string; glow: string; shadow: string }> = {
-  brand: { Icon: Sparkles, chip: 'bg-brand/10 text-brand', glow: 'bg-brand/35', shadow: 'shadow-brand/20' },
-  success: {
-    Icon: CheckCircle2,
-    chip: 'bg-emerald-100 text-emerald-600',
-    glow: 'bg-emerald-400/30',
-    shadow: 'shadow-emerald-500/20',
-  },
-  danger: {
-    Icon: AlertTriangle,
-    chip: 'bg-red-100 text-red-600',
-    glow: 'bg-red-400/30',
-    shadow: 'shadow-red-500/20',
-  },
-  info: { Icon: Info, chip: 'bg-blue-100 text-blue-600', glow: 'bg-blue-400/30', shadow: 'shadow-blue-500/20' },
+// brand = trung tính (form tạo/sửa thông thường, không cần nhấn màu); success/danger/info dùng
+// đúng 3 pastel tương ứng trong bộ token chung — khớp với priority/status badge trong app.
+const toneConfig: Record<ModalTone, { Icon: typeof Sparkles; chip: string }> = {
+  brand: { Icon: Sparkles, chip: 'bg-canvas text-ink' },
+  success: { Icon: CheckCircle2, chip: 'bg-pastel-green text-pastel-green-ink' },
+  danger: { Icon: AlertTriangle, chip: 'bg-pastel-red text-pastel-red-ink' },
+  info: { Icon: Info, chip: 'bg-pastel-blue text-pastel-blue-ink' },
 }
 
 const layoutMaxWidth: Record<ModalLayout, string> = {
@@ -49,10 +41,10 @@ const layoutMaxWidth: Record<ModalLayout, string> = {
  * Modal dùng chung: backdrop mờ, đóng bằng Escape / click nền, và khoá cuộn body khi mở.
  * Dùng cho form thêm/sửa, xác nhận...
  *
- * `tone` tô màu icon/glow/shadow theo ngữ cảnh (brand = mặc định, success/danger/info dùng
- * đúng màu đã có sẵn trong app — vd nút Start màu emerald, nút Xoá màu đỏ). `layout` đổi
- * kích thước + cách vào màn hình: 'compact' cho xác nhận ngắn, 'sheet' trượt lên từ đáy màn
- * hình (hợp cho nội dung dài trên mobile). Cả 2 đều thuần visual — không đổi hành vi đóng/mở.
+ * `tone` chỉ đổi màu icon-chip ở header (brand = trung tính mặc định, success/danger/info
+ * dùng đúng pastel đã dùng cho badge/trạng thái trong app). `layout` đổi kích thước + cách
+ * vào màn hình: 'compact' cho xác nhận ngắn, 'sheet' trượt lên từ đáy màn hình (hợp cho nội
+ * dung dài trên mobile). Cả 2 đều thuần visual — không đổi hành vi đóng/mở.
 */
 const Modal = ({
   open,
@@ -66,7 +58,7 @@ const Modal = ({
   icon,
 }: ModalProps) => {
   const reduceMotion = useReducedMotion()
-  const { Icon, chip, glow, shadow } = toneConfig[tone]
+  const { Icon, chip } = toneConfig[tone]
   const isSheet = layout === 'sheet'
 
   // Đóng bằng phím Escape + khoá cuộn nền khi modal mở.
@@ -96,7 +88,7 @@ const Modal = ({
         >
           {/* Nền mờ — click ra ngoài để đóng. */}
           <motion.div
-            className="absolute inset-0 bg-ink/35 backdrop-blur-md"
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={onClose}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -107,8 +99,7 @@ const Modal = ({
           {/* Khung nội dung. */}
           <motion.div
             className={cn(
-              'relative z-10 w-full rounded-2xl bg-white shadow-2xl ring-1 ring-ink/5',
-              shadow,
+              'relative z-10 w-full rounded-lg bg-surface border border-hairline',
               layoutMaxWidth[layout],
               isSheet && 'rounded-b-none',
               className,
@@ -118,7 +109,7 @@ const Modal = ({
                 ? false
                 : isSheet
                   ? { opacity: 0, y: 48 }
-                  : { opacity: 0, scale: 0.94, y: 12 }
+                  : { opacity: 0, scale: 0.96, y: 8 }
             }
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={
@@ -126,30 +117,22 @@ const Modal = ({
                 ? undefined
                 : isSheet
                   ? { opacity: 0, y: 32, transition: { duration: 0.16 } }
-                  : { opacity: 0, scale: 0.94, y: 12, transition: { duration: 0.16 } }
+                  : { opacity: 0, scale: 0.96, y: 8, transition: { duration: 0.16 } }
             }
-            transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+            transition={{ type: 'spring', stiffness: 380, damping: 30 }}
           >
-            {/* Glow màu theo tone, thuần trang trí phía sau header — không chặn thao tác. */}
-            <div
-              className={cn(
-                'absolute -top-8 left-1/2 h-24 w-56 -translate-x-1/2 rounded-full opacity-60 blur-3xl pointer-events-none',
-                glow,
-              )}
-            />
-
             {title && (
-              <div className="relative flex items-start justify-between gap-3 border-b border-line/15 px-6 py-4">
+              <div className="relative flex items-start justify-between gap-3 border-b border-hairline px-6 py-4">
                 <div className="flex items-start gap-3 min-w-0">
-                  <div className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-xl', chip)}>
+                  <div className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-lg', chip)}>
                     {icon ?? <Icon size={18} />}
                   </div>
-                  <h2 className="pt-1.5 text-base font-bold text-ink">{title}</h2>
+                  <h2 className="pt-1.5 text-base font-semibold text-ink">{title}</h2>
                 </div>
                 <button
                   type="button"
                   onClick={onClose}
-                  className="shrink-0 rounded-lg p-1 text-muted transition-all hover:bg-slate-100 hover:text-ink"
+                  className="shrink-0 rounded-md p-1 text-muted transition-colors hover:bg-canvas hover:text-ink"
                   aria-label="Đóng"
                 >
                   <X size={16} />
@@ -158,8 +141,7 @@ const Modal = ({
             )}
             <div className="relative px-6 py-5">{children}</div>
 
-
-            {footer && <div className="relative flex justify-end gap-2 border-t border-line/15 px-6 py-4">{footer}</div>}
+            {footer && <div className="relative flex justify-end gap-2 border-t border-hairline px-6 py-4">{footer}</div>}
           </motion.div>
         </div>
       )}

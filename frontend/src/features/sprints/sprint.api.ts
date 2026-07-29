@@ -47,7 +47,7 @@ export const sprintApi = {
     return res.data.data
   },
 
-  /** DELETE /projects/:projectId/sprints/:sprintId — xoá mềm sprint (không cho xoá khi đang ACTIVE). Chỉ OWNER. */
+  /** DELETE /projects/:projectId/sprints/:sprintId — xoá hẳn sprint (không cho xoá khi đang ACTIVE). Chỉ OWNER. */
   remove: async (projectId: string, sprintId: string): Promise<Sprint> => {
     const res = await api.delete<ApiResponse<Sprint>>(
       `/projects/${projectId}/sprints/${sprintId}`,
