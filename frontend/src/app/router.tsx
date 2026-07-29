@@ -20,10 +20,20 @@ import MyTasksPage from '@/features/tasks/pages/MyTasksPage'
 import { useAuthStore } from '@/features/auth/authStore'
 import { ProfilePage } from '@/features/profile/pages/ProfilePage'
 import { ChangePasswordPage } from '@/features/profile/pages/ChangePasswordPage'
+import AdminUsersPage from '@/features/admin/pages/AdminUsersPage'
+
 // Chặn truy cập trang cần đăng nhập.
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const user = useAuthStore((state) => state.user)
   if (!user) return <Navigate to="/login" replace />
+  return children
+}
+
+// Chặn truy cập trang dành riêng cho Admin.
+const AdminRoute = ({ children }: { children: ReactNode }) => {
+  const user = useAuthStore((state) => state.user)
+  if (!user) return <Navigate to="/login" replace />
+  if (user.role !== 'admin') return <Navigate to="/" replace />
   return children
 }
 
@@ -52,6 +62,14 @@ const router = createBrowserRouter([
       { path: 'tasks', element: <MyTasksPage /> },
       { path: 'profile', element: <ProfilePage /> },
       { path: 'profile/change-password', element: <ChangePasswordPage /> },
+      {
+        path: 'admin/users',
+        element: (
+          <AdminRoute>
+            <AdminUsersPage />
+          </AdminRoute>
+        ),
+      },
     ],
   },
   {

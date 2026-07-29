@@ -25,7 +25,7 @@ const ProjectMembersModal = ({ open, onClose, members }: ProjectMembersModalProp
   })
 
   return (
-    <Modal open={open} onClose={onClose} title="Thành viên dự án" size="md">
+    <Modal open={open} onClose={onClose} title="Thành viên dự án">
       <div className="max-h-[60vh] overflow-y-auto px-1 -mx-1 divide-y divide-line/10">
         {sortedMembers.map((member) => {
           const displayName = member.user?.fullName || 'Thành viên hệ thống'

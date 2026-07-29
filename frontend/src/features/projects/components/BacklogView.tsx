@@ -354,16 +354,25 @@ const BacklogView = ({ projectId, onSelectIssue, onGoToBoard }: BacklogViewProps
             </div>
 
             {isOpen(activeSprint._id) && (
-              <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1 scrollbar-thin">
-                <SortableContext items={activeSprintIssues.map((i) => i._id)} strategy={verticalListSortingStrategy}>
-                  {activeSprintIssues.map((issue) => (
-                    <SortableItem key={issue._id} id={issue._id} disabled={!isOwner}>
-                      <IssueRow issue={issue} projectId={projectId} isOwner={isOwner} onSelectIssue={onSelectIssue} />
-                    </SortableItem>
-                  ))}
-                </SortableContext>
-                {activeSprintIssues.length === 0 && (
-                  <p className="text-xs text-subtle italic py-4 text-center">Sprint chưa có công việc nào. Kéo công việc vào đây.</p>
+              <div className="space-y-2.5">
+                <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1 scrollbar-thin">
+                  <SortableContext items={activeSprintIssues.map((i) => i._id)} strategy={verticalListSortingStrategy}>
+                    {activeSprintIssues.map((issue) => (
+                      <SortableItem key={issue._id} id={issue._id} disabled={!isOwner}>
+                        <IssueRow issue={issue} projectId={projectId} isOwner={isOwner} onSelectIssue={onSelectIssue} />
+                      </SortableItem>
+                    ))}
+                  </SortableContext>
+                  {activeSprintIssues.length === 0 && (
+                    <p className="text-xs text-subtle italic py-4 text-center">Sprint chưa có công việc nào. Kéo công việc vào đây hoặc thêm nhanh bên dưới.</p>
+                  )}
+                </div>
+                {isOwner && (
+                  <QuickAddIssue
+                    projectId={projectId}
+                    targetSprintId={activeSprint._id}
+                    nextOrderIndex={calculateNewOrderIndex(activeSprintIssues, activeSprintIssues.length)}
+                  />
                 )}
               </div>
             )}
