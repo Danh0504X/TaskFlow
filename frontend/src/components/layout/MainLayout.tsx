@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { LayoutGrid, FolderGit2, CheckSquare, LogOut, User, Shield } from 'lucide-react'
+import { LayoutGrid, FolderGit2, CheckSquare, LogOut, User } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { APP_LOGO_URL } from '@/lib/constants'
 import Avatar from '@/components/ui/Avatar'
@@ -20,12 +20,9 @@ const MainLayout = () => {
   const { user, signOut } = useAuth()
   const [loading, setLoading] = useState(false)
 
-  const navItems = [
-    ...baseNavItems,
-    ...(user?.role === 'admin'
-      ? [{ to: '/admin/users', label: 'Quản trị hệ thống', icon: Shield, end: false }]
-      : []),
-  ]
+  // Admin không bao giờ render layout này (RootGate redirect thẳng sang /admin), nên nav ở đây
+  // chỉ còn dành cho user thường.
+  const navItems = baseNavItems
 
   const handleLogout = async () => {
     setLoading(true)

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/cn'
 
-type BadgeColor = 'green' | 'blue' | 'red' | 'amber' | 'slate'
+export type BadgeColor = 'green' | 'blue' | 'red' | 'amber' | 'slate'
 
 interface BadgeProps {
   color?: BadgeColor

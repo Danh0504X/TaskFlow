@@ -21,12 +21,22 @@ import MyTasksPage from '@/features/tasks/pages/MyTasksPage'
 import { useAuthStore } from '@/features/auth/authStore'
 import { ProfilePage } from '@/features/profile/pages/ProfilePage'
 import { ChangePasswordPage } from '@/features/profile/pages/ChangePasswordPage'
-import AdminUsersPage from '@/features/admin/pages/AdminUsersPage'
 import LandingPage from '@/features/landing/pages/LandingPage'
+import AdminLayout from '@/components/layout/AdminLayout'
+import AdminOverviewPage from '@/features/admin/pages/AdminOverviewPage'
+import AdminUsersPage from '@/features/admin/pages/AdminUsersPage'
+import AdminAiPage from '@/features/admin/pages/AdminAiPage'
+import AiOverviewTab from '@/features/admin/pages/ai/AiOverviewTab'
+import AiLogsTab from '@/features/admin/pages/ai/AiLogsTab'
+import AiQuotaTab from '@/features/admin/pages/ai/AiQuotaTab'
+import AdminAuditPage from '@/features/admin/pages/AdminAuditPage'
+import AdminSettingsPage from '@/features/admin/pages/AdminSettingsPage'
 // Route "/" hiển thị khác nhau tuỳ trạng thái đăng nhập: khách (chưa đăng nhập) xem trang
 // giới thiệu (LandingPage) ngay tại "/"; các đường dẫn con khác dưới "/" (vd /projects) vẫn
 // đá về /login như route được bảo vệ bình thường. Người đã đăng nhập vào thẳng MainLayout
 // (sidebar + Outlet) như cũ — không đổi hành vi cho user đã đăng nhập.
+// Admin không dùng chung không gian làm việc (dashboard/dự án/việc) với user thường — toàn bộ
+// nhánh "/" (và mọi route con) redirect thẳng sang khu Admin, kể cả khi họ gõ thẳng URL.
 const RootGate = () => {
   const user = useAuthStore((state) => state.user)
   const location = useLocation()
@@ -36,15 +46,9 @@ const RootGate = () => {
     return <Navigate to="/login" replace />
   }
 
-  return <MainLayout />
-}
+  if (user.role === 'admin') return <Navigate to="/admin" replace />
 
-// Chặn truy cập trang dành riêng cho Admin.
-const AdminRoute = ({ children }: { children: ReactNode }) => {
-  const user = useAuthStore((state) => state.user)
-  if (!user) return <Navigate to="/login" replace />
-  if (user.role !== 'admin') return <Navigate to="/" replace />
-  return children
+  return <MainLayout />
 }
 
 // Nếu đã đăng nhập thì không cho vào lại trang login.
@@ -71,14 +75,27 @@ const router = createBrowserRouter([
       { path: 'tasks', element: <MyTasksPage /> },
       { path: 'profile', element: <ProfilePage /> },
       { path: 'profile/change-password', element: <ChangePasswordPage /> },
+    ],
+  },
+  {
+    // Khu vực Admin tách hẳn khỏi MainLayout — AdminLayout tự chặn nếu user không có role
+    // 'admin' (xem AdminLayout.tsx), không dùng chung ProtectedRoute/AdminRoute của app user.
+    path: '/admin',
+    element: <AdminLayout />,
+    children: [
+      { index: true, element: <AdminOverviewPage /> },
+      { path: 'users', element: <AdminUsersPage /> },
       {
-        path: 'admin/users',
-        element: (
-          <AdminRoute>
-            <AdminUsersPage />
-          </AdminRoute>
-        ),
+        path: 'ai',
+        element: <AdminAiPage />,
+        children: [
+          { index: true, element: <AiOverviewTab /> },
+          { path: 'logs', element: <AiLogsTab /> },
+          { path: 'quota', element: <AiQuotaTab /> },
+        ],
       },
+      { path: 'audit', element: <AdminAuditPage /> },
+      { path: 'settings', element: <AdminSettingsPage /> },
     ],
   },
   {
