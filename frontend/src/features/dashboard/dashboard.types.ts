@@ -1,31 +1,9 @@
-import type { IssuePriority } from '@/features/issues/issue.types'
-
-// CHƯA có backend cho các số liệu tổng quan này -> dữ liệu lấy từ dashboard.mock.ts.
-// TODO: thay bằng API thật khi backend có endpoint dashboard/summary.
-
-export interface DashboardStats {
-  todo: number
-  inProgress: number
-  completedThisMonth: number
-  overdue: number
-}
-
-export interface AssignedTaskPreview {
-  id: string
-  key: string
-  summary: string
+// Sprint đang ACTIVE, sắp tới endDate — dùng cho widget "Sprint sắp kết thúc" ở Dashboard.
+// Khớp với response thật từ GET /me/upcoming-sprints (xem sprintService.getUpcomingSprints).
+export interface UpcomingSprint {
+  _id: string
+  name: string
+  projectId: string
   projectName: string
-  category: string
-  priority: IssuePriority
-  dueDate: string
-  assigneeAvatars: string[]
-}
-
-export interface UpcomingEvent {
-  id: string
-  day: string
-  month: string
-  title: string
-  time: string
-  platform: string
+  endDate: string
 }

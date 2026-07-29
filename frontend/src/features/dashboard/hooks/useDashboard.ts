@@ -1,14 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
-import { MOCK_ASSIGNED_TASKS, MOCK_DASHBOARD_STATS, MOCK_UPCOMING_EVENTS } from '../dashboard.mock'
+import { dashboardApi } from '../dashboard.api'
 
-// TODO: thay bằng API thật khi backend có endpoint dashboard/summary.
-export const useDashboardOverview = () => {
+// Sprint đang chạy sắp hết hạn, trải trên mọi project — widget "Sprint sắp kết thúc".
+export const useUpcomingSprints = () => {
   return useQuery({
-    queryKey: ['dashboard', 'overview'],
-    queryFn: () => ({
-      stats: MOCK_DASHBOARD_STATS,
-      assignedTasks: MOCK_ASSIGNED_TASKS,
-      upcomingEvents: MOCK_UPCOMING_EVENTS,
-    }),
+    queryKey: ['dashboard', 'upcoming-sprints'],
+    queryFn: dashboardApi.getUpcomingSprints,
   })
 }

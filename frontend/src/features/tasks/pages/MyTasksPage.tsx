@@ -1,63 +1,98 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { AnimatePresence } from 'motion/react'
-import { Search } from 'lucide-react'
+import { ChevronRight, Search } from 'lucide-react'
 import Spinner from '@/components/ui/Spinner'
 import Tabs from '@/components/ui/Tabs'
+import Avatar from '@/components/ui/Avatar'
 import IssueTypeIcon from '@/components/ui/IssueTypeIcon'
 import IssuePriorityBadge from '@/components/ui/IssuePriorityBadge'
 import IssueStatusBadge from '@/components/ui/IssueStatusBadge'
 import IssueDetailPanel from '@/features/issues/components/IssueDetailPanel'
+import { useAuth } from '@/features/auth/hooks/useAuth'
+import { getProjectColor } from '@/lib/projectColor'
 import { useMyTasks } from '../hooks/useMyTasks'
-import type { IssueStatus } from '@/features/issues/issue.types'
+import type { Issue, IssuePriority, IssueStatus } from '@/features/issues/issue.types'
 
-type FilterTab = 'ALL' | IssueStatus
+type GroupMode = 'PROJECT' | 'STATUS'
 
-const filterItems: { value: FilterTab; label: string }[] = [
-  { value: 'ALL', label: 'Tất cả việc' },
-  { value: 'TODO', label: 'Cần làm' },
-  { value: 'IN_PROGRESS', label: 'Đang làm' },
-  { value: 'DONE', label: 'Đã hoàn thành' },
+const groupModeItems: { value: GroupMode; label: string }[] = [
+  { value: 'PROJECT', label: 'Theo dự án' },
+  { value: 'STATUS', label: 'Theo trạng thái' },
 ]
 
+const STATUS_ORDER: IssueStatus[] = ['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE']
+const STATUS_LABELS: Record<IssueStatus, string> = {
+  TODO: 'Cần làm',
+  IN_PROGRESS: 'Đang làm',
+  IN_REVIEW: 'Đang đánh giá',
+  DONE: 'Hoàn thành',
+}
+const PRIORITY_RANK: Record<IssuePriority, number> = { URGENT: 0, HIGH: 1, MEDIUM: 2, LOW: 3 }
+
+const byPriority = (a: Issue, b: Issue) => PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority]
+
+interface ProjectGroup {
+  projectId: string
+  projectName: string
+  tasks: Issue[]
+}
+
 const MyTasksPage = () => {
+  const { user } = useAuth()
   const { data: tasks, isLoading } = useMyTasks()
-  const [activeTab, setActiveTab] = useState<FilterTab>('ALL')
+  const [groupMode, setGroupMode] = useState<GroupMode>('PROJECT')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedTaskKey, setSelectedTaskKey] = useState<string | null>(null)
 
-  const filteredTasks = (tasks ?? []).filter((task) => {
-    if (activeTab !== 'ALL' && task.status !== activeTab) return false
-    return (
-      task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      task.key.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredTasks = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase()
+    return (tasks ?? []).filter(
+      (task) =>
+        !query ||
+        task.title.toLowerCase().includes(query) ||
+        task.key.toLowerCase().includes(query),
     )
-  })
+  }, [tasks, searchQuery])
+
+  const projectGroups = useMemo<ProjectGroup[]>(() => {
+    const byProject = new Map<string, ProjectGroup>()
+    filteredTasks.forEach((task) => {
+      const existing = byProject.get(task.projectId)
+      if (existing) {
+        existing.tasks.push(task)
+      } else {
+        byProject.set(task.projectId, {
+          projectId: task.projectId,
+          projectName: task.projectName ?? 'Không rõ dự án',
+          tasks: [task],
+        })
+      }
+    })
+    return Array.from(byProject.values())
+      .map((group) => ({ ...group, tasks: group.tasks.slice().sort(byPriority) }))
+      .sort((a, b) => a.projectName.localeCompare(b.projectName))
+  }, [filteredTasks])
+
+  const statusGroups = useMemo(() => {
+    return STATUS_ORDER.map((status) => ({
+      status,
+      tasks: filteredTasks.filter((task) => task.status === status).sort(byPriority),
+    }))
+  }, [filteredTasks])
 
   const selectedTask = tasks?.find((task) => task.key === selectedTaskKey) ?? null
-
-  const assignedCount = tasks?.length ?? 0
-  const inProgressCount = tasks?.filter((t) => t.status === 'IN_PROGRESS').length ?? 0
+  const projectCount = new Set((tasks ?? []).map((task) => task.projectId)).size
 
   return (
     <div className="max-w-7xl mx-auto flex flex-col gap-8 p-8">
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h2 className="text-3xl font-extrabold text-brand tracking-tight mb-2">Công việc của tôi</h2>
           <p className="text-muted font-medium max-w-xl text-sm leading-relaxed">
-            Theo dõi, thực hiện và cập nhật trạng thái mọi đầu việc được phân công cho bạn từ tất cả các dự án.
+            {tasks?.length ?? 0} việc được giao, trải trên {projectCount} dự án — theo dõi và cập nhật trạng thái ngay tại đây.
           </p>
         </div>
-
-        <div className="flex gap-4 p-4 bg-slate-50 border border-line/15 rounded-2xl">
-          <div className="text-center px-4 border-r border-line/20">
-            <span className="text-2xl font-extrabold text-brand">{assignedCount}</span>
-            <p className="text-[9px] font-bold text-muted uppercase mt-1">Được giao</p>
-          </div>
-          <div className="text-center px-4">
-            <span className="text-2xl font-extrabold text-amber-600">{inProgressCount}</span>
-            <p className="text-[9px] font-bold text-muted uppercase mt-1">Đang thực hiện</p>
-          </div>
-        </div>
+        <Avatar src={user?.avatarUrl} name={user?.fullName ?? ''} size={40} />
       </header>
 
       <section className="flex flex-wrap items-center justify-between gap-4 py-3 px-4 bg-white border border-line/15 rounded-2xl shadow-sm">
@@ -72,49 +107,96 @@ const MyTasksPage = () => {
           />
         </div>
 
-        <Tabs items={filterItems} value={activeTab} onChange={setActiveTab} />
+        <Tabs items={groupModeItems} value={groupMode} onChange={setGroupMode} />
       </section>
 
-      <section className="space-y-3.5">
-        {isLoading && (
-          <div className="py-12 flex justify-center text-muted">
-            <Spinner />
-          </div>
-        )}
+      {isLoading && (
+        <div className="py-12 flex justify-center text-muted">
+          <Spinner />
+        </div>
+      )}
 
-        {!isLoading &&
-          filteredTasks.map((task) => (
-            <div
-              key={task._id}
-              onClick={() => setSelectedTaskKey(task.key)}
-              className="flex flex-wrap items-center justify-between gap-4 p-4 bg-white hover:bg-slate-50/50 border border-line/15 rounded-2xl hover:border-brand/30 transition-all shadow-sm cursor-pointer group"
-            >
-              <div className="flex items-center gap-3.5 flex-1 min-w-0">
-                <div className="w-9 h-9 rounded-xl bg-brand/5 flex items-center justify-center shrink-0">
-                  <IssueTypeIcon type={task.type} size={16} />
-                </div>
-                <span className="text-xs font-bold text-brand flex-shrink-0">{task.key}</span>
-                <div className="min-w-0">
-                  <h4 className="text-xs font-bold text-ink truncate max-w-md">{task.title}</h4>
-                  <p className="text-[10px] text-muted font-semibold mt-1">
-                    Dự án: <span className="font-bold">{task.projectName}</span>
-                  </p>
-                </div>
+      {!isLoading && filteredTasks.length === 0 && (
+        <div className="border border-dashed border-line/35 rounded-3xl py-12 text-center text-subtle text-xs font-medium">
+          Không tìm thấy công việc nào khớp với điều kiện tìm kiếm.
+        </div>
+      )}
+
+      {!isLoading && filteredTasks.length > 0 && groupMode === 'PROJECT' && (
+        <section className="flex flex-col gap-3.5">
+          {projectGroups.map((group) => (
+            <details key={group.projectId} className="group/detail bg-white border border-line/15 rounded-2xl shadow-sm overflow-hidden" open>
+              <summary className="flex items-center gap-3 px-5 py-3.5 bg-slate-50/70 cursor-pointer select-none list-none">
+                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: getProjectColor(group.projectId) }} />
+                <span className="font-bold text-sm text-ink">{group.projectName}</span>
+                <span className="text-[10px] font-bold text-subtle bg-white border border-line/25 rounded-full px-2 py-0.5">
+                  {group.tasks.length} việc
+                </span>
+                <ChevronRight size={15} className="ml-auto text-subtle transition-transform group-open/detail:rotate-90" />
+              </summary>
+
+              <div className="divide-y divide-line/10">
+                {group.tasks.map((task) => (
+                  <div
+                    key={task._id}
+                    onClick={() => setSelectedTaskKey(task.key)}
+                    className="flex flex-wrap items-center justify-between gap-4 px-5 py-3.5 hover:bg-slate-50/50 cursor-pointer transition-all"
+                  >
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="w-8 h-8 rounded-lg bg-brand/5 flex items-center justify-center shrink-0">
+                        <IssueTypeIcon type={task.type} size={15} />
+                      </div>
+                      <span className="text-xs font-bold text-brand font-mono shrink-0">{task.key}</span>
+                      <h4 className="text-xs font-bold text-ink truncate">{task.title}</h4>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <IssuePriorityBadge priority={task.priority} showIcon={false} />
+                      <IssueStatusBadge status={task.status} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </details>
+          ))}
+        </section>
+      )}
+
+      {!isLoading && filteredTasks.length > 0 && groupMode === 'STATUS' && (
+        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
+          {statusGroups.map(({ status, tasks: columnTasks }) => (
+            <div key={status} className="flex flex-col gap-2.5">
+              <div className="flex items-center gap-2 px-1">
+                <span className="text-xs font-bold text-muted">{STATUS_LABELS[status]}</span>
+                <span className="text-[10px] font-bold text-subtle ml-auto">{columnTasks.length}</span>
               </div>
 
-              <div className="flex items-center gap-4">
-                <IssuePriorityBadge priority={task.priority} showIcon={false} />
-                <IssueStatusBadge status={task.status} />
-              </div>
+              {columnTasks.map((task) => (
+                <div
+                  key={task._id}
+                  onClick={() => setSelectedTaskKey(task.key)}
+                  className="flex flex-col gap-2 p-3.5 bg-white border border-line/15 rounded-xl shadow-sm hover:border-brand/30 cursor-pointer transition-all"
+                >
+                  <h4 className="text-xs font-bold text-ink leading-snug line-clamp-2">{task.title}</h4>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="flex items-center gap-1.5 text-[11px] font-bold text-subtle font-mono">
+                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: getProjectColor(task.projectId) }} />
+                      {task.key}
+                    </span>
+                    <IssuePriorityBadge priority={task.priority} showIcon={false} />
+                  </div>
+                </div>
+              ))}
+
+              {columnTasks.length === 0 && (
+                <div className="border border-dashed border-line/25 rounded-xl py-6 text-center text-subtle text-[10px] font-medium">
+                  Không có việc nào
+                </div>
+              )}
             </div>
           ))}
-
-        {!isLoading && filteredTasks.length === 0 && (
-          <div className="border border-dashed border-line/35 rounded-3xl py-12 text-center text-subtle text-xs font-medium">
-            Không tìm thấy công việc nào khớp với điều kiện tìm kiếm.
-          </div>
-        )}
-      </section>
+        </section>
+      )}
 
       <AnimatePresence>
         {selectedTaskKey && (

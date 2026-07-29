@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { ArrowLeft, Plus, UserPlus } from 'lucide-react'
 import { useAuthStore } from '@/features/auth/authStore'
@@ -79,9 +79,24 @@ const WorkspaceTabs = ({ items, value, onChange }: WorkspaceTabsProps) => {
 const ProjectWorkspacePage = () => {
   const { projectId } = useParams<{ projectId: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
   const { data: project, isLoading } = useProject(projectId)
   const reduceMotion = useReducedMotion()
-  const [activeTab, setActiveTab] = useState<WorkspaceTab>('SUMMARY')
+  // Cho phép điều hướng tới thẳng 1 tab cụ thể từ nơi khác (vd Dashboard -> Board của
+  // project) qua navigate state — tab vẫn chỉ là state nội bộ, không có URL riêng (xem
+  // comment ở getTabItems), nên đây là cách duy nhất "deep-link" vào 1 tab không phải SUMMARY.
+  const [activeTab, setActiveTab] = useState<WorkspaceTab>(
+    (location.state as { initialTab?: WorkspaceTab } | null)?.initialTab ?? 'SUMMARY',
+  )
+  // Đổi state ngay trong lúc render (không dùng effect) để xử lý cả trường hợp component
+  // không bị remount — vd bấm từ Dashboard sang project A rồi lại bấm sang project B trong
+  // khi trang vẫn đang mở (React Router tái dùng cùng 1 instance vì chung route pattern).
+  const [appliedNavState, setAppliedNavState] = useState(location.state)
+  if (location.state !== appliedNavState) {
+    setAppliedNavState(location.state)
+    const initialTab = (location.state as { initialTab?: WorkspaceTab } | null)?.initialTab
+    if (initialTab) setActiveTab(initialTab)
+  }
   const [selectedIssueKey, setSelectedIssueKey] = useState<string | null>(null)
   const [isCreateIssueOpen, setIsCreateIssueOpen] = useState(false)
   const [isInviteOpen, setIsInviteOpen] = useState(false)

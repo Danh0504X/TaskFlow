@@ -417,6 +417,30 @@ const deleteIssue = async (projectId, issueId) => {
   return issue
 }
 
+// Lấy toàn bộ issue được giao cho 1 user, trải trên mọi project (dùng cho trang "Việc của
+// tôi" và Dashboard) — khác các hàm trên, không nhận projectId vì phải gộp nhiều project.
+// `leaveProject` đã tự null hoá assigneeId khi member rời project, nên không cần lọc lại
+// theo membership ở đây: còn assigneeId = userId nghĩa là vẫn còn quyền trên issue đó.
+const getMyIssues = async (userId) => {
+  ensureValidObjectId(userId, 'user id')
+
+  const issues = await Issue.find({ assigneeId: userId, isDeleted: false })
+    .sort({ updatedAt: -1 })
+    .populate({ path: 'projectId', select: 'name key' })
+    .populate([ASSIGNEE_POPULATE, PARENT_ISSUE_POPULATE])
+    .lean()
+
+  return issues
+    // Phòng hờ project đã bị xóa cứng nhưng issue sót lại (không nên xảy ra, xem cascade
+    // ở projectService.permanentlyDeleteProject).
+    .filter((issue) => issue.projectId)
+    .map((issue) => {
+      const project = issue.projectId
+      const dto = toIssueDTO({ ...issue, projectId: project._id }, project.key)
+      return { ...dto, projectName: project.name }
+    })
+}
+
 export const issueService = {
   createIssue,
   getIssuesByProject,
@@ -425,4 +449,5 @@ export const issueService = {
   updateIssue,
   updateIssueStatus,
   deleteIssue,
+  getMyIssues,
 }

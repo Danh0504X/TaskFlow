@@ -2,6 +2,7 @@ import { StatusCodes } from 'http-status-codes'
 import mongoose from 'mongoose'
 import Sprint from '../models/sprints.js'
 import Issue from '../models/issues.js'
+import Project from '../models/projects.js'
 import ApiError from '../utils/ApiError.js'
 
 const RESOLUTIONS = ['BACKLOG', 'MOVE_TO_SPRINT', 'NEW_SPRINT']
@@ -332,6 +333,37 @@ const completeSprint = async (projectId, sprintId, project, userId, body = {}) =
   return { sprint, movedCount: incompleteIssues.length, newSprint: createdSprint }
 }
 
+// Lấy các sprint đang ACTIVE, sắp hết hạn nhất trước, trải trên mọi project mà user đang
+// là thành viên (dùng cho widget "Sprint sắp kết thúc" ở Dashboard).
+const getUpcomingSprints = async (userId, limit = 20) => {
+  ensureValidObjectId(userId, 'user id')
+
+  const myProjects = await Project.find({
+    isDeleted: false,
+    members: { $elemMatch: { userId, status: 'ACTIVE' } },
+  })
+    .select('_id name')
+    .lean()
+
+  if (myProjects.length === 0) return []
+
+  const projectNameById = new Map(myProjects.map((p) => [p._id.toString(), p.name]))
+
+  const sprints = await Sprint.find({
+    projectId: { $in: myProjects.map((p) => p._id) },
+    status: 'ACTIVE',
+    isDeleted: false,
+  })
+    .sort({ endDate: 1 })
+    .limit(limit)
+    .lean()
+
+  return sprints.map((sprint) => ({
+    ...sprint,
+    projectName: projectNameById.get(sprint.projectId.toString()),
+  }))
+}
+
 export const sprintService = {
   createSprint,
   getSprintsByProject,
@@ -340,4 +372,5 @@ export const sprintService = {
   deleteSprint,
   startSprint,
   completeSprint,
+  getUpcomingSprints,
 }
