@@ -1,5 +1,7 @@
 import { motion } from 'motion/react'
 import type { ReactNode } from 'react'
+import { Link } from 'react-router-dom'
+import { ArrowLeft } from 'lucide-react'
 import AuthAurora from './AuthAurora'
 import AuthBranding from './AuthBranding'
 
@@ -10,6 +12,14 @@ import AuthBranding from './AuthBranding'
 const AuthLayout = ({ children }: { children: ReactNode }) => {
   return (
     <AuthAurora>
+      <Link
+        to="/"
+        className="fixed left-5 top-5 z-20 flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-muted transition-colors hover:bg-surface hover:text-ink"
+      >
+        <ArrowLeft size={16} />
+        Trang chủ
+      </Link>
+
       <div className="flex min-h-screen items-center justify-center overflow-hidden px-4 py-12">
         <main className="mx-auto grid w-full max-w-6xl grid-cols-1 items-center gap-y-12 font-sans md:grid-cols-12 md:gap-x-12 lg:gap-x-16">
           {/* Khung trái: branding + cụm thẻ trôi nổi (dùng chung) */}
