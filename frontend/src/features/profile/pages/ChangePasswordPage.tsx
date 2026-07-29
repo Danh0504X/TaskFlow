@@ -1,16 +1,25 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { getApiErrorMessage } from '@/lib/http';
 import { changePasswordSchema, type ChangePasswordFormValues } from '@/features/auth/auth.schema';
 import { useChangePassword } from '@/features/auth/hooks/useAuthMutations';
 import { useAuthStore } from '@/features/auth/authStore';
+import Modal, { type ModalTone } from '@/components/ui/Modal'; // Import component Modal
 
 export function ChangePasswordPage() {
   const navigate = useNavigate();
+  // Lấy thông tin user và hàm cập nhật user từ store
   const user = useAuthStore((state) => state.user);
+  const setUser = useAuthStore((state) => state.setUser);
   const changePasswordMutation = useChangePassword();
 
-  // Lấy trạng thái mật khẩu từ store, mặc định là false nếu chưa có dữ liệu
+  // State quản lý Modal thông báo
+  const [modalConfig, setModalConfig] = useState<{ open: boolean; tone: ModalTone; title: string; message: string; isSuccess: boolean }>({
+    open: false, tone: 'brand', title: '', message: '', isSuccess: false
+  });
+
   const hasPassword = user?.hasPassword ?? false;
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<ChangePasswordFormValues>({
@@ -18,7 +27,6 @@ export function ChangePasswordPage() {
   });
 
   const onSubmit = (data: ChangePasswordFormValues) => {
-    // Nếu chưa có mật khẩu, gửi chuỗi rỗng cho currentPassword
     const payload = {
       currentPassword: data.currentPassword || '',
       newPassword: data.newPassword,
@@ -26,13 +34,43 @@ export function ChangePasswordPage() {
 
     changePasswordMutation.mutate(payload, {
       onSuccess: () => {
-        reset();
-        navigate('/profile');
+        // 1. Cập nhật trạng thái hasPassword thành true trong Store
+        if (user && setUser) {
+          setUser({ ...user, hasPassword: true });
+        }
+        
+        // 2. Hiển thị Modal thành công
+        setModalConfig({
+          open: true,
+          tone: 'success',
+          title: 'Thành công',
+          message: hasPassword ? 'Đổi mật khẩu thành công!' : 'Thiết lập mật khẩu thành công!',
+          isSuccess: true
+        });
       },
+      onError: (error: unknown) => {
+        // Hiển thị Modal thất bại với message từ backend
+        setModalConfig({
+          open: true,
+          tone: 'danger',
+          title: 'Lỗi thiết lập',
+          message: getApiErrorMessage(error, 'Có lỗi xảy ra, vui lòng kiểm tra lại mật khẩu hiện tại.'),
+          isSuccess: false
+        });
+      }
     });
   };
 
-  // Hiển thị thông báo đang tải nếu dữ liệu người dùng chưa sẵn sàng
+  // Hàm xử lý khi người dùng đóng Modal
+  const handleCloseModal = () => {
+    setModalConfig(prev => ({ ...prev, open: false }));
+    // Nếu là modal thành công, đóng modal xong thì điều hướng về trang Profile
+    if (modalConfig.isSuccess) {
+      reset();
+      navigate('/profile');
+    }
+  };
+
   if (!user) return <div className="p-8 text-center text-[#464554] text-sm mt-10">Đang tải dữ liệu trang...</div>;
 
   return (
@@ -53,7 +91,6 @@ export function ChangePasswordPage() {
       <section className="bg-surface rounded-2xl p-6 shadow-sm border border-[#c7c4d7]/30">
         <form className="grid grid-cols-1 gap-4" onSubmit={handleSubmit(onSubmit)} noValidate>
           
-          {/* Chỉ hiển thị ô nhập mật khẩu hiện tại nếu tài khoản đã có mật khẩu */}
           {hasPassword && (
             <div>
               <label className="block text-xs font-bold text-[#464554] mb-1.5 uppercase tracking-wide">
@@ -110,6 +147,14 @@ export function ChangePasswordPage() {
           </div>
         </form>
       </section>
+
+      {/* Tích hợp Modal */}
+      <Modal open={modalConfig.open} onClose={handleCloseModal} title={modalConfig.title} tone={modalConfig.tone} layout="compact"
+        footer={<button onClick={handleCloseModal} className="px-4 py-2 bg-[#4648d4] text-white rounded-lg text-sm font-semibold hover:bg-[#6063ee] transition-colors">Đóng</button>}
+      >
+        <p className="text-sm text-[#464554] leading-relaxed">{modalConfig.message}</p>
+      </Modal>
+
     </div>
   );
 }

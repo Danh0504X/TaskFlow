@@ -149,6 +149,20 @@ const resetPassword = async ({ email, token, newPassword }) => {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Không tìm thấy người dùng')
   }
 
+  // ==========================================
+  // BẮT ĐẦU PHẦN THÊM MỚI: KIỂM TRA MẬT KHẨU CŨ
+  // ==========================================
+  if (user.passwordHash) {
+    const isSameAsOldPassword = await bcrypt.compare(newPassword, user.passwordHash)
+    if (isSameAsOldPassword) {
+      throw new ApiError(
+        StatusCodes.BAD_REQUEST,
+        'Mật khẩu mới không được trùng với mật khẩu hiện tại.'
+      )
+    }
+  }
+  // ==========================================
+
   // Hash mật khẩu giống authService (bcrypt, salt rounds = 10)
   user.passwordHash = await bcrypt.hash(newPassword, 10)
   await user.save()

@@ -1,6 +1,4 @@
-import { useMutation } from '@tanstack/react-query'
-import { toast } from '@/components/ui/toast/toastStore'
-import { getApiErrorMessage } from '@/lib/http'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { authApi } from '../auth.api'
 import { useAuthStore } from '../authStore'
 
@@ -51,8 +49,20 @@ export const useForgotPassword = () =>
   useMutation({ mutationFn: authApi.forgotPassword })
 
 /** Đặt lại mật khẩu bằng token từ link trong email (bước 2 của luồng reset). */
-export const useResetPassword = () =>
-  useMutation({ mutationFn: authApi.resetPassword })
+export const useResetPassword = () => {
+  const queryClient = useQueryClient()
+  const user = useAuthStore((state) => state.user)
+  const setUser = useAuthStore((state) => state.setUser)
+  return useMutation({
+    mutationFn: authApi.resetPassword,
+    onSuccess: () => {
+      if (user) {
+        setUser({ ...user, hasPassword: true })
+      }
+      queryClient.invalidateQueries({ queryKey: ['auth', 'me'] })
+    },
+  })
+}
 
 /** Cập nhật hồ sơ cá nhân (trang Profile) -> đồng bộ lại userInfo trong store. */
 export const useUpdateProfile = () => {
@@ -68,9 +78,17 @@ export const useUpdateProfile = () => {
 }
 
 /** Đổi mật khẩu khi đã đăng nhập (trang Profile). */
-export const useChangePassword = () =>
-  useMutation({
+export const useChangePassword = () => {
+  const queryClient = useQueryClient()
+  const user = useAuthStore((state) => state.user)
+  const setUser = useAuthStore((state) => state.setUser)
+  return useMutation({
     mutationFn: authApi.changePassword,
-    onSuccess: () => toast.success('Đổi mật khẩu thành công'),
-    onError: (error) => toast.error(getApiErrorMessage(error, 'Đổi mật khẩu thất bại')),
+    onSuccess: () => {
+      if (user) {
+        setUser({ ...user, hasPassword: true })
+      }
+      queryClient.invalidateQueries({ queryKey: ['auth', 'me'] })
+    },
   })
+}

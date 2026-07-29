@@ -19,9 +19,7 @@ export const protectedRoute = async (req, res, next) => {
         env.ACCESS_TOKEN_SECRET,
       )
 
-      const user = await User.findById(decodedUser.userInfo._id).select(
-        '-passwordHash',
-      )
+      const user = await User.findById(decodedUser.userInfo._id)
 
       if (!user) {
         return res.status(StatusCodes.UNAUTHORIZED).json({

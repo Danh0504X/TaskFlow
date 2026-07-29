@@ -130,13 +130,10 @@ const router = createBrowserRouter([
       </PublicOnlyRoute>
     ),
   },
+
   {
     path: '/reset-password',
-    element: (
-      <PublicOnlyRoute>
-        <ResetPasswordPage />
-      </PublicOnlyRoute>
-    ),
+    element: <ResetPasswordPage />,
   },
   { path: '*', element: <Navigate to="/" replace /> },
 ])
