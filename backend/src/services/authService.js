@@ -21,6 +21,7 @@ const buildUserInfo = (user) => ({
   isEmailVerified: user.isEmailVerified,
   status: user.status,
   role: user.role,
+  hasPassword: Boolean(user.passwordHash || user.hasPassword), 
 })
 
 const ensureAccountCanSignIn = (user) => {
@@ -289,7 +290,15 @@ const changePassword = async (userId, { currentPassword, newPassword }) => {
     }
     const isPasswordValid = await bcrypt.compare(currentPassword, user.passwordHash)
     if (!isPasswordValid) {
-      throw new ApiError(StatusCodes.BAD_REQUEST, 'Incorrect current password')
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'Mật khẩu hiện tại không chính xác')
+    }
+
+    const isSameAsOldPassword = await bcrypt.compare(newPassword, user.passwordHash)
+    if (isSameAsOldPassword) {
+      throw new ApiError(
+        StatusCodes.BAD_REQUEST,
+        'Mật khẩu mới không được trùng với mật khẩu hiện tại.',
+      )
     }
   }
   // TRƯỜNG HỢP 2: Tài khoản CHƯA có mật khẩu (tài khoản Google) -> Bỏ qua kiểm tra mật khẩu cũ
