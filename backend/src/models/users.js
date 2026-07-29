@@ -87,10 +87,12 @@ userSchema.index(
 // Không trả passwordHash ra ngoài API
 userSchema.set('toJSON', {
   transform: function (doc, ret) {
-    delete ret.passwordHash
-    delete ret.__v
-    return ret
+    // Thêm dòng này để frontend biết user có mật khẩu chưa
+    ret.hasPassword = !!ret.passwordHash;
+    delete ret.passwordHash;
+    delete ret.__v;
+    return ret;
   },
-})
+});
 
 export default mongoose.model('user', userSchema)

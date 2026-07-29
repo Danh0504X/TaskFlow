@@ -12,6 +12,7 @@ export interface UserInfo {
   isEmailVerified: boolean
   status: string
   role?: string
+  hasPassword: boolean; 
 }
 
 // ----- Payload gửi lên -----
