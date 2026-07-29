@@ -51,7 +51,7 @@ const AssigneePicker = ({ projectId, value, onChange, size = 24, onOpenChange, r
     ) : (
       <div
         style={{ width: size, height: size }}
-        className="rounded-full bg-slate-100 border border-dashed flex items-center justify-center text-subtle text-[8px] font-bold shrink-0"
+        className="rounded-full bg-canvas border border-dashed border-hairline flex items-center justify-center text-subtle text-[8px] font-bold shrink-0"
       >
         --
       </div>
@@ -75,7 +75,7 @@ const AssigneePicker = ({ projectId, value, onChange, size = 24, onOpenChange, r
         ) : (
           <div
             style={{ width: size, height: size }}
-            className="rounded-full border border-dashed border-line/50 flex items-center justify-center text-subtle hover:border-brand/40 hover:text-brand transition-all"
+            className="rounded-full border border-dashed border-hairline flex items-center justify-center text-subtle hover:border-ink/30 hover:text-ink transition-colors"
           >
             <UserPlus size={size * 0.55} />
           </div>
@@ -88,21 +88,21 @@ const AssigneePicker = ({ projectId, value, onChange, size = 24, onOpenChange, r
             ref={dropdownRef}
             onClick={(e) => e.stopPropagation()}
             style={{ position: 'fixed', top: coords.top, left: coords.left, width: DROPDOWN_WIDTH }}
-            className="z-50 bg-white border border-line/20 rounded-2xl shadow-lg py-1.5 max-h-64 overflow-y-auto"
+            className="z-50 bg-surface border border-hairline rounded-lg shadow-lg py-1.5 max-h-64 overflow-y-auto"
           >
             <button
               type="button"
               onClick={() => handleSelect(null)}
-              className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-muted hover:bg-slate-50 transition-all"
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-muted hover:bg-canvas transition-colors"
             >
-              <div className="w-6 h-6 rounded-full border border-dashed border-line/50 flex items-center justify-center shrink-0">
+              <div className="w-6 h-6 rounded-full border border-dashed border-hairline flex items-center justify-center shrink-0">
                 <X size={12} />
               </div>
               <span className="flex-1 text-left">Chưa gán</span>
               {value === null && <Check size={14} className="text-brand" />}
             </button>
 
-            <div className="my-1 border-t border-line/10" />
+            <div className="my-1 border-t border-hairline" />
 
             {members.map((member) => {
               const isSelf = member.userId === currentUser?._id
@@ -111,7 +111,7 @@ const AssigneePicker = ({ projectId, value, onChange, size = 24, onOpenChange, r
                   key={member.userId}
                   type="button"
                   onClick={() => handleSelect(member.userId)}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-ink hover:bg-slate-50 transition-all"
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-ink hover:bg-canvas transition-colors"
                 >
                   <Avatar src={member.user?.avatarUrl} name={member.user?.fullName ?? '?'} size={24} />
                   <span className="flex-1 text-left truncate">

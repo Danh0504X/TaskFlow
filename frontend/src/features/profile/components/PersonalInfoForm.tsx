@@ -71,7 +71,7 @@ export function PersonalInfoForm() {
   };
 
   return (
-    <section className="bg-white rounded-2xl p-6 shadow-sm border border-[#c7c4d7]/30">
+    <section className="bg-surface rounded-2xl p-6 shadow-sm border border-[#c7c4d7]/30">
       <header className="flex items-center gap-2.5 mb-5">
         <span className="material-symbols-outlined text-[20px] text-[#4648d4]">badge</span>
         <h3 className="text-base font-bold text-[#121c2a]">
@@ -132,7 +132,7 @@ export function PersonalInfoForm() {
         footer={
           <button
             onClick={closeModal}
-            className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-200 transition-colors"
+            className="px-4 py-2 bg-canvas text-ink rounded-lg text-sm font-semibold hover:bg-hairline transition-colors"
           >
             Đóng
           </button>

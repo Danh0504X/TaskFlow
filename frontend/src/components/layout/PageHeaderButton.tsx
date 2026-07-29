@@ -20,14 +20,14 @@ const PageHeaderButton = ({ icon: Icon, children, onClick, variant = 'secondary'
       onClick={onClick}
       className={
         isPrimary
-          ? 'flex items-center gap-1.5 px-2.5 py-1.5 bg-ink text-white rounded-md text-xs font-semibold hover:bg-[#333333] transition-colors active:scale-[0.98]'
-          : 'relative flex items-center gap-1.5 px-2.5 py-1.5 bg-white text-ink border border-hairline rounded-md text-xs font-semibold hover:border-ink/20 transition-colors'
+          ? 'flex items-center gap-1.5 px-2.5 py-1.5 bg-ink text-canvas rounded-md text-xs font-semibold hover:bg-[#e4e4e5] transition-colors active:scale-[0.98]'
+          : 'relative flex items-center gap-1.5 px-2.5 py-1.5 bg-surface text-ink border border-hairline rounded-md text-xs font-semibold hover:border-ink/20 transition-colors'
       }
     >
       <Icon size={13} className={isPrimary ? undefined : 'text-muted'} />
       <span>{children}</span>
       {!!badge && badge > 0 && (
-        <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-ink px-1 text-[9px] font-bold text-white">
+        <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-ink px-1 text-[9px] font-bold text-canvas">
           {badge}
         </span>
       )}

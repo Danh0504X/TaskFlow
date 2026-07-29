@@ -58,7 +58,7 @@ const AuthBranding = () => {
           whileHover={{ scale: 1.08, rotate: 0 }}
           alt="AI Assistant"
           className="relative h-72 w-72 cursor-pointer object-contain sm:h-80 sm:w-80 lg:h-[26rem] lg:w-[26rem]"
-          style={{ filter: 'drop-shadow(0 25px 50px rgba(139, 92, 246, 0.3))' }}
+          style={{ filter: 'drop-shadow(0 25px 50px rgba(0, 0, 0, 0.35))' }}
           src={HERO_URL}
         />
       </div>

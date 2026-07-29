@@ -1,19 +1,17 @@
 import { cn } from '@/lib/cn'
 import type { IssueStatus } from '@/features/issues/issue.types'
 
-interface IssueStatusBadgeProps {
-  status: IssueStatus
-  className?: string
-}
-
+// Cùng bộ pastel với priority/methodology badge: TODO trung tính, IN_PROGRESS xanh dương
+// (đang chạy), IN_REVIEW vàng (đang chờ duyệt), DONE xanh lá (hoàn tất) — quy ước màu quen
+// thuộc thay vì các màu Tailwind rời rạc (cyan/green/slate) trước đây.
 const config: Record<IssueStatus, { label: string; style: string }> = {
-  TODO: { label: 'Cần làm', style: 'bg-slate-100 text-brand border-line' },
-  IN_PROGRESS: { label: 'Đang làm', style: 'bg-cyan-50 text-cyan-700 border-cyan-100' },
-  IN_REVIEW: { label: 'Đang đánh giá', style: 'bg-brand/5 text-brand border-brand/10' },
-  DONE: { label: 'Hoàn thành', style: 'bg-green-100 text-green-700 border-green-200' },
+  TODO: { label: 'Cần làm', style: 'bg-canvas text-subtle border-hairline' },
+  IN_PROGRESS: { label: 'Đang làm', style: 'bg-pastel-blue text-pastel-blue-ink border-transparent' },
+  IN_REVIEW: { label: 'Đang đánh giá', style: 'bg-pastel-yellow text-pastel-yellow-ink border-transparent' },
+  DONE: { label: 'Hoàn thành', style: 'bg-pastel-green text-pastel-green-ink border-transparent' },
 }
 
-const IssueStatusBadge = ({ status, className }: IssueStatusBadgeProps) => {
+const IssueStatusBadge = ({ status, className }: { status: IssueStatus; className?: string }) => {
   const { label, style } = config[status]
   return (
     <span

@@ -50,7 +50,7 @@ export function ChangePasswordPage() {
         </h2>
       </header>
 
-      <section className="bg-white rounded-2xl p-6 shadow-sm border border-[#c7c4d7]/30">
+      <section className="bg-surface rounded-2xl p-6 shadow-sm border border-[#c7c4d7]/30">
         <form className="grid grid-cols-1 gap-4" onSubmit={handleSubmit(onSubmit)} noValidate>
           
           {/* Chỉ hiển thị ô nhập mật khẩu hiện tại nếu tài khoản đã có mật khẩu */}

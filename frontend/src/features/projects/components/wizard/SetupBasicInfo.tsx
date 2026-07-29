@@ -1,4 +1,6 @@
 import type { ChangeEvent } from 'react'
+import { motion } from 'motion/react'
+import { staggerContainer, fadeUpItem } from '@/lib/motion'
 
 export interface BasicInfoData {
   name: string
@@ -45,29 +47,29 @@ const SetupBasicInfo = ({ data, onChange }: SetupBasicInfoProps) => {
   }
 
   return (
-    <div className="space-y-6 max-w-xl mx-auto text-left">
-      <div className="text-center mb-8">
-        <h2 className="text-2xl font-extrabold text-brand tracking-tight">Thông tin dự án</h2>
-        <p className="text-muted mt-2 text-xs font-semibold">Cung cấp thông tin cơ bản để khởi tạo không gian làm việc.</p>
-      </div>
+    <motion.div variants={staggerContainer} initial="hidden" animate="show" className="space-y-6 max-w-xl mx-auto text-left">
+      <motion.div variants={fadeUpItem} className="text-center mb-8">
+        <h2 className="font-editorial text-2xl font-medium text-ink tracking-tight">Thông tin dự án</h2>
+        <p className="text-muted mt-2 text-xs">Cung cấp thông tin cơ bản để khởi tạo không gian làm việc.</p>
+      </motion.div>
 
       <div className="space-y-4">
-        <div className="space-y-1.5">
-          <label className="text-xs font-extrabold text-ink uppercase tracking-wider">
-            Tên dự án <span className="text-red-500">*</span>
+        <motion.div variants={fadeUpItem} className="space-y-1.5">
+          <label className="text-xs font-semibold text-ink uppercase tracking-wider">
+            Tên dự án <span className="text-pastel-red-ink">*</span>
           </label>
           <input
             type="text"
             value={data.name}
             onChange={handleNameChange}
             placeholder="Ví dụ: Website Revamp Q3, TaskFlow Core Engine..."
-            className="w-full bg-slate-50 border border-line/20 rounded-2xl px-4 py-3 text-xs font-semibold focus:ring-2 focus:ring-brand/20 outline-none transition-all placeholder:text-subtle"
+            className="w-full bg-surface border border-hairline rounded-lg px-4 py-3 text-xs font-medium focus:ring-2 focus:ring-brand/15 focus:border-ink/20 outline-none transition-all placeholder:text-subtle"
           />
-        </div>
+        </motion.div>
 
-        <div className="space-y-1.5">
-          <label className="text-xs font-extrabold text-ink uppercase tracking-wider">
-            Mã khoá dự án (Key) <span className="text-red-500">*</span>
+        <motion.div variants={fadeUpItem} className="space-y-1.5">
+          <label className="text-xs font-semibold text-ink uppercase tracking-wider">
+            Mã khoá dự án (Key) <span className="text-pastel-red-ink">*</span>
           </label>
           <input
             type="text"
@@ -75,33 +77,33 @@ const SetupBasicInfo = ({ data, onChange }: SetupBasicInfoProps) => {
             onChange={handleKeyChange}
             placeholder="Ví dụ: WEB, TFC, OPS (tối đa 5 ký tự)"
             aria-invalid={showKeyError}
-            className={`w-full bg-slate-50 border rounded-2xl px-4 py-3 text-xs font-semibold outline-none transition-all placeholder:text-subtle ${
+            className={`w-full bg-surface border rounded-lg px-4 py-3 text-xs font-medium outline-none transition-all placeholder:text-subtle ${
               showKeyError
-                ? 'border-red-400 focus:ring-2 focus:ring-red-400/30'
-                : 'border-line/20 focus:ring-2 focus:ring-brand/20'
+                ? 'border-red-300 focus:ring-2 focus:ring-red-300/40'
+                : 'border-hairline focus:ring-2 focus:ring-brand/15 focus:border-ink/20'
             }`}
           />
           {showKeyError ? (
-            <p className="text-[10px] text-red-500 font-semibold">
+            <p className="text-[10px] text-pastel-red-ink font-medium">
               Mã khoá phải còn ít nhất 2 ký tự chữ/số sau khi bỏ ký tự đặc biệt.
             </p>
           ) : (
-            <p className="text-[10px] text-muted font-semibold">Dùng làm tiền tố đánh số công việc (vd: WEB-1, WEB-2...).</p>
+            <p className="text-[10px] text-subtle">Dùng làm tiền tố đánh số công việc (vd: WEB-1, WEB-2...).</p>
           )}
-        </div>
+        </motion.div>
 
-        <div className="space-y-1.5">
-          <label className="text-xs font-extrabold text-ink uppercase tracking-wider">Mô tả chi tiết</label>
+        <motion.div variants={fadeUpItem} className="space-y-1.5">
+          <label className="text-xs font-semibold text-ink uppercase tracking-wider">Mô tả chi tiết</label>
           <textarea
             value={data.description}
             onChange={handleDescriptionChange}
             rows={4}
             placeholder="Tóm tắt mục tiêu dự án, phạm vi công việc và kết quả đầu ra mong đợi..."
-            className="w-full bg-slate-50 border border-line/20 rounded-2xl px-4 py-3 text-xs font-semibold focus:ring-2 focus:ring-brand/20 outline-none transition-all placeholder:text-subtle resize-none"
+            className="w-full bg-surface border border-hairline rounded-lg px-4 py-3 text-xs font-medium focus:ring-2 focus:ring-brand/15 focus:border-ink/20 outline-none transition-all placeholder:text-subtle resize-none"
           />
-        </div>
+        </motion.div>
       </div>
-    </div>
+    </motion.div>
   )
 }
 

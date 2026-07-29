@@ -18,7 +18,7 @@ const AuthLayout = ({ children }: { children: ReactNode }) => {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-            className="mx-auto flex w-full max-w-[460px] flex-col space-y-6 rounded-[28px] border border-white/60 bg-white/40 p-7 shadow-[0_20px_60px_-15px_rgba(107,56,212,0.25)] backdrop-blur-2xl sm:p-9 md:col-span-5"
+            className="mx-auto flex w-full max-w-[460px] flex-col space-y-6 rounded-[28px] border border-white/10 bg-surface/40 p-7 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.55)] backdrop-blur-2xl sm:p-9 md:col-span-5"
           >
             {children}
           </motion.div>

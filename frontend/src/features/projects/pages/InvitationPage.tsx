@@ -131,7 +131,7 @@ const InvitationPage = () => {
         </div>
       ) : (
         <div className="py-4 flex flex-col items-center gap-3 text-center">
-          <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center text-red-500">
+          <div className="w-12 h-12 rounded-full bg-pastel-red flex items-center justify-center text-pastel-red-ink">
             <ShieldAlert size={22} />
           </div>
           <div className="space-y-1">

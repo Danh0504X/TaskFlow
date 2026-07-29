@@ -9,26 +9,28 @@ interface IssuePriorityBadgeProps {
   className?: string
 }
 
+// Dùng đúng 4 pastel chung của app cho 4 mức ưu tiên — nhất quán với methodology badge và
+// status badge, thay vì các màu Tailwind mặc định (red/amber/blue/gray) rời rạc trước đây.
 const config: Record<IssuePriority, { label: string; style: string; icon: ReactNode }> = {
   URGENT: {
     label: 'Khẩn cấp',
-    style: 'bg-red-50 text-red-700 border-red-100',
-    icon: <AlertCircle className="text-red-600" size={14} />,
+    style: 'bg-pastel-red text-pastel-red-ink border-transparent',
+    icon: <AlertCircle size={14} />,
   },
   HIGH: {
     label: 'Cao',
-    style: 'bg-amber-50 text-amber-700 border-amber-100',
-    icon: <ChevronUp className="text-amber-600" size={14} />,
+    style: 'bg-pastel-yellow text-pastel-yellow-ink border-transparent',
+    icon: <ChevronUp size={14} />,
   },
   MEDIUM: {
     label: 'Trung bình',
-    style: 'bg-blue-50 text-blue-700 border-blue-100',
-    icon: <Minus className="text-blue-600" size={14} />,
+    style: 'bg-pastel-blue text-pastel-blue-ink border-transparent',
+    icon: <Minus size={14} />,
   },
   LOW: {
     label: 'Thấp',
-    style: 'bg-gray-50 text-gray-600 border-gray-100',
-    icon: <ChevronDown className="text-gray-500" size={14} />,
+    style: 'bg-canvas text-subtle border-hairline',
+    icon: <ChevronDown size={14} />,
   },
 }
 

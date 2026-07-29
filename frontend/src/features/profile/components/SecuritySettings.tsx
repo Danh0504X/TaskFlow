@@ -39,7 +39,7 @@ export function SecuritySettings() {
   };
 
   return (
-    <section className="bg-white rounded-2xl p-6 shadow-sm border border-[#c7c4d7]/30">
+    <section className="bg-surface rounded-2xl p-6 shadow-sm border border-[#c7c4d7]/30">
       <header className="flex items-center gap-2.5 mb-5">
         <span className="material-symbols-outlined text-[20px] text-[#4648d4]">security</span>
         <h3 className="text-base font-bold text-[#121c2a]">Bảo mật & Mật khẩu</h3>
@@ -48,7 +48,7 @@ export function SecuritySettings() {
       <div className="space-y-4">
         {/* TRƯỜNG HỢP 1: Hiển thị thông tin liên kết Google */}
         {isGoogle && (
-          <div className="p-4 bg-white rounded-xl border border-[#c7c4d7]/40 flex flex-col gap-4 shadow-sm">
+          <div className="p-4 bg-surface rounded-xl border border-[#c7c4d7]/40 flex flex-col gap-4 shadow-sm">
             <div className="flex items-start gap-3">
               <div className="w-9 h-9 rounded-lg bg-[#4285F4]/10 flex items-center justify-center shrink-0">
                 <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24">
@@ -113,7 +113,7 @@ export function SecuritySettings() {
 
       {/* Hộp thoại thông báo kết quả gửi email quên mật khẩu */}
       <Modal open={modalConfig.open} onClose={closeModal} title={modalConfig.title} tone={modalConfig.tone} layout="compact"
-        footer={<button onClick={closeModal} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-200 transition-colors">Đóng</button>}
+        footer={<button onClick={closeModal} className="px-4 py-2 bg-canvas text-ink rounded-lg text-sm font-semibold hover:bg-hairline transition-colors">Đóng</button>}
       >
         <p className="text-sm text-[#464554] leading-relaxed">{modalConfig.message}</p>
       </Modal>

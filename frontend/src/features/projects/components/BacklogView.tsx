@@ -59,13 +59,13 @@ const IssueRow = ({
   return (
     <div
       onClick={() => onSelectIssue(issue.key)}
-      className="flex flex-wrap items-center justify-between gap-4 p-3 bg-white border border-line/15 rounded-2xl hover:bg-slate-50/50 transition-all cursor-pointer select-none"    >
+      className="flex flex-wrap items-center justify-between gap-4 p-3 bg-surface border border-hairline rounded-lg hover:border-ink/15 transition-colors cursor-pointer select-none"    >
       <div className="flex items-center gap-3 flex-1 min-w-0">
         <IssueTypeIcon type={issue.type} size={14} />
         <span className="text-xs font-bold text-brand flex-shrink-0">{issue.key}</span>
         <p className="text-xs font-semibold text-ink truncate flex-grow max-w-lg">{issue.title}</p>
         {issue.epicName && (
-          <span className="px-2 py-0.5 bg-brand/5 border border-brand/10 text-brand rounded text-[9px] font-bold uppercase tracking-wider flex-shrink-0">
+          <span className="px-2 py-0.5 bg-pastel-blue text-pastel-blue-ink rounded text-[9px] font-bold uppercase tracking-wider flex-shrink-0">
             {issue.epicName}
           </span>
         )}
@@ -320,20 +320,20 @@ const BacklogView = ({ projectId, onSelectIssue, onGoToBoard }: BacklogViewProps
         {activeSprint && (
           <DroppableContainer
             id={activeSprint._id}
-            className="bg-white border-2 border-blue-200 rounded-3xl p-6 shadow-sm"
+            className="bg-surface border-2 border-pastel-blue-ink/25 rounded-lg p-6"
           >
-            <div className="flex flex-wrap items-center justify-between gap-4 mb-5 pb-4 border-b border-line/10">
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-5 pb-4 border-b border-hairline">
               <div className="flex items-start gap-3">
                 <button
                   onClick={() => toggleOpen(activeSprint._id)}
-                  className="p-1 mt-0.5 rounded hover:bg-slate-100 text-muted transition-all shrink-0"
+                  className="p-1 mt-0.5 rounded hover:bg-canvas text-muted transition-colors shrink-0"
                 >
                   {isOpen(activeSprint._id) ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
                 </button>
                 <div>
                   <div className="flex items-center gap-2.5">
-                    <h3 className="text-base font-extrabold text-ink">{activeSprint.name}</h3>
-                    <span className="px-2.5 py-0.5 bg-blue-50 text-blue-700 border border-blue-100 rounded-md text-[10px] font-bold uppercase tracking-wider">
+                    <h3 className="text-base font-semibold text-ink">{activeSprint.name}</h3>
+                    <span className="px-2.5 py-0.5 bg-pastel-blue text-pastel-blue-ink rounded-md text-[10px] font-bold uppercase tracking-wider">
                       Đang chạy
                     </span>
                   </div>
@@ -376,7 +376,7 @@ const BacklogView = ({ projectId, onSelectIssue, onGoToBoard }: BacklogViewProps
             <DroppableContainer
               key={sprint._id}
               id={sprint._id}
-              className="bg-white border border-line/30 rounded-3xl p-6 shadow-sm"
+              className="bg-surface border border-hairline rounded-lg p-6"
             >
               <PlannedSprintCardHeader
                 sprint={sprint}
@@ -415,17 +415,17 @@ const BacklogView = ({ projectId, onSelectIssue, onGoToBoard }: BacklogViewProps
           )
         })}
 
-        <DroppableContainer id={BACKLOG_CONTAINER_ID} className="bg-white border border-line/30 rounded-3xl p-6 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-4 mb-6 pb-4 border-b border-line/10">
+        <DroppableContainer id={BACKLOG_CONTAINER_ID} className="bg-surface border border-hairline rounded-lg p-6">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-6 pb-4 border-b border-hairline">
             <div className="flex items-center gap-3">
               <button
                 onClick={() => toggleOpen(BACKLOG_CONTAINER_ID)}
-                className="p-1 rounded hover:bg-slate-100 text-muted transition-all"
+                className="p-1 rounded hover:bg-canvas text-muted transition-colors"
               >
                 {isOpen(BACKLOG_CONTAINER_ID) ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
               </button>
               <div>
-                <h3 className="text-base font-extrabold text-ink">Bể công việc (Backlog)</h3>
+                <h3 className="text-base font-semibold text-ink">Bể công việc (Backlog)</h3>
                 <p className="text-xs text-muted mt-1 font-medium">{backlogIssues.length} công việc chưa lên kế hoạch</p>
               </div>
             </div>

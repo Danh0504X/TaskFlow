@@ -31,7 +31,7 @@ const matchWeekPreset = (startInput: string, endInput: string): number | null =>
 }
 
 const fieldClass =
-    'w-full bg-slate-50 border border-line/25 rounded-lg px-3 py-2 text-xs font-semibold outline-none focus:ring-2 focus:ring-brand/20'
+    'w-full bg-surface border border-line/25 rounded-lg px-3 py-2 text-xs font-semibold outline-none focus:ring-2 focus:ring-brand/20'
 
 /**
  * Modal sửa 1 sprint PLANNED — dùng chung cho 2 luồng:
@@ -183,8 +183,8 @@ const SprintFormModal = ({ projectId, sprint, mode, onClose }: SprintFormModalPr
                                 type="button"
                                 onClick={() => handleWeekPreset(weeks)}
                                 className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-bold border transition-all ${weekPreset === weeks
-                                        ? 'bg-brand text-white border-brand shadow-sm'
-                                        : 'bg-white text-muted border-line/25 hover:border-brand/30 hover:text-brand'
+                                        ? 'bg-brand text-canvas border-brand shadow-sm'
+                                        : 'bg-surface text-muted border-line/25 hover:border-brand/30 hover:text-brand'
                                     }`}
                             >
                                 {weeks} tuần

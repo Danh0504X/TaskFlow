@@ -95,7 +95,7 @@ const ProjectInviteModal = ({ open, onClose, projectId }: ProjectInviteModalProp
       <div className="space-y-4">
         <form onSubmit={handleAddInvite} className="flex gap-2 items-end">
           <div className="flex-grow space-y-1.5">
-            <label className="text-[10px] font-extrabold text-ink uppercase tracking-wider">
+            <label className="text-[10px] font-semibold text-ink uppercase tracking-wider">
               Địa chỉ email thành viên
             </label>
             <div className="relative">
@@ -106,7 +106,7 @@ const ProjectInviteModal = ({ open, onClose, projectId }: ProjectInviteModalProp
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="nhanvien@company.com"
                 disabled={isPending}
-                className="w-full bg-slate-50 border border-line/20 rounded-xl pl-10 pr-4 py-2 text-xs font-semibold focus:ring-2 focus:ring-brand/20 outline-none transition-all placeholder:text-subtle"
+                className="w-full bg-surface border border-hairline rounded-lg pl-10 pr-4 py-2 text-xs font-medium focus:ring-2 focus:ring-brand/15 focus:border-ink/20 outline-none transition-all placeholder:text-subtle"
               />
             </div>
           </div>
@@ -123,22 +123,22 @@ const ProjectInviteModal = ({ open, onClose, projectId }: ProjectInviteModalProp
           </Button>
         </form>
 
-        <div className="space-y-2 pt-2 border-t border-line/10">
-          <h3 className="text-[10px] font-extrabold text-ink uppercase tracking-wider">
+        <div className="space-y-2 pt-2 border-t border-hairline">
+          <h3 className="text-[10px] font-semibold text-ink uppercase tracking-wider">
             Danh sách sẽ mời ({invites.length})
           </h3>
           <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1 scrollbar-thin">
             {invites.map((member, index) => (
               <div
                 key={member.email}
-                className="flex items-center justify-between p-2.5 border border-line/15 rounded-xl bg-slate-50/50 hover:bg-slate-50 transition-all"
+                className="flex items-center justify-between p-2.5 border border-hairline rounded-lg bg-surface hover:border-ink/15 transition-colors"
               >
                 <span className="text-xs font-semibold text-ink truncate flex-1 mr-2">{member.email}</span>
                 <button
                   type="button"
                   onClick={() => handleRemoveInvite(index)}
                   disabled={isPending}
-                  className="p-1 text-muted hover:text-red-500 rounded-lg hover:bg-slate-100 transition-all shrink-0"
+                  className="p-1 text-muted hover:text-pastel-red-ink rounded-md hover:bg-pastel-red transition-colors shrink-0"
                 >
                   <X size={14} />
                 </button>

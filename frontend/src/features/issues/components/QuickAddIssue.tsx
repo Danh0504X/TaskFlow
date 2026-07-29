@@ -157,7 +157,7 @@ const QuickAddIssue = ({ projectId, targetSprintId, nextOrderIndex, status, allo
     return (
       <button
         onClick={() => setIsAdding(true)}
-        className="w-full flex items-center justify-center gap-2 py-3 border border-dashed border-line/40 rounded-2xl text-subtle hover:border-brand/40 hover:text-brand hover:bg-brand/5 transition-all"
+        className="w-full flex items-center justify-center gap-2 py-3 border border-dashed border-hairline rounded-lg text-subtle hover:border-ink/25 hover:text-ink transition-colors"
       >
         <Plus size={16} />
         <span className="text-xs font-semibold">Thêm issue</span>
@@ -179,7 +179,7 @@ const QuickAddIssue = ({ projectId, targetSprintId, nextOrderIndex, status, allo
         onChange={(e) => setTitle(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder="Nhập tên issue rồi Enter..."
-        className="flex-1 min-w-0 bg-white border border-brand/30 rounded-2xl px-3.5 py-3 text-xs font-semibold focus:ring-2 focus:ring-brand/20 outline-none disabled:opacity-60"
+        className="flex-1 min-w-0 bg-surface border border-hairline rounded-lg px-3.5 py-3 text-xs font-semibold focus:ring-2 focus:ring-brand/15 focus:border-ink/20 outline-none disabled:opacity-60"
       />
       <AssigneePicker
         projectId={projectId}

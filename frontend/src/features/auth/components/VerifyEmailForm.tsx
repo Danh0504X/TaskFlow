@@ -8,7 +8,7 @@ import { errorClass, primaryButtonClass } from '../auth.styles'
 
 // Ô nhập mã: cùng phong cách input chung nhưng căn giữa + giãn ký tự cho dễ đọc.
 const codeInputClass =
-  'h-12 w-full rounded-xl border border-line/80 bg-white/50 px-4 text-center text-lg tracking-[0.5em] text-ink backdrop-blur-md transition placeholder:text-base placeholder:tracking-normal placeholder:text-subtle outline-none focus:border-transparent focus:ring-2 focus:ring-brand/70'
+  'h-12 w-full rounded-xl border border-line/80 bg-surface/50 px-4 text-center text-lg tracking-[0.5em] text-ink backdrop-blur-md transition placeholder:text-base placeholder:tracking-normal placeholder:text-subtle outline-none focus:border-transparent focus:ring-2 focus:ring-brand/70'
 
 const decodeJWT = (token: string) => {
   try {

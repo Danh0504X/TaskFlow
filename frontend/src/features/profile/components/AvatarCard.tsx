@@ -9,7 +9,7 @@ export function AvatarCard() {
   const roleLabel = user.role === 'admin' ? 'Quản trị viên' : 'Thành viên hệ thống';
 
   return (
-    <section className="bg-white rounded-2xl p-6 flex flex-col items-center text-center shadow-sm border border-[#c7c4d7]/30">
+    <section className="bg-surface rounded-2xl p-6 flex flex-col items-center text-center shadow-sm border border-[#c7c4d7]/30">
       <div className="mb-4">
         <Avatar
           src={user.avatarUrl}

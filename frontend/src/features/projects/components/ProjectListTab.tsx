@@ -119,7 +119,7 @@ const IssueRow = ({ issue, projectId, isOwner, depth, onSelectIssue, onDeleteIss
   return (
     <div
       onClick={() => onSelectIssue(issue.key)}
-      className={`group flex items-center gap-3 px-3 py-2 rounded-2xl transition-colors cursor-pointer ${isEpic ? 'bg-brand/5 hover:bg-brand/10' : 'hover:bg-slate-50/70'
+      className={`group flex items-center gap-3 px-3 py-2 rounded-lg transition-colors cursor-pointer ${isEpic ? 'bg-pastel-blue/50 hover:bg-pastel-blue' : 'hover:bg-canvas'
         }`}
     >
       <div className="w-6 flex justify-center shrink-0">
@@ -131,7 +131,7 @@ const IssueRow = ({ issue, projectId, isOwner, depth, onSelectIssue, onDeleteIss
               toggle.onToggle()
             }}
             disabled={toggle.childCount === 0}
-            className="p-0.5 rounded hover:bg-slate-200/60 text-muted group-hover:text-brand transition-all disabled:opacity-25 disabled:pointer-events-none"
+            className="p-0.5 rounded hover:bg-canvas text-muted group-hover:text-ink transition-colors disabled:opacity-25 disabled:pointer-events-none"
             aria-label={toggle.collapsed ? 'Mở rộng' : 'Thu gọn'}
           >
             {toggle.collapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
@@ -161,7 +161,7 @@ const IssueRow = ({ issue, projectId, isOwner, depth, onSelectIssue, onDeleteIss
                 setIsEditingTitle(false)
               }
             }}
-            className="flex-1 min-w-0 bg-white border border-brand/30 rounded-lg px-2 py-1 text-xs font-semibold text-ink outline-none focus:ring-2 focus:ring-brand/20"
+            className="flex-1 min-w-0 bg-surface border border-ink/20 rounded-lg px-2 py-1 text-xs font-semibold text-ink outline-none focus:ring-2 focus:ring-brand/15"
           />
         ) : (
           <>
@@ -187,7 +187,7 @@ const IssueRow = ({ issue, projectId, isOwner, depth, onSelectIssue, onDeleteIss
                   e.stopPropagation()
                   setIsEditingTitle(true)
                 }}
-                className="p-1 rounded opacity-0 group-hover:opacity-100 text-subtle hover:text-brand hover:bg-slate-100 transition-all shrink-0"
+                className="p-1 rounded opacity-0 group-hover:opacity-100 text-subtle hover:text-ink hover:bg-canvas transition-all shrink-0"
                 aria-label="Sửa tên"
                 title="Sửa tên"
               >
@@ -195,7 +195,7 @@ const IssueRow = ({ issue, projectId, isOwner, depth, onSelectIssue, onDeleteIss
               </button>
             )}
             {issue.epicName && (
-              <span className="px-2 py-0.5 bg-brand/5 border border-brand/10 text-brand rounded text-[9px] font-bold uppercase tracking-wider shrink-0">
+              <span className="px-2 py-0.5 bg-pastel-blue text-pastel-blue-ink rounded text-[9px] font-bold uppercase tracking-wider shrink-0">
                 {issue.epicName}
               </span>
             )}
@@ -236,7 +236,7 @@ const IssueRow = ({ issue, projectId, isOwner, depth, onSelectIssue, onDeleteIss
               e.stopPropagation()
               onAddChild()
             }}
-            className="p-1.5 rounded-lg text-subtle hover:bg-brand/10 hover:text-brand transition-all"
+            className="p-1.5 rounded-lg text-subtle hover:bg-pastel-blue hover:text-pastel-blue-ink transition-colors"
             aria-label={`Thêm việc con cho ${issue.key}`}
             title="Thêm việc con"
           >
@@ -249,7 +249,7 @@ const IssueRow = ({ issue, projectId, isOwner, depth, onSelectIssue, onDeleteIss
             e.stopPropagation()
             onDeleteIssue(issue)
           }}
-          className="p-1.5 rounded-lg text-subtle hover:bg-red-50 hover:text-red-500 transition-all"
+          className="p-1.5 rounded-lg text-subtle hover:bg-pastel-red hover:text-pastel-red-ink transition-colors"
           aria-label={`Xoá ${issue.key}`}
           title="Xoá issue"
         >
@@ -319,7 +319,7 @@ const InlineAddIssueRow = ({ depth, childType, onCancel, onSubmit }: InlineAddIs
           }
         }}
         placeholder={childType === ISSUE_TYPE.SUBTASK ? 'Nhập tên việc con rồi Enter...' : 'Nhập tên công việc rồi Enter...'}
-        className="w-full bg-white border border-brand/30 rounded-lg px-3 py-1.5 text-xs font-semibold text-ink outline-none focus:ring-2 focus:ring-brand/20 placeholder:text-subtle placeholder:font-medium"
+        className="w-full bg-surface border border-ink/20 rounded-lg px-3 py-1.5 text-xs font-semibold text-ink outline-none focus:ring-2 focus:ring-brand/15 placeholder:text-subtle placeholder:font-medium"
       />
     </div>
   )
@@ -433,7 +433,7 @@ const ProjectListTab = ({ projectId, onSelectIssue }: ProjectListTabProps) => {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-4 py-3.5 px-5 bg-white/70 backdrop-blur-md rounded-2xl border border-line/30 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-4 py-3.5 px-5 bg-surface rounded-lg border border-hairline">
         <SearchInput
           containerClassName="max-w-md"
           value={query}
@@ -442,14 +442,14 @@ const ProjectListTab = ({ projectId, onSelectIssue }: ProjectListTabProps) => {
         />
       </div>
 
-      <div className="bg-white border border-line/30 rounded-3xl p-3 shadow-sm">
+      <div className="bg-surface border border-hairline rounded-lg p-3">
         {isLoading ? (
           <div className="py-12 flex justify-center text-muted">
             <Spinner />
           </div>
         ) : (
           <>
-            <div className="sticky top-0 z-10 flex items-center gap-3 px-3 py-2 text-[10px] font-bold text-muted uppercase tracking-wider bg-white border-b border-line/15 rounded-t-2xl">
+            <div className="sticky top-0 z-10 flex items-center gap-3 px-3 py-2 text-[10px] font-bold text-muted uppercase tracking-wider bg-surface border-b border-hairline rounded-t-lg">
               <div className="w-6 shrink-0" />
               <div className="flex-1 min-w-0">Công việc</div>
               <div className={COL_ASSIGNEE}>Người thực hiện</div>

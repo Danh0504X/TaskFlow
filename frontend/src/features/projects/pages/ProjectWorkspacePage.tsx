@@ -58,14 +58,14 @@ const WorkspaceTabs = ({ items, value, onChange }: WorkspaceTabsProps) => {
             onClick={() => onChange(item.value)}
             className={cn(
               'relative pb-2.5 text-xs font-semibold transition-colors',
-              isActive ? 'text-brand' : 'text-muted hover:text-ink',
+              isActive ? 'text-ink' : 'text-muted hover:text-ink',
             )}
           >
             {item.label}
             {isActive && (
               <motion.span
                 layoutId="workspace-tab-underline"
-                className="absolute left-0 right-0 -bottom-px h-[2px] bg-brand rounded-full"
+                className="absolute left-0 right-0 -bottom-px h-[2px] bg-ink rounded-full"
                 transition={reduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 420, damping: 34 }}
               />
             )}
@@ -140,10 +140,10 @@ const ProjectWorkspacePage = () => {
   return (
     <div className="h-screen flex flex-col overflow-hidden">
       {/* Header cố định — không cuộn theo nội dung tab bên dưới. */}
-      <header className="shrink-0 border-b border-line/20 bg-white/80 backdrop-blur-md px-6 md:px-8 pt-3">
+      <header className="shrink-0 border-b border-hairline bg-surface px-6 md:px-8 pt-3">
         <button
           onClick={() => navigate('/projects')}
-          className="flex items-center gap-1.5 text-[11px] font-bold text-muted hover:text-brand transition-all w-fit mb-2"
+          className="flex items-center gap-1.5 text-[11px] font-bold text-muted hover:text-ink transition-colors w-fit mb-2"
         >
           <ArrowLeft size={12} />
           <span>Dự án của tôi</span>
@@ -151,7 +151,7 @@ const ProjectWorkspacePage = () => {
 
         <div className="flex flex-wrap items-center justify-between gap-3 pb-3">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-lg bg-brand/8 border border-brand/10 flex items-center justify-center text-brand font-extrabold text-xs shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-pastel-blue flex items-center justify-center text-pastel-blue-ink font-extrabold text-xs shrink-0">
               {(project.key || project.name).slice(0, 2).toUpperCase()}
             </div>
             <h1 className="text-lg md:text-xl font-bold text-ink tracking-tight truncate">{project.name}</h1>
@@ -174,11 +174,11 @@ const ProjectWorkspacePage = () => {
                       src={member.user?.avatarUrl}
                       name={member.user?.fullName || 'Thành viên'}
                       size={24}
-                      className="border-2 border-white shadow-sm ring-1 ring-slate-100/50"
+                      className="border-2 border-surface ring-1 ring-hairline"
                     />
                   ))}
                 {project.members.filter((m) => m.status !== 'REMOVED').length > 4 && (
-                  <div className="w-6 h-6 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center text-[9px] font-bold text-slate-600 shadow-sm ring-1 ring-slate-100/50 shrink-0">
+                  <div className="w-6 h-6 rounded-full bg-canvas border-2 border-surface flex items-center justify-center text-[9px] font-bold text-muted ring-1 ring-hairline shrink-0">
                     +{project.members.filter((m) => m.status !== 'REMOVED').length - 4}
                   </div>
                 )}
@@ -190,7 +190,7 @@ const ProjectWorkspacePage = () => {
             {isOwner && (
               <button
                 onClick={() => setIsInviteOpen(true)}
-                className="flex items-center gap-1.5 px-3.5 py-2 bg-white text-ink border border-line/30 rounded-xl text-xs font-bold hover:bg-slate-50 transition-all active:scale-95"
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-surface text-ink border border-hairline rounded-lg text-xs font-semibold hover:border-ink/20 transition-colors active:scale-[0.98]"
               >
                 <UserPlus size={14} className="text-muted" />
                 <span>Thêm thành viên</span>
@@ -198,7 +198,7 @@ const ProjectWorkspacePage = () => {
             )}
             <button
               onClick={() => setIsCreateIssueOpen(true)}
-              className="flex items-center gap-1.5 px-3.5 py-2 bg-brand text-white rounded-xl text-xs font-bold shadow-md shadow-brand/20 hover:bg-brand-light transition-all active:scale-95"
+              className="flex items-center gap-1.5 px-3.5 py-2 bg-ink text-canvas rounded-lg text-xs font-semibold hover:bg-[#e4e4e5] transition-colors active:scale-[0.98]"
             >
               <Plus size={14} />
               <span>Thêm issue</span>
@@ -209,8 +209,14 @@ const ProjectWorkspacePage = () => {
         <WorkspaceTabs items={getTabItems(project.methodology)} value={activeTab} onChange={setActiveTab} />
       </header>
 
-      {/* Body — vùng cuộn DUY NHẤT của trang, header phía trên luôn đứng yên. */}
-      <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin">
+      {/* Body — vùng cuộn DUY NHẤT của trang, header phía trên luôn đứng yên.
+          [scrollbar-gutter:stable]: luôn dành sẵn chỗ cho thanh cuộn dọc dù nội dung tab hiện
+          tại chưa đủ dài để cuộn (vd Danh sách) — chỉ đặt `scrollbar-gutter: stable` trên
+          `html` (index.css) là không đủ vì div này tự cuộn riêng (overflow-y-auto), không phải
+          document cuộn. Thiếu dòng này: đổi qua lại giữa tab thấp (Danh sách) và tab cao hơn
+          (Board/Backlog/Tóm tắt) làm thanh cuộn ẩn/hiện liên tục -> nội dung bị đẩy ngang mỗi
+          lần đổi tab, giao diện "vỡ". */}
+      <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin [scrollbar-gutter:stable]">
         <div className="max-w-7xl mx-auto p-6 md:p-8">
           <div className="relative">
             <AnimatePresence mode="popLayout" initial={false}>

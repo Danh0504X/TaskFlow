@@ -13,7 +13,7 @@ export const DroppableContainer = ({ id, children, className }: DroppableContain
   return (
     <div
       ref={setNodeRef}
-      className={`${className} ${isOver ? 'bg-slate-100/50 outline-2 outline-dashed outline-brand/30' : ''} transition-all`}
+      className={`${className} ${isOver ? 'bg-pastel-blue/40 outline-2 outline-dashed outline-pastel-blue-ink/40' : ''} transition-colors`}
     >
       {children}
     </div>

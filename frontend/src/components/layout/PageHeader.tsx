@@ -17,9 +17,9 @@ const PageHeader = ({ title, subtitle, actions }: PageHeaderProps) => (
   <header
     className="sticky top-0 z-10 flex flex-col sm:flex-row sm:items-end justify-between gap-4 px-8 md:px-12 pt-8 md:pt-10 pb-5 border-b border-hairline"
     style={{
-      background: `radial-gradient(circle at 0% 0%, #ebdffd 0%, transparent 55%),
-                  radial-gradient(circle at 100% 100%, #fce7f3 0%, transparent 55%),
-                  #fafafa`,
+      background: `radial-gradient(circle at 0% 0%, rgba(255,255,255,0.05) 0%, transparent 55%),
+                  radial-gradient(circle at 100% 100%, rgba(255,255,255,0.03) 0%, transparent 55%),
+                  #232326`,
       backgroundAttachment: 'fixed',
     }}
   >

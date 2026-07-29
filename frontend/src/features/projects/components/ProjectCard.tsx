@@ -21,7 +21,7 @@ interface ProjectCardProps {
 const ProjectCard = ({ project, isOwner, onEdit, onDelete, onLeave, staggerIndex = 0 }: ProjectCardProps) => {
   return (
     <div
-      className="group animate-fade-up bg-white border border-hairline rounded-lg p-4 hover:border-ink/15 transition-colors flex flex-col gap-3"
+      className="group animate-fade-up bg-surface border border-hairline rounded-lg p-4 hover:border-ink/15 transition-colors flex flex-col gap-3"
       style={{ '--stagger': staggerIndex } as CSSProperties}
     >
       <div className="flex items-start justify-between gap-2">

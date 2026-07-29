@@ -150,7 +150,7 @@ const ProjectsView = () => {
               </div>
               <button
                 onClick={() => navigate('/projects/new')}
-                className="flex items-center gap-2 px-4 py-2.5 bg-ink text-white rounded-lg text-sm font-semibold hover:bg-[#333333] transition-colors active:scale-[0.98]"
+                className="flex items-center gap-2 px-4 py-2.5 bg-ink text-canvas rounded-lg text-sm font-semibold hover:bg-[#e4e4e5] transition-colors active:scale-[0.98]"
               >
                 <Plus size={15} />
                 <span>Tạo dự án đầu tiên</span>

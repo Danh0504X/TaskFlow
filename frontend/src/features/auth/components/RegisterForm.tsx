@@ -214,7 +214,7 @@ const RegisterForm = () => {
                 className={cn(
                   'mt-1.5',
                   inputClass,
-                  decodedEmail && 'opacity-60 bg-slate-100 cursor-not-allowed'
+                  decodedEmail && 'opacity-60 bg-canvas cursor-not-allowed'
                 )}
               />
               {errors.email && (
@@ -233,7 +233,7 @@ const RegisterForm = () => {
             className="space-y-4"
           >
             {/* Cho biết đang tạo mật khẩu cho email nào (lấy từ bước 1). */}
-            <div className="flex items-start gap-2.5 rounded-xl border border-line/60 bg-white/50 px-4 py-3 backdrop-blur-md">
+            <div className="flex items-start gap-2.5 rounded-xl border border-line/60 bg-surface/50 px-4 py-3 backdrop-blur-md">
               <Mail className="mt-0.5 h-[18px] w-[18px] shrink-0 text-brand" />
               <p className="text-[13px] leading-snug text-muted">
                 Creating a password for{' '}

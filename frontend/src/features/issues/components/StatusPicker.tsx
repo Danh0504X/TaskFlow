@@ -52,7 +52,7 @@ const StatusPicker = ({ value, onChange, onOpenChange, readOnly = false }: Statu
             ref={dropdownRef}
             onClick={(e) => e.stopPropagation()}
             style={{ position: 'fixed', top: coords.top, left: coords.left, width: DROPDOWN_WIDTH }}
-            className="z-50 bg-white border border-line/20 rounded-2xl shadow-lg py-1.5"
+            className="z-50 bg-surface border border-hairline rounded-lg shadow-lg py-1.5"
           >
             {OPTIONS.map((opt) => (
               <button
@@ -62,7 +62,7 @@ const StatusPicker = ({ value, onChange, onOpenChange, readOnly = false }: Statu
                   onChange(opt)
                   close()
                 }}
-                className="w-full flex items-center justify-between gap-2 px-3 py-2 hover:bg-slate-50 transition-all"
+                className="w-full flex items-center justify-between gap-2 px-3 py-2 hover:bg-canvas transition-colors"
               >
                 <IssueStatusBadge status={opt} />
                 {value === opt && <Check size={14} className="text-brand shrink-0" />}

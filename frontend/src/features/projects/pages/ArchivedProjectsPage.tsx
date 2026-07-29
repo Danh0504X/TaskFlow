@@ -39,7 +39,7 @@ const ArchivedProjectsPage = () => {
       <header className="flex items-center gap-4">
         <button
           onClick={() => navigate('/projects')}
-          className="p-2 text-muted hover:text-ink hover:bg-slate-100 rounded-xl transition-all"
+          className="p-2 text-muted hover:text-ink hover:bg-canvas rounded-xl transition-all"
           aria-label="Quay lại"
         >
           <ArrowLeft size={20} />
@@ -71,7 +71,7 @@ const ArchivedProjectsPage = () => {
         <>
           {projects.length === 0 ? (
             <div className="flex flex-col items-center gap-4 border border-dashed border-line/35 rounded-3xl py-24 text-center">
-              <div className="w-14 h-14 rounded-2xl bg-slate-50 border border-line/10 flex items-center justify-center text-muted">
+              <div className="w-14 h-14 rounded-2xl bg-surface border border-line/10 flex items-center justify-center text-muted">
                 <FolderKanban size={26} />
               </div>
               <div>
@@ -80,11 +80,11 @@ const ArchivedProjectsPage = () => {
               </div>
             </div>
           ) : (
-            <div className="border border-line/15 rounded-3xl bg-white overflow-hidden shadow-sm">
+            <div className="border border-line/15 rounded-3xl bg-surface overflow-hidden shadow-sm">
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse text-left">
                   <thead>
-                    <tr className="border-b border-line/15 bg-slate-50/50 text-[10px] font-extrabold text-muted uppercase tracking-wider">
+                    <tr className="border-b border-line/15 bg-surface/50 text-[10px] font-extrabold text-muted uppercase tracking-wider">
                       <th className="px-6 py-4">Dự án</th>
                       <th className="px-6 py-4">Mã</th>
                       <th className="px-6 py-4">Quy trình</th>
@@ -96,11 +96,11 @@ const ArchivedProjectsPage = () => {
                     {projects.map((project) => (
                       <tr
                         key={project._id}
-                        className="hover:bg-slate-50/40 transition-colors"
+                        className="hover:bg-surface/40 transition-colors"
                       >
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-slate-100 border border-line/20 flex items-center justify-center text-muted font-bold text-xs shrink-0">
+                            <div className="w-8 h-8 rounded-lg bg-canvas border border-line/20 flex items-center justify-center text-muted font-bold text-xs shrink-0">
                               {(project.key || project.name).slice(0, 2).toUpperCase()}
                             </div>
                             <span className="text-sm font-bold text-ink" title="Khôi phục để xem chi tiết dự án">
@@ -109,7 +109,7 @@ const ArchivedProjectsPage = () => {
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <span className="text-xs font-semibold text-muted bg-slate-100 px-2 py-1 rounded-md">
+                          <span className="text-xs font-semibold text-muted bg-canvas px-2 py-1 rounded-md">
                             {project.key}
                           </span>
                         </td>
@@ -180,7 +180,7 @@ const ArchivedProjectsPage = () => {
         }
       >
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center text-red-500 shrink-0">
+          <div className="w-10 h-10 rounded-full bg-pastel-red flex items-center justify-center text-pastel-red-ink shrink-0">
             <ShieldAlert size={20} />
           </div>
           <div className="space-y-1">

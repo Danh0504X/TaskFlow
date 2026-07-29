@@ -14,11 +14,11 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantStyles: Record<ButtonVariant, string> = {
-  primary: 'bg-brand text-white shadow-md shadow-brand/15 hover:bg-brand-light focus-visible:ring-brand',
+  primary: 'bg-ink text-canvas hover:bg-[#e4e4e5] focus-visible:ring-ink/30',
   secondary:
-    'bg-white text-ink border border-line/40 hover:bg-slate-50 focus-visible:ring-brand/40',
+    'bg-surface text-ink border border-hairline hover:border-ink/20 focus-visible:ring-ink/20',
   danger: 'bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-500',
-  ghost: 'bg-transparent text-muted hover:bg-slate-100 hover:text-ink focus-visible:ring-brand/40',
+  ghost: 'bg-transparent text-muted hover:bg-canvas hover:text-ink focus-visible:ring-ink/20',
 }
 
 const sizeStyles: Record<ButtonSize, string> = {
@@ -46,7 +46,7 @@ const Button = ({
       type={type}
       disabled={disabled || loading}
       className={cn(
-        'inline-flex items-center justify-center gap-2 rounded-xl font-bold transition-all active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100',
+        'inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition-colors active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100',
         variantStyles[variant],
         sizeStyles[size],
         className,

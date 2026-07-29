@@ -25,8 +25,8 @@ const ProjectMembersModal = ({ open, onClose, members }: ProjectMembersModalProp
   })
 
   return (
-    <Modal open={open} onClose={onClose} title="Thành viên dự án" size="md">
-      <div className="max-h-[60vh] overflow-y-auto px-1 -mx-1 divide-y divide-line/10">
+    <Modal open={open} onClose={onClose} title="Thành viên dự án">
+      <div className="max-h-[60vh] overflow-y-auto px-1 -mx-1 divide-y divide-hairline">
         {sortedMembers.map((member) => {
           const displayName = member.user?.fullName || 'Thành viên hệ thống'
           const avatarUrl = member.user?.avatarUrl
@@ -41,12 +41,12 @@ const ProjectMembersModal = ({ open, onClose, members }: ProjectMembersModalProp
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-bold text-ink">{displayName}</span>
                     {isOwner && (
-                      <span className="text-[10px] font-extrabold bg-brand/10 text-brand px-2 py-0.5 rounded-full uppercase tracking-wider">
+                      <span className="text-[10px] font-bold bg-pastel-blue text-pastel-blue-ink px-2 py-0.5 rounded-full uppercase tracking-wider">
                         Owner
                       </span>
                     )}
                     {isPending && (
-                      <span className="text-[10px] font-bold bg-amber-50 text-amber-600 border border-amber-200/50 px-2 py-0.5 rounded-full">
+                      <span className="text-[10px] font-semibold bg-pastel-yellow text-pastel-yellow-ink px-2 py-0.5 rounded-full">
                         Chờ xác nhận
                       </span>
                     )}

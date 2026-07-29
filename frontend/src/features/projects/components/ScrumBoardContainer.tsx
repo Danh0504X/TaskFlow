@@ -81,30 +81,30 @@ const ScrumBoardContainer = ({ projectId, onSelectIssue, onGoToBacklog }: ScrumB
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-4 p-5 bg-white border border-line/30 rounded-3xl shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-4 p-5 bg-surface border border-hairline rounded-lg">
         <div className="min-w-0 space-y-1.5">
           <div className="flex items-center gap-2.5">
-            <h3 className="text-base font-extrabold text-ink">{activeSprint.name}</h3>
-            <span className="px-2.5 py-0.5 bg-blue-50 text-blue-700 border border-blue-100 rounded-md text-[10px] font-bold uppercase tracking-wider">
+            <h3 className="text-base font-semibold text-ink">{activeSprint.name}</h3>
+            <span className="px-2.5 py-0.5 bg-pastel-blue text-pastel-blue-ink rounded-md text-[10px] font-bold uppercase tracking-wider">
               Đang chạy
             </span>
           </div>
-          {activeSprint.goal && <p className="text-xs text-muted font-semibold">{activeSprint.goal}</p>}
-          <p className="text-[11px] text-subtle font-semibold">
+          {activeSprint.goal && <p className="text-xs text-muted">{activeSprint.goal}</p>}
+          <p className="text-[11px] text-subtle font-medium">
             {formatDate(activeSprint.startDate)} — {formatDate(activeSprint.endDate)}
           </p>
         </div>
 
         <div className="flex items-center gap-4 shrink-0">
           <div className="flex items-center gap-2.5 min-w-[160px]">
-            <CheckCircle2 size={16} className="text-emerald-500" />
+            <CheckCircle2 size={16} className="text-pastel-green-ink" />
             <div className="space-y-1 flex-1">
-              <div className="flex justify-between text-[10px] font-bold text-muted">
+              <div className="flex justify-between text-[10px] font-semibold text-muted">
                 <span>{doneCount}/{totalCount} hoàn thành</span>
                 <span>{progressPercent}%</span>
               </div>
-              <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${progressPercent}%` }} />
+              <div className="w-full h-1.5 bg-canvas rounded-full overflow-hidden">
+                <div className="h-full rounded-full bg-pastel-green-ink transition-all" style={{ width: `${progressPercent}%` }} />
               </div>
             </div>
           </div>
@@ -112,7 +112,7 @@ const ScrumBoardContainer = ({ projectId, onSelectIssue, onGoToBacklog }: ScrumB
           {isOwner && (
             <button
               onClick={() => setIsCompleteOpen(true)}
-              className="px-4 py-2.5 bg-red-50 border border-red-200 text-red-600 rounded-xl text-xs font-bold hover:bg-red-100 transition-all active:scale-95 shrink-0"
+              className="px-4 py-2.5 bg-pastel-red text-pastel-red-ink rounded-lg text-xs font-semibold hover:bg-pastel-red/70 transition-colors active:scale-[0.98] shrink-0"
             >
               Kết thúc sprint
             </button>
