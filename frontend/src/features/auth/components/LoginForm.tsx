@@ -70,10 +70,10 @@ const LoginForm = () => {
       noValidate
     >
       {infoMessage ? (
-        <p className="ml-1 text-[13px] text-green-600">{infoMessage}</p>
+        <p className="ml-1 text-[13px] text-pastel-green-ink">{infoMessage}</p>
       ) : (
         sessionExpired && (
-          <p className="ml-1 text-[13px] font-medium text-amber-600">
+          <p className="ml-1 text-[13px] font-medium text-pastel-yellow-ink">
             Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.
           </p>
         )
@@ -129,11 +129,11 @@ const LoginForm = () => {
       </Button>
 
       <div className="relative flex items-center">
-        <div className="flex-grow border-t border-line/60" />
+        <div className="flex-grow border-t border-hairline" />
         <span className="mx-3 flex-shrink text-[12px] font-medium text-subtle">
           hoặc
         </span>
-        <div className="flex-grow border-t border-line/60" />
+        <div className="flex-grow border-t border-hairline" />
       </div>
 
       <Button

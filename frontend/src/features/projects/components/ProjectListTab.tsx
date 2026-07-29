@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { CornerDownRight, ChevronDown, ChevronRight, Pencil, Trash2, Plus } from 'lucide-react'
+import { ChevronDown, ChevronRight, Pencil, Trash2, Plus } from 'lucide-react'
 import SearchInput from '@/components/ui/SearchInput'
 import Spinner from '@/components/ui/Spinner'
 import IssueTypeIcon from '@/components/ui/IssueTypeIcon'
@@ -61,14 +61,6 @@ const buildIssueTree = (issues: Issue[]) => {
   }
 
   return { roots, ungrouped }
-}
-
-// Cỡ chữ/màu giảm dần theo cấp -> phân biệt rõ Epic (đậm, có nền nhấn) / Task (bình thường)
-// / Subtask trở xuống (nhẹ, mờ hơn) mà không cần đọc icon loại issue.
-const getTitleIndentClass = (depth: number) => {
-  if (depth <= 0) return ''
-  if (depth === 1) return 'pl-8'
-  return 'pl-14'
 }
 
 // Độ rộng cố định cho các cột bên phải -> Assignee/Priority/Status/Actions luôn thẳng hàng
@@ -136,14 +128,18 @@ const IssueRow = ({ issue, projectId, isOwner, depth, onSelectIssue, onDeleteIss
           >
             {toggle.collapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
           </button>
-        ) : (
-          depth > 0 && <CornerDownRight size={13} className="text-subtle" />
-        )}
+        ) : null}
       </div>
 
-      <div className={`flex-1 min-w-0 flex items-center gap-2.5 ${getTitleIndentClass(depth)}`}>
+      <div className="flex-1 min-w-0 flex items-center gap-2.5">
         <IssueTypeIcon type={issue.type} size={isEpic ? 15 : isDeep ? 13 : 14} />
-        <span className={`font-bold shrink-0 ${isDeep ? 'text-subtle text-[10px]' : 'text-brand text-xs'}`}>{issue.key}</span>
+        <span
+          className={`shrink-0 font-mono font-semibold ${isDeep ? 'text-[10px]' : 'text-xs'} ${
+            issue.status === 'DONE' ? 'line-through text-subtle' : isDeep ? 'text-subtle' : 'text-brand'
+          }`}
+        >
+          {issue.key}
+        </span>
 
         {isEditingTitle ? (
           <input
@@ -166,19 +162,14 @@ const IssueRow = ({ issue, projectId, isOwner, depth, onSelectIssue, onDeleteIss
         ) : (
           <>
             <span
-              className={`truncate ${issue.status === 'DONE'
-                  ? 'line-through text-subtle font-medium'
-                  : isEpic
-                    ? 'font-extrabold text-ink text-[13px]'
-                    : isDeep
-                      ? 'font-medium text-muted text-[11px]'
-                      : 'font-semibold text-ink'
-                }`}
+              className={`truncate font-normal ${isEpic ? 'text-[13px]' : isDeep ? 'text-[11px]' : 'text-xs'} ${
+                issue.status === 'DONE' ? 'line-through text-subtle' : isEpic ? 'text-ink' : isDeep ? 'text-muted' : 'text-ink'
+              }`}
             >
               {issue.title}
             </span>
             {toggle && toggle.childCount > 0 && (
-              <span className="text-[10px] text-subtle font-bold shrink-0">({toggle.childCount})</span>
+              <span className="text-[10px] text-subtle font-medium shrink-0">({toggle.childCount})</span>
             )}
             {isOwner && (
               <button
@@ -261,7 +252,6 @@ const IssueRow = ({ issue, projectId, isOwner, depth, onSelectIssue, onDeleteIss
 }
 
 interface InlineAddIssueRowProps {
-  depth: number
   childType: IssueType
   onCancel: () => void
   onSubmit: (title: string) => void
@@ -273,7 +263,7 @@ interface InlineAddIssueRowProps {
  * sự đóng khi rời khỏi hẳn (blur ra ngoài) hoặc nhấn Escape. `closingRef` chặn đóng 2 lần (vd
  * Escape xử lý xong rồi input vẫn kịp bắn thêm sự kiện blur trước khi dòng này unmount).
  */
-const InlineAddIssueRow = ({ depth, childType, onCancel, onSubmit }: InlineAddIssueRowProps) => {
+const InlineAddIssueRow = ({ childType, onCancel, onSubmit }: InlineAddIssueRowProps) => {
   const [value, setValue] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
   const closingRef = useRef(false)
@@ -301,7 +291,7 @@ const InlineAddIssueRow = ({ depth, childType, onCancel, onSubmit }: InlineAddIs
   }
 
   return (
-    <div className={`flex items-center gap-2 py-1.5 pr-4 ${depth <= 1 ? 'pl-16' : 'pl-24'}`}>
+    <div className="flex items-center gap-2 py-1.5 px-3">
       <IssueTypeIcon type={childType} size={14} />
       <input
         ref={inputRef}
@@ -413,12 +403,11 @@ const ProjectListTab = ({ projectId, onSelectIssue }: ProjectListTabProps) => {
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.18, ease: 'easeOut' }}
-              className="overflow-hidden"
+              className="overflow-hidden ml-6 border-l border-hairline pl-3"
             >
               {node.children.map((child) => renderNode(child, depth + 1))}
               {isAdding && (
                 <InlineAddIssueRow
-                  depth={depth + 1}
                   childType={isEpic ? ISSUE_TYPE.TASK : ISSUE_TYPE.SUBTASK}
                   onCancel={() => setAddingChildFor(null)}
                   onSubmit={(title) => handleCreateChild(node.issue, title)}

@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react'
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { Calendar, LogOut, Pencil, Trash2, Users } from 'lucide-react'
 import { formatDate } from '@/lib/format'
 import type { Project } from '../project.types'
@@ -17,11 +17,16 @@ interface ProjectCardProps {
   staggerIndex?: number
 }
 
-/** Thẻ hiển thị 1 project trong lưới danh sách — trình bày thuần, nhận data & callback. */
+/** Thẻ hiển thị 1 project trong lưới danh sách — cả thẻ có thể bấm để vào trang chi tiết
+ * (không chỉ riêng tên); các nút hành động (sửa/xoá/rời) chặn nổi bọt sự kiện để không kích
+ * hoạt điều hướng khi bấm vào chúng. */
 const ProjectCard = ({ project, isOwner, onEdit, onDelete, onLeave, staggerIndex = 0 }: ProjectCardProps) => {
+  const navigate = useNavigate()
+
   return (
     <div
-      className="group animate-fade-up bg-surface border border-hairline rounded-lg p-4 hover:border-ink/15 transition-colors flex flex-col gap-3"
+      onClick={() => navigate(`/projects/${project._id}`)}
+      className="group animate-fade-up bg-surface border border-hairline rounded-lg p-4 hover:-translate-y-1 hover:border-ink/25 hover:shadow-xl hover:shadow-black/25 transition-all duration-200 flex flex-col gap-3 cursor-pointer"
       style={{ '--stagger': staggerIndex } as CSSProperties}
     >
       <div className="flex items-start justify-between gap-2">
@@ -30,12 +35,9 @@ const ProjectCard = ({ project, isOwner, onEdit, onDelete, onLeave, staggerIndex
             {(project.key || project.name).slice(0, 2).toUpperCase()}
           </div>
           <div className="min-w-0">
-            <Link
-              to={`/projects/${project._id}`}
-              className="text-sm font-semibold text-ink tracking-tight hover:text-brand transition-colors line-clamp-1"
-            >
+            <h3 className="text-sm font-semibold text-ink tracking-tight group-hover:text-brand transition-colors line-clamp-1">
               {project.name}
-            </Link>
+            </h3>
             <div className="flex items-center gap-1.5 mt-0.5">
               <span className="text-[9px] font-semibold text-subtle uppercase tracking-wider">{project.key || '—'}</span>
               <ProjectMethodologyBadge methodology={project.methodology} />
@@ -65,14 +67,20 @@ const ProjectCard = ({ project, isOwner, onEdit, onDelete, onLeave, staggerIndex
           {isOwner ? (
             <>
               <button
-                onClick={() => onEdit(project)}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onEdit(project)
+                }}
                 className="p-1.5 text-muted hover:text-pastel-blue-ink hover:bg-pastel-blue rounded-md transition-colors"
                 aria-label="Sửa project"
               >
                 <Pencil size={13} />
               </button>
               <button
-                onClick={() => onDelete(project)}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onDelete(project)
+                }}
                 className="p-1.5 text-muted hover:text-pastel-red-ink hover:bg-pastel-red rounded-md transition-colors"
                 aria-label="Xoá project"
               >
@@ -81,7 +89,10 @@ const ProjectCard = ({ project, isOwner, onEdit, onDelete, onLeave, staggerIndex
             </>
           ) : (
             <button
-              onClick={() => onLeave(project)}
+              onClick={(e) => {
+                e.stopPropagation()
+                onLeave(project)
+              }}
               className="p-1.5 text-muted hover:text-pastel-red-ink hover:bg-pastel-red rounded-md transition-colors"
               aria-label="Rời dự án"
             >

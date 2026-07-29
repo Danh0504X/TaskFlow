@@ -164,13 +164,11 @@ const RegisterForm = () => {
           </span>
         </div>
         <div className="flex gap-2">
-          <span className="h-1.5 flex-1 rounded-full bg-gradient-to-r from-brand-light to-brand" />
+          <span className="h-1.5 flex-1 rounded-full bg-ink" />
           <span
             className={cn(
               'h-1.5 flex-1 rounded-full transition-colors duration-300',
-              step === 2
-                ? 'bg-gradient-to-r from-brand-light to-brand'
-                : 'bg-line/50',
+              step === 2 ? 'bg-ink' : 'bg-hairline',
             )}
           />
         </div>
@@ -233,11 +231,11 @@ const RegisterForm = () => {
             className="space-y-4"
           >
             {/* Cho biết đang tạo mật khẩu cho email nào (lấy từ bước 1). */}
-            <div className="flex items-start gap-2.5 rounded-xl border border-line/60 bg-surface/50 px-4 py-3 backdrop-blur-md">
+            <div className="flex items-start gap-2.5 rounded-lg border border-hairline bg-canvas px-4 py-3">
               <Mail className="mt-0.5 h-[18px] w-[18px] shrink-0 text-brand" />
               <p className="text-[13px] leading-snug text-muted">
                 Creating a password for{' '}
-                <span className="font-semibold text-brand">
+                <span className="font-semibold text-ink">
                   {getValues('email')}
                 </span>
               </p>
@@ -278,7 +276,7 @@ const RegisterForm = () => {
         )}
       </AnimatePresence>
 
-      {serverError && <p className="ml-1 text-sm text-red-500">{serverError}</p>}
+      {serverError && <p className="ml-1 text-sm text-pastel-red-ink">{serverError}</p>}
 
       <Button
         type={step === 1 ? 'button' : 'submit'}
@@ -305,11 +303,11 @@ const RegisterForm = () => {
           className="space-y-5"
         >
           <div className="relative flex items-center">
-            <div className="flex-grow border-t border-line/60" />
+            <div className="flex-grow border-t border-hairline" />
             <span className="mx-3 flex-shrink text-[12px] font-medium text-subtle">
               or join with
             </span>
-            <div className="flex-grow border-t border-line/60" />
+            <div className="flex-grow border-t border-hairline" />
           </div>
 
           <Button

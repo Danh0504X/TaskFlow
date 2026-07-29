@@ -1,17 +1,18 @@
 // Class dùng chung cho các form auth (register/login/verify) để giữ giao diện đồng bộ.
 // Đặt tập trung ở đây giúp chỉnh một chỗ là cả 3 trang đổi theo.
+// Theo tinh thần minimalist-ui: phẳng, viền mảnh (hairline), không blur/gradient/shadow nặng.
 
 export const inputClass =
-  'h-12 w-full rounded-xl border border-line/80 bg-surface/50 px-4 text-[15px] text-ink backdrop-blur-md transition placeholder:text-subtle focus:border-transparent focus:ring-2 focus:ring-brand/70'
+  'h-12 w-full rounded-lg border border-hairline bg-surface px-4 text-[15px] text-ink transition-colors placeholder:text-subtle outline-none focus:border-ink/25 focus:ring-2 focus:ring-brand/20'
 
-export const labelClass = 'ml-1 block text-[13px] font-semibold text-muted'
+export const labelClass = 'ml-1 block text-xs font-semibold text-ink uppercase tracking-wider'
 
-export const errorClass = 'ml-1 mt-1.5 text-xs text-red-500'
+export const errorClass = 'ml-1 mt-1.5 text-xs font-medium text-pastel-red-ink'
 
-// Nút chính: nền sáng trung tính (không dùng tím — tím trên nền tối kém tương phản), bóng mềm, hover nhấc nhẹ.
+// Nút chính: phẳng, đồng bộ với Button.tsx dùng chung toàn app (nền sáng trung tính, chữ tối).
 export const primaryButtonClass =
-  'h-12 w-full rounded-xl text-[15px] font-semibold bg-gradient-to-br from-brand-light to-brand text-canvas border-none shadow-[0_10px_25px_-8px_rgba(0,0,0,0.45)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_30px_-8px_rgba(0,0,0,0.55)] active:translate-y-0 active:scale-[0.99]'
+  'h-12 w-full rounded-lg text-[15px] font-semibold bg-ink text-canvas border-none transition-colors duration-200 hover:bg-[#e4e4e5] active:scale-[0.99]'
 
-// Nút phụ (Google...): nền trắng mờ, viền nhẹ, cùng chiều cao với nút chính.
+// Nút phụ (Google...): viền mảnh, nền surface, cùng chiều cao với nút chính.
 export const ghostButtonClass =
-  'h-12 w-full gap-3 rounded-xl text-[15px] font-semibold text-ink border border-line/60 bg-surface/70 backdrop-blur-md transition-all duration-200 hover:bg-surface hover:shadow-sm active:scale-[0.99]'
+  'h-12 w-full gap-3 rounded-lg text-[15px] font-semibold text-ink border border-hairline bg-surface transition-colors duration-200 hover:border-ink/25 active:scale-[0.99]'
