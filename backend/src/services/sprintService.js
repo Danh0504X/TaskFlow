@@ -164,8 +164,10 @@ const updateSprint = async (projectId, sprintId, body = {}, project) => {
   return sprint
 }
 
-// Xóa mềm sprint (đồng thời gỡ sprintId khỏi các issue liên quan, đưa về backlog).
+// Xóa cứng sprint (đồng thời gỡ sprintId khỏi các issue liên quan, đưa về backlog).
 // Không cho xóa sprint đang ACTIVE -> phải complete (hoặc cancel) trước.
+// Lưu ý: đây là xóa riêng lẻ 1 sprint qua UI — khác với cascade xóa mềm sprint khi cả
+// project bị archive (xem projectService.deleteProject), vẫn giữ nguyên isDeleted/deletedAt.
 const deleteSprint = async (projectId, sprintId, project) => {
   ensureValidObjectId(projectId, 'project id')
   ensureValidObjectId(sprintId, 'sprint id')
@@ -180,10 +182,9 @@ const deleteSprint = async (projectId, sprintId, project) => {
     )
   }
 
-  sprint.isDeleted = true
-  await sprint.save()
-
   await moveIssuesToBacklog(projectId, sprintId)
+
+  await Sprint.deleteOne({ _id: sprintId })
 
   return sprint
 }

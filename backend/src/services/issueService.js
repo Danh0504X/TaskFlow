@@ -389,26 +389,21 @@ const updateIssueStatus = async (projectId, issueId, body = {}, projectKey, proj
   return toIssueDTO(issue, projectKey)
 }
 
-// Xóa mềm issue (đồng thời xóa mềm các subtask con).
+// Xóa cứng issue (đồng thời xóa cứng các subtask con).
+// Lưu ý: đây là xóa riêng lẻ 1 issue qua UI — khác với cascade xóa mềm issue khi cả
+// project bị archive (xem projectService.deleteProject), vẫn giữ nguyên isDeleted/deletedAt.
 const deleteIssue = async (projectId, issueId) => {
   ensureValidObjectId(projectId, 'project id')
   ensureValidObjectId(issueId, 'issue id')
 
-  const issue = await Issue.findOneAndUpdate(
-    { _id: issueId, projectId, isDeleted: false },
-    { isDeleted: true },
-    { new: true },
-  )
+  const issue = await Issue.findOneAndDelete({ _id: issueId, projectId, isDeleted: false })
 
   if (!issue) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Issue not found')
   }
 
-  // Xóa mềm các issue con (subtask) thuộc issue này.
-  await Issue.updateMany(
-    { projectId, parentIssueId: issueId, isDeleted: false },
-    { isDeleted: true },
-  )
+  // Xóa cứng các issue con (subtask) thuộc issue này.
+  await Issue.deleteMany({ projectId, parentIssueId: issueId, isDeleted: false })
 
   return issue
 }

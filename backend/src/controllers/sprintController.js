@@ -46,7 +46,7 @@ export const updateSprint = asyncHandler(async (req, res) => {
   })
 })
 
-// Xóa mềm sprint.
+// Xóa sprint (xóa cứng).
 export const deleteSprint = asyncHandler(async (req, res) => {
   const { projectId, sprintId } = req.params
   const result = await sprintService.deleteSprint(projectId, sprintId, req.project)
