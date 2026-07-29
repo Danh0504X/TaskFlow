@@ -55,11 +55,11 @@ export const resetPasswordSchema = z
 
 export type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>
 
-// Schema validate form đổi mật khẩu khi đã đăng nhập (trang Profile). Độ dài tối thiểu
-// khớp policy backend (passwordSchema trong common.validation.js).
+// Schema validate form đổi mật khẩu khi đã đăng nhập (trang Profile).
 export const changePasswordSchema = z
   .object({
-    currentPassword: z.string().min(1, 'Vui lòng nhập mật khẩu hiện tại.'),
+    // Sử dụng .optional() thay vì .min(1) để form có thể submit khi ô này bị ẩn
+    currentPassword: z.string().optional(),
     newPassword: z.string().min(6, 'Mật khẩu phải có ít nhất 6 ký tự.'),
     confirmPassword: z.string(),
   })
