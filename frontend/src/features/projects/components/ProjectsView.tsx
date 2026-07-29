@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { FolderKanban, Plus, RotateCcw, Archive, Mail } from 'lucide-react'
+import PageHeader from '@/components/layout/PageHeader'
+import PageHeaderButton from '@/components/layout/PageHeaderButton'
 import Spinner from '@/components/ui/Spinner'
 import SearchInput from '@/components/ui/SearchInput'
 import Modal from '@/components/ui/Modal'
@@ -87,45 +89,26 @@ const ProjectsView = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto flex flex-col gap-8 p-8">
-      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-3xl font-extrabold text-ink tracking-tight">Dự án</h2>
-          <p className="text-muted mt-1 font-medium text-sm">
-            Quản lý toàn bộ không gian dự án bạn đang tham gia.
-          </p>
-        </div>
+    <div className="max-w-7xl mx-auto flex flex-col">
+      <PageHeader
+        title="Dự án"
+        subtitle="Quản lý toàn bộ không gian dự án bạn đang tham gia."
+        actions={
+          <>
+            <PageHeaderButton icon={Mail} onClick={() => setShowInvitations(true)} badge={invitationCount}>
+              Lời mời
+            </PageHeaderButton>
+            <PageHeaderButton icon={Archive} onClick={() => navigate('/projects/archived')}>
+              Đã lưu trữ
+            </PageHeaderButton>
+            <PageHeaderButton icon={Plus} variant="primary" onClick={() => navigate('/projects/new')}>
+              Tạo dự án mới
+            </PageHeaderButton>
+          </>
+        }
+      />
 
-        <div className="flex items-center gap-3 self-start sm:self-auto">
-          <button
-            onClick={() => setShowInvitations(true)}
-            className="relative flex items-center gap-2 px-4 py-2.5 bg-white text-ink border border-line/30 rounded-xl text-sm font-bold hover:bg-slate-50 transition-all active:scale-95"
-          >
-            <Mail size={16} className="text-muted" />
-            <span>Lời mời</span>
-            {invitationCount > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1 text-[10px] font-bold text-white">
-                {invitationCount}
-              </span>
-            )}
-          </button>
-          <button
-            onClick={() => navigate('/projects/archived')}
-            className="flex items-center gap-2 px-4 py-2.5 bg-white text-ink border border-line/30 rounded-xl text-sm font-bold hover:bg-slate-50 transition-all active:scale-95"
-          >
-            <Archive size={16} className="text-muted" />
-            <span>Dự án đã lưu trữ</span>
-          </button>
-          <button
-            onClick={() => navigate('/projects/new')}
-            className="flex items-center gap-2 px-4 py-2.5 bg-brand text-white rounded-xl text-sm font-bold shadow-lg shadow-brand/20 hover:bg-brand-light transition-all active:scale-95"
-          >
-            <Plus size={16} />
-            <span>Tạo dự án mới</span>
-          </button>
-        </div>
-      </header>
-
+      <div className="flex flex-col gap-8 px-8 md:px-12 pt-6 pb-12">
       {!isLoading && !isError && projects && projects.length > 0 && (
         <SearchInput
           containerClassName="max-w-sm"
@@ -143,10 +126,10 @@ const ProjectsView = () => {
 
       {isError && (
         <div className="flex flex-col items-center gap-3 py-24 text-center">
-          <p className="text-sm text-muted font-medium">Không tải được danh sách dự án.</p>
+          <p className="text-sm text-muted">Không tải được danh sách dự án.</p>
           <button
             onClick={() => refetch()}
-            className="flex items-center gap-2 px-4 py-2 border border-line/30 rounded-xl text-xs font-bold text-muted hover:bg-slate-50 hover:text-ink transition-all"
+            className="flex items-center gap-2 px-4 py-2 border border-hairline rounded-lg text-xs font-semibold text-muted hover:border-ink/20 hover:text-ink transition-colors"
           >
             <RotateCcw size={14} />
             <span>Thử lại</span>
@@ -157,25 +140,25 @@ const ProjectsView = () => {
       {!isLoading && !isError && projects && (
         <>
           {projects.length === 0 ? (
-            <div className="flex flex-col items-center gap-4 border border-dashed border-line/35 rounded-3xl py-24 text-center">
-              <div className="w-14 h-14 rounded-2xl bg-brand/5 flex items-center justify-center text-brand">
-                <FolderKanban size={26} />
+            <div className="flex flex-col items-center gap-4 border border-dashed border-hairline rounded-xl py-24 text-center">
+              <div className="w-14 h-14 rounded-lg bg-pastel-blue flex items-center justify-center text-pastel-blue-ink">
+                <FolderKanban size={24} />
               </div>
               <div>
-                <p className="text-sm font-bold text-ink">Chưa có dự án nào</p>
+                <p className="text-sm font-semibold text-ink">Chưa có dự án nào</p>
                 <p className="text-xs text-subtle mt-1">Bắt đầu bằng cách tạo dự án đầu tiên của bạn.</p>
               </div>
               <button
                 onClick={() => navigate('/projects/new')}
-                className="flex items-center gap-2 px-4 py-2.5 bg-brand text-white rounded-xl text-sm font-bold shadow-lg shadow-brand/20 hover:bg-brand-light transition-all active:scale-95"
+                className="flex items-center gap-2 px-4 py-2.5 bg-ink text-white rounded-lg text-sm font-semibold hover:bg-[#333333] transition-colors active:scale-[0.98]"
               >
-                <Plus size={16} />
+                <Plus size={15} />
                 <span>Tạo dự án đầu tiên</span>
               </button>
             </div>
           ) : (
-            <div className="space-y-8">
-              {isFetching && <p className="text-xs text-subtle -mb-4">Đang cập nhật...</p>}
+            <div className="space-y-12">
+              {isFetching && <p className="text-xs text-subtle -mb-8">Đang cập nhật...</p>}
 
               {recentProjects.length > 0 && (
                 <ProjectGridSection
@@ -215,6 +198,7 @@ const ProjectsView = () => {
           )}
         </>
       )}
+      </div>
 
       {/* Modal danh sách lời mời tham gia dự án đang chờ xử lý */}
       <ProjectInvitationsModal open={showInvitations} onClose={() => setShowInvitations(false)} />

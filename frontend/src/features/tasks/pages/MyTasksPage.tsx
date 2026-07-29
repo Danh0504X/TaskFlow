@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { AnimatePresence } from 'motion/react'
 import { ChevronRight, Search } from 'lucide-react'
+import PageHeader from '@/components/layout/PageHeader'
 import Spinner from '@/components/ui/Spinner'
 import Tabs from '@/components/ui/Tabs'
 import Avatar from '@/components/ui/Avatar'
@@ -84,17 +85,14 @@ const MyTasksPage = () => {
   const projectCount = new Set((tasks ?? []).map((task) => task.projectId)).size
 
   return (
-    <div className="max-w-7xl mx-auto flex flex-col gap-8 p-8">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div>
-          <h2 className="text-3xl font-extrabold text-brand tracking-tight mb-2">Công việc của tôi</h2>
-          <p className="text-muted font-medium max-w-xl text-sm leading-relaxed">
-            {tasks?.length ?? 0} việc được giao, trải trên {projectCount} dự án — theo dõi và cập nhật trạng thái ngay tại đây.
-          </p>
-        </div>
-        <Avatar src={user?.avatarUrl} name={user?.fullName ?? ''} size={40} />
-      </header>
+    <div className="max-w-7xl mx-auto flex flex-col">
+      <PageHeader
+        title="Việc của tôi"
+        subtitle={`${tasks?.length ?? 0} việc được giao, trải trên ${projectCount} dự án — theo dõi và cập nhật trạng thái ngay tại đây.`}
+        actions={<Avatar src={user?.avatarUrl} name={user?.fullName ?? ''} size={36} />}
+      />
 
+      <div className="flex flex-col gap-8 px-8 md:px-12 pt-6 pb-12">
       <section className="flex flex-wrap items-center justify-between gap-4 py-3 px-4 bg-white border border-line/15 rounded-2xl shadow-sm">
         <div className="relative flex-grow max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" size={16} />
@@ -197,6 +195,7 @@ const MyTasksPage = () => {
           ))}
         </section>
       )}
+      </div>
 
       <AnimatePresence>
         {selectedTaskKey && (

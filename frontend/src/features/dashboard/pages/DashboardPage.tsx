@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronRight, Plus, Activity, ListChecks, Layers, Timer, Users } from 'lucide-react'
+import PageHeader from '@/components/layout/PageHeader'
+import PageHeaderButton from '@/components/layout/PageHeaderButton'
 import Spinner from '@/components/ui/Spinner'
 import IssuePriorityBadge from '@/components/ui/IssuePriorityBadge'
 import IssueTypeIcon from '@/components/ui/IssueTypeIcon'
@@ -47,18 +49,10 @@ const DashboardPage = () => {
   const { data: projects, isLoading: isProjectsLoading } = useProjects()
   const { data: upcomingSprints, isLoading: isSprintsLoading } = useUpcomingSprints()
 
-  if (isTasksLoading || !tasks) {
-    return (
-      <div className="min-h-[60vh] flex items-center justify-center text-muted">
-        <Spinner />
-      </div>
-    )
-  }
+  const todoCount = tasks?.filter((task) => task.status === 'TODO').length ?? 0
+  const inProgressCount = tasks?.filter((task) => task.status === 'IN_PROGRESS').length ?? 0
 
-  const todoCount = tasks.filter((task) => task.status === 'TODO').length
-  const inProgressCount = tasks.filter((task) => task.status === 'IN_PROGRESS').length
-
-  const priorityTasks = tasks
+  const priorityTasks = (tasks ?? [])
     .filter((task) => task.status !== 'DONE')
     .slice()
     .sort((a, b) => PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority])
@@ -67,21 +61,28 @@ const DashboardPage = () => {
   const topProjects = (projects ?? []).slice(0, 3)
 
   return (
-    <div className="max-w-7xl mx-auto flex flex-col gap-5 p-6">
-      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <p className="text-muted text-sm font-medium">
-          Hôm nay bạn có <span className="text-brand font-bold">{todoCount + inProgressCount} công việc</span> cần tập trung.
-        </p>
+    <div className="max-w-7xl mx-auto flex flex-col">
+      <PageHeader
+        title="Tổng quan"
+        subtitle={
+          <>
+            Hôm nay bạn có <span className="text-brand font-semibold">{todoCount + inProgressCount} công việc</span> cần tập trung.
+          </>
+        }
+        actions={
+          <PageHeaderButton icon={Plus} variant="primary" onClick={() => navigate('/projects/new')}>
+            Tạo dự án mới
+          </PageHeaderButton>
+        }
+      />
 
-        <button
-          onClick={() => navigate('/projects/new')}
-          className="flex items-center gap-1.5 px-3.5 py-2 bg-brand text-white rounded-lg text-xs font-bold shadow-sm shadow-brand/20 hover:bg-brand-light transition-all active:scale-95 self-end sm:self-auto"
-        >
-          <Plus size={14} />
-          <span>Tạo dự án mới</span>
-        </button>
-      </header>
-
+      <div className="flex flex-col gap-5 px-8 md:px-12 pt-6 pb-12">
+      {isTasksLoading || !tasks ? (
+        <div className="min-h-[50vh] flex items-center justify-center text-muted">
+          <Spinner />
+        </div>
+      ) : (
+        <>
       <section className="flex flex-wrap gap-2 p-1.5 bg-slate-50/70 border border-line/15 rounded-xl">
         <div className="flex-1 min-w-[150px] flex items-center gap-2.5 bg-white border border-line/20 rounded-lg px-3 py-2.5">
           <div className="w-7 h-7 rounded-lg bg-brand/8 flex items-center justify-center text-brand shrink-0">
@@ -233,6 +234,9 @@ const DashboardPage = () => {
           </div>
         </div>
       </section>
+        </>
+      )}
+      </div>
     </div>
   )
 }
