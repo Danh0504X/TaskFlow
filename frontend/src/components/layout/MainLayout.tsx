@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { LayoutGrid, FolderGit2, CheckSquare, LogOut, User } from 'lucide-react'
+import { LayoutGrid, FolderGit2, CheckSquare, LogOut, User, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { APP_LOGO_URL } from '@/lib/constants'
 import Avatar from '@/components/ui/Avatar'
+import Badge from '@/components/ui/Badge'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import AppBackground from './AppBackground'
 
@@ -12,6 +13,8 @@ const baseNavItems = [
   { to: '/projects', label: 'Dự án của tôi', icon: FolderGit2, end: false },
   { to: '/tasks', label: 'Việc của tôi', icon: CheckSquare, end: false },
   { to: '/profile', label: 'Hồ sơ', icon: User, end: false },
+  // Beta/Demo — AI Lab: đặt cuối nhóm nav, không đổi thứ tự/hành vi các mục cũ.
+  { to: '/ai-lab', label: 'AI Lab', icon: Sparkles, end: false, beta: true },
 ]
 
 /** Layout gốc cho các trang cần đăng nhập: sidebar dùng chung + nội dung trang render vào <Outlet />. */
@@ -52,7 +55,7 @@ const MainLayout = () => {
             </div>
 
             <nav className="space-y-1">
-              {navItems.map(({ to, label, icon: Icon, end }) => (
+              {navItems.map(({ to, label, icon: Icon, end, beta }) => (
                 <NavLink
                   key={to}
                   to={to}
@@ -67,7 +70,8 @@ const MainLayout = () => {
                   }
                 >
                   <Icon size={18} />
-                  <span>{label}</span>
+                  <span className="flex-1">{label}</span>
+                  {beta && <Badge color="blue">Beta</Badge>}
                 </NavLink>
               ))}
             </nav>
