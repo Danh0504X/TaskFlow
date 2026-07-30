@@ -1,5 +1,5 @@
 import { useState, type CSSProperties } from 'react'
-import { Download, Eye, Lock, Pencil, Unlock, Trash2 } from 'lucide-react'
+import { Download, Eye, Lock, Unlock, Trash2 } from 'lucide-react'
 import SearchInput from '@/components/ui/SearchInput'
 import Avatar from '@/components/ui/Avatar'
 import Badge from '@/components/ui/Badge'
@@ -11,7 +11,6 @@ import { toast } from '@/components/ui/toast/toastStore'
 import { adminApi } from '../admin.api'
 import { useAdminCount, useAdminUsers, useDeleteUser, useUpdateUser } from '../hooks/useAdminUsers'
 import { UserDetailModal } from '../components/UserDetailModal'
-import EditUserModal from '../components/EditUserModal'
 import AdminSelect from '../components/AdminSelect'
 import AdminPageLayout from '../components/AdminPageLayout'
 import Pagination from '../components/Pagination'
@@ -41,8 +40,7 @@ const AdminUsersPage = () => {
   const [status, setStatus] = useState<UserStatus | ''>('')
   const [page, setPage] = useState(1)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [detailUserId, setDetailUserId] = useState<string | null>(null)
-  const [editUser, setEditUser] = useState<AdminUserItem | null>(null)
+  const [detailUser, setDetailUser] = useState<AdminUserItem | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<AdminUserItem | null>(null)
   const [bulkAction, setBulkAction] = useState<UserStatus | null>(null)
 
@@ -57,6 +55,11 @@ const AdminUsersPage = () => {
   const roleLockReason = (row: AdminUserItem): string | undefined => {
     if (isSelf(row)) return 'Không thể tự thay đổi vai trò của chính mình.'
     if (isLastAdmin(row)) return 'Không thể hạ quyền admin cuối cùng của hệ thống.'
+    return undefined
+  }
+
+  const statusLockReason = (row: AdminUserItem): string | undefined => {
+    if (isLastAdmin(row)) return 'Không thể khoá admin cuối cùng của hệ thống.'
     return undefined
   }
 
@@ -195,7 +198,6 @@ const AdminUsersPage = () => {
                   <th className="py-2.5 px-4">Người dùng</th>
                   <th className="py-2.5 px-4">Vai trò</th>
                   <th className="py-2.5 px-4">Trạng thái</th>
-                  <th className="py-2.5 px-4">Đăng nhập</th>
                   <th className="py-2.5 px-4">Ngày tạo</th>
                   <th className="py-2.5 px-4 text-right">Thao tác</th>
                 </tr>
@@ -233,23 +235,15 @@ const AdminUsersPage = () => {
                           {u.status === 'active' ? 'Hoạt động' : u.status === 'banned' ? 'Bị khoá' : 'Chưa kích hoạt'}
                         </Badge>
                       </td>
-                      <td className="py-2.5 px-4 text-muted capitalize">{u.authProvider}</td>
                       <td className="py-2.5 px-4 font-mono text-xs text-subtle">{formatDate(u.createdAt)}</td>
                       <td className="py-2.5 px-4">
                         <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
                           <button
-                            onClick={() => setDetailUserId(u._id)}
+                            onClick={() => setDetailUser(u)}
                             className="p-1.5 text-muted hover:text-pastel-blue-ink hover:bg-pastel-blue rounded-md transition-colors"
-                            title="Xem chi tiết"
+                            title="Xem & chỉnh sửa chi tiết"
                           >
                             <Eye size={15} />
-                          </button>
-                          <button
-                            onClick={() => setEditUser(u)}
-                            className="p-1.5 text-muted hover:text-pastel-blue-ink hover:bg-pastel-blue rounded-md transition-colors"
-                            title="Chỉnh sửa tên / vai trò"
-                          >
-                            <Pencil size={15} />
                           </button>
                           <button
                             onClick={() => handleToggleLock(u)}
@@ -280,15 +274,15 @@ const AdminUsersPage = () => {
         {data && <Pagination page={page} limit={LIMIT} total={data.total} currentCount={data.users.length} onChange={setPage} />}
       </SectionCard>
 
-      <UserDetailModal userId={detailUserId} onClose={() => setDetailUserId(null)} />
-
-      {/* key theo userId -> remount mỗi lần đổi dòng, tránh giữ tên/role cũ của dòng trước. */}
-      <EditUserModal
-        key={editUser?._id ?? 'none'}
-        user={editUser}
-        roleLocked={!!editUser && !!roleLockReason(editUser)}
-        roleLockedReason={editUser ? roleLockReason(editUser) : undefined}
-        onClose={() => setEditUser(null)}
+      {/* key theo userId -> remount mỗi lần đổi dòng, tránh giữ role/trạng thái cũ của dòng trước. */}
+      <UserDetailModal
+        key={detailUser?._id ?? 'none'}
+        userId={detailUser?._id ?? null}
+        onClose={() => setDetailUser(null)}
+        roleLocked={!!detailUser && !!roleLockReason(detailUser)}
+        roleLockedReason={detailUser ? roleLockReason(detailUser) : undefined}
+        lockToggleLocked={!!detailUser && !!statusLockReason(detailUser)}
+        lockToggleLockedReason={detailUser ? statusLockReason(detailUser) : undefined}
       />
 
       <ConfirmDialog
