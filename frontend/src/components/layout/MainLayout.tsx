@@ -6,6 +6,7 @@ import { APP_LOGO_URL } from '@/lib/constants'
 import Avatar from '@/components/ui/Avatar'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import AppBackground from './AppBackground'
+import { NotificationBell } from '@/features/notifications/components/NotificationBell'
 
 const baseNavItems = [
   { to: '/', label: 'Tổng quan', icon: LayoutGrid, end: true },
@@ -37,7 +38,7 @@ const MainLayout = () => {
   return (
     <AppBackground>
       <div className="min-h-screen flex">
-        <aside className="w-72 bg-surface border-r border-hairline p-6 flex-col justify-between hidden md:flex sticky top-0 h-screen shrink-0">
+        <aside className="w-72 bg-surface border-r border-hairline p-6 flex-col justify-between hidden md:flex sticky top-0 h-screen shrink-0 z-20">
           <div>
             <div className="flex items-center gap-3 mb-8 px-2">
               <img
@@ -74,12 +75,15 @@ const MainLayout = () => {
           </div>
 
           <div className="space-y-3 pt-4 border-t border-hairline">
-            <div className="flex items-center gap-3 px-2 py-1">
-              <Avatar src={user?.avatarUrl} name={user?.fullName ?? '?'} size={36} />
-              <div className="text-left min-w-0">
-                <p className="font-semibold text-ink text-sm leading-tight truncate">{user?.fullName}</p>
-                <p className="text-xs text-subtle font-medium truncate">{user?.email}</p>
+            <div className="flex items-center justify-between px-2 py-1 gap-2">
+              <div className="flex items-center gap-3 min-w-0">
+                <Avatar src={user?.avatarUrl} name={user?.fullName ?? '?'} size={36} />
+                <div className="text-left min-w-0">
+                  <p className="font-semibold text-ink text-sm leading-tight truncate">{user?.fullName}</p>
+                  <p className="text-xs text-subtle font-medium truncate">{user?.email}</p>
+                </div>
               </div>
+              <NotificationBell />
             </div>
 
             <button

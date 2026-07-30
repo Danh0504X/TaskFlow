@@ -57,7 +57,7 @@ const AdminLayout = () => {
       <NarrowScreenNotice />
 
       <div className="hidden xl:flex min-h-screen">
-        <aside className="w-72 bg-surface border-r border-hairline p-6 flex-col justify-between sticky top-0 h-screen shrink-0 flex">
+        <aside className="w-72 bg-surface border-r border-hairline p-6 flex-col justify-between sticky top-0 h-screen shrink-0 flex z-20">
           <div>
             <div className="flex items-center gap-3 mb-8 px-2">
               <img src={APP_LOGO_URL} alt="TaskFlow AI Logo" className="w-12 h-12 object-contain" />

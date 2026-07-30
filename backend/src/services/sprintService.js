@@ -4,6 +4,8 @@ import Sprint from '../models/sprints.js'
 import Issue from '../models/issues.js'
 import Project from '../models/projects.js'
 import ApiError from '../utils/ApiError.js'
+import User from '../models/users.js'
+import { notificationService } from './notificationService.js'
 
 const RESOLUTIONS = ['BACKLOG', 'MOVE_TO_SPRINT', 'NEW_SPRINT']
 
@@ -191,7 +193,7 @@ const deleteSprint = async (projectId, sprintId, project) => {
 }
 
 // Start sprint: mỗi project chỉ 1 sprint ACTIVE tại 1 thời điểm.
-const startSprint = async (projectId, sprintId, project) => {
+const startSprint = async (projectId, sprintId, project, userId) => {
   ensureValidObjectId(projectId, 'project id')
   ensureValidObjectId(sprintId, 'sprint id')
   ensureScrumProject(project)
@@ -232,6 +234,28 @@ const startSprint = async (projectId, sprintId, project) => {
       )
     }
     throw err
+  }
+
+  // Gửi thông báo cho các thành viên trong dự án
+  if (userId && project.members) {
+    const actor = await User.findById(userId).select('fullName').lean()
+    const actorName = actor ? actor.fullName : 'Ai đó'
+    const activeMembers = project.members.filter(
+      (m) => m.status === 'ACTIVE' && m.userId.toString() !== userId.toString()
+    )
+
+    for (const member of activeMembers) {
+      await notificationService.createNotification({
+        userId: member.userId,
+        actorId: userId,
+        projectId,
+        type: 'SPRINT_STARTED',
+        entityType: 'SPRINT',
+        entityId: sprint._id,
+        title: 'Sprint mới bắt đầu',
+        message: `${actorName} đã bắt đầu Sprint "${sprint.name}" trong dự án "${project.name}".`,
+      })
+    }
   }
 
   return sprint
@@ -328,6 +352,28 @@ const completeSprint = async (projectId, sprintId, project, userId, body = {}) =
     })
   } finally {
     session.endSession()
+  }
+
+  // Gửi thông báo cho các thành viên trong dự án
+  if (userId && project.members) {
+    const actor = await User.findById(userId).select('fullName').lean()
+    const actorName = actor ? actor.fullName : 'Ai đó'
+    const activeMembers = project.members.filter(
+      (m) => m.status === 'ACTIVE' && m.userId.toString() !== userId.toString()
+    )
+
+    for (const member of activeMembers) {
+      await notificationService.createNotification({
+        userId: member.userId,
+        actorId: userId,
+        projectId,
+        type: 'SPRINT_COMPLETED',
+        entityType: 'SPRINT',
+        entityId: sprint._id,
+        title: 'Sprint đã hoàn thành',
+        message: `${actorName} đã đóng (hoàn thành) Sprint "${sprint.name}".`,
+      })
+    }
   }
 
   return { sprint, movedCount: incompleteIssues.length, newSprint: createdSprint }

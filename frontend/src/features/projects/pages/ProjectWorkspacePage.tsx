@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams, useNavigate, useLocation } from 'react-router-dom'
+import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { ArrowLeft, Plus, UserPlus } from 'lucide-react'
 import { useAuthStore } from '@/features/auth/authStore'
@@ -102,6 +102,9 @@ const ProjectWorkspacePage = () => {
   const [isInviteOpen, setIsInviteOpen] = useState(false)
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false)
 
+  const [searchParams, setSearchParams] = useSearchParams()
+  const activeIssueId = searchParams.get('issueId')
+
   const currentUser = useAuthStore((state) => state.user)
   const userMemberRecord = project?.members?.find((m) => m.userId === currentUser?._id)
   const isOwner = userMemberRecord?.role === 'OWNER'
@@ -117,6 +120,19 @@ const ProjectWorkspacePage = () => {
       recordProjectVisit(currentUser._id, project._id)
     }
   }, [currentUser, project])
+
+  // Tự động mở modal chi tiết task khi truy cập từ thông báo (Deep-link)
+  useEffect(() => {
+    if (activeIssueId && issues) {
+      const matchedIssue = issues.find((issue) => issue._id === activeIssueId)
+      if (matchedIssue) {
+        setSelectedIssueKey(matchedIssue.key)
+        // Xóa query param để không bị mở lại khi đóng panel
+        searchParams.delete('issueId')
+        setSearchParams(searchParams, { replace: true })
+      }
+    }
+  }, [activeIssueId, issues, searchParams, setSearchParams])
 
   if (isLoading) {
     return (

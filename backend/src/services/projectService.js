@@ -9,6 +9,7 @@ import { env } from '../config/environment.js'
 import { EMAIL_PURPOSE, EMAIL_REGEX } from '../utils/constants.js'
 import { emailService } from './email/emailService.js'
 import { JwtProvider } from '../providers/JwtProvider.js'
+import { notificationService } from './notificationService.js'
 
 // Các enum hợp lệ (khớp với models/projects.js).
 const PROJECT_STATUSES = ['ACTIVE', 'COMPLETED', 'CANCELLED']
@@ -176,6 +177,17 @@ const inviteMembers = async (projectId, inviterId, invites = []) => {
                 projectName: project.name,
                 projectUrl: `${env.FRONTEND_URL}/projects/${project._id}/invitation?token=${inviteToken}`,
               },
+            })
+            // Gửi thông báo trong hệ thống
+            await notificationService.createNotification({
+              userId: result.userId,
+              actorId: inviterId,
+              projectId: project._id,
+              type: 'INVITATION',
+              entityType: 'PROJECT',
+              entityId: project._id,
+              title: 'Lời mời tham gia dự án',
+              message: `${inviter?.fullName || 'Ai đó'} đã mời bạn tham gia vào dự án "${project.name}".`,
             })
           } else {
             // Chưa có tài khoản -> Gửi link đăng ký kèm token mời

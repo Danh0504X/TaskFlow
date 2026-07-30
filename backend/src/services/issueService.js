@@ -4,6 +4,8 @@ import Issue from '../models/issues.js'
 import Sprint from '../models/sprints.js'
 import Project from '../models/projects.js'
 import ApiError from '../utils/ApiError.js'
+import User from '../models/users.js'
+import { notificationService } from './notificationService.js'
 
 // Các enum hợp lệ (khớp với models/issues.js).
 const ISSUE_TYPES = ['EPIC', 'TASK', 'SUBTASK', 'BUG']
@@ -193,6 +195,22 @@ const createIssue = async (projectId, userId, body = {}) => {
 
   await issue.populate([ASSIGNEE_POPULATE, PARENT_ISSUE_POPULATE])
 
+  // Gửi thông báo nếu được gán cho người khác
+  if (assigneeId && assigneeId.toString() !== userId.toString()) {
+    const actor = await User.findById(userId).select('fullName').lean()
+    const actorName = actor ? actor.fullName : 'Ai đó'
+    await notificationService.createNotification({
+      userId: assigneeId,
+      actorId: userId,
+      projectId,
+      type: 'TASK_ASSIGNED',
+      entityType: 'ISSUE',
+      entityId: issue._id,
+      title: 'Công việc mới được gán',
+      message: `${actorName} đã gán công việc "${issue.title}" cho bạn.`,
+    })
+  }
+
   return toIssueDTO(issue, updatedProject.key)
 }
 
@@ -278,7 +296,7 @@ const getIssueById = async (projectId, issueId, projectKey) => {
 }
 
 // Cập nhật toàn bộ issue.
-const updateIssue = async (projectId, issueId, body = {}, projectKey, project) => {
+const updateIssue = async (projectId, issueId, body = {}, projectKey, project, userId) => {
   ensureValidObjectId(projectId, 'project id')
   ensureValidObjectId(issueId, 'issue id')
 
@@ -360,9 +378,30 @@ const updateIssue = async (projectId, issueId, body = {}, projectKey, project) =
     throw new ApiError(StatusCodes.BAD_REQUEST, 'No valid fields to update')
   }
 
+  const oldAssigneeId = issue.assigneeId ? issue.assigneeId.toString() : null
+  const newAssigneeId = payload.assigneeId !== undefined
+    ? (payload.assigneeId ? payload.assigneeId.toString() : null)
+    : oldAssigneeId
+
   Object.assign(issue, payload)
   await issue.save()
   await issue.populate([ASSIGNEE_POPULATE, PARENT_ISSUE_POPULATE])
+
+  // Gửi thông báo gán việc
+  if (oldAssigneeId !== newAssigneeId && newAssigneeId && userId && newAssigneeId !== userId.toString()) {
+    const actor = await User.findById(userId).select('fullName').lean()
+    const actorName = actor ? actor.fullName : 'Ai đó'
+    await notificationService.createNotification({
+      userId: newAssigneeId,
+      actorId: userId,
+      projectId,
+      type: 'TASK_ASSIGNED',
+      entityType: 'ISSUE',
+      entityId: issue._id,
+      title: 'Công việc mới được gán',
+      message: `${actorName} đã gán công việc "${issue.title}" cho bạn.`,
+    })
+  }
 
   return toIssueDTO(issue, projectKey)
 }

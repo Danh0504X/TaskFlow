@@ -60,7 +60,7 @@ export const deleteSprint = asyncHandler(async (req, res) => {
 // Start sprint (chuyển sang ACTIVE).
 export const startSprint = asyncHandler(async (req, res) => {
   const { projectId, sprintId } = req.params
-  const result = await sprintService.startSprint(projectId, sprintId, req.project)
+  const result = await sprintService.startSprint(projectId, sprintId, req.project, req.user._id)
 
   res.status(StatusCodes.OK).json({
     message: 'Sprint started successfully',
