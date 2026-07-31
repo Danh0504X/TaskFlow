@@ -48,7 +48,7 @@ export const getIssueById = asyncHandler(async (req, res) => {
 // Cập nhật toàn bộ issue.
 export const updateIssue = asyncHandler(async (req, res) => {
   const { projectId, issueId } = req.params
-  const result = await issueService.updateIssue(projectId, issueId, req.body, req.project.key, req.project)
+  const result = await issueService.updateIssue(projectId, issueId, req.body, req.project.key, req.project, req.user._id)
 
   res.status(StatusCodes.OK).json({
     message: 'Issue updated successfully',
