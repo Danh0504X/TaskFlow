@@ -11,6 +11,7 @@ import {
 } from '../controllers/aiGeneration.controller.js'
 import { protectedRoute } from '../../../middlewares/authMiddleware.js'
 import { authorizeProjectRole } from '../../../middlewares/projectAuthMiddleware.js'
+import { checkAiLimit } from '../../../middlewares/checkAiLimit.js'
 
 // Beta/Demo — AI Lab. Mounted tại /projects/:projectId/ai (xem routes/api.js).
 // mergeParams: true để lấy :projectId từ route cha, giống issueRoute.js/sprintRoute.js.
@@ -22,7 +23,8 @@ router.use(protectedRoute)
 // hiện tại, tương đương "PM" trong tài liệu thiết kế tính năng) được dùng AI Lab. MEMBER bị 403.
 router.use(authorizeProjectRole('OWNER'))
 
-router.post('/generations', createGeneration)
+// checkAiLimit chỉ áp cho route TẠO lượt sinh mới — list/detail/accept/reject không tốn quota.
+router.post('/generations', checkAiLimit, createGeneration)
 router.get('/generations', listGenerations)
 router.get('/generations/:genId', getGeneration)
 router.post('/generations/:genId/drafts', addManualDraft)

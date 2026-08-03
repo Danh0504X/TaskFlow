@@ -1,11 +1,10 @@
 import { StatusCodes } from 'http-status-codes'
 import mongoose from 'mongoose'
-import AiGeneration from '../models/aiGenerations.js'
-import AiDraftIssue from '../models/aiDraftIssues.js'
+import AiGeneration from '../../../models/aiGenerations.js'
+import AiDraftIssue from '../../../models/aiDraftIssues.js'
 import Issue from '../../../models/issues.js'
 import Project from '../../../models/projects.js'
 import ApiError from '../../../utils/ApiError.js'
-import { aiEnv } from '../config/aiEnv.js'
 import { runAiGeneration } from '../aiRunner.js'
 
 // Beta/Demo — AI Lab. Layered giống issueService.js: Routes -> Controllers -> Services -> Models,
@@ -19,27 +18,6 @@ const DRAFT_PRIORITIES = ['LOW', 'MEDIUM', 'HIGH', 'URGENT']
 const ensureValidObjectId = (id, label = 'id') => {
   if (!mongoose.Types.ObjectId.isValid(id)) {
     throw new ApiError(StatusCodes.BAD_REQUEST, `Invalid ${label}`)
-  }
-}
-
-const startOfTodayUtc = () => {
-  const d = new Date()
-  d.setUTCHours(0, 0, 0, 0)
-  return d
-}
-
-// Rate limit: tối đa AI_DAILY_LIMIT lượt sinh / ngày / user (đếm theo UTC).
-const ensureDailyQuota = async (requestedBy) => {
-  const count = await AiGeneration.countDocuments({
-    requestedBy,
-    createdAt: { $gte: startOfTodayUtc() },
-  })
-
-  if (count >= aiEnv.AI_DAILY_LIMIT) {
-    throw new ApiError(
-      StatusCodes.TOO_MANY_REQUESTS,
-      `Đã đạt giới hạn ${aiEnv.AI_DAILY_LIMIT} lượt sinh AI hôm nay`,
-    )
   }
 }
 
@@ -196,8 +174,8 @@ const createGeneration = async (projectId, requestedBy, body = {}) => {
     }
   }
 
-  await ensureDailyQuota(requestedBy)
-
+  // Rate limit hằng ngày đã được chặn ở middleware checkAiLimit trên route POST .../generations
+  // (xem backend/src/middlewares/checkAiLimit.js) — không kiểm lại ở đây nữa.
   const generation = await AiGeneration.create({
     projectId,
     requestedBy,
