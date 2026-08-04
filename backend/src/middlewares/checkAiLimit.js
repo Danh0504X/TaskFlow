@@ -16,6 +16,15 @@ const startOfTodayUtc = () => {
  */
 export const checkAiLimit = async (req, res, next) => {
   try {
+    const user = req.user
+
+    // Nếu tài khoản là PRO và còn hạn sử dụng -> Không giới hạn lượt sinh AI
+    const isPro = user?.plan === 'PRO' && user?.currentPlanExpiresAt && new Date(user.currentPlanExpiresAt) > new Date()
+    if (isPro) {
+      return next()
+    }
+
+    // Tài khoản FREE hoặc PRO đã hết hạn: Đếm số lượt dùng hôm nay
     const count = await AiGeneration.countDocuments({
       requestedBy: req.user._id,
       createdAt: { $gte: startOfTodayUtc() },
@@ -23,7 +32,8 @@ export const checkAiLimit = async (req, res, next) => {
 
     if (count >= aiEnv.AI_DAILY_LIMIT) {
       return res.status(StatusCodes.TOO_MANY_REQUESTS).json({
-        message: `Đã đạt giới hạn ${aiEnv.AI_DAILY_LIMIT} lượt sinh AI hôm nay`,
+        message: `Tài khoản FREE đã đạt giới hạn ${aiEnv.AI_DAILY_LIMIT} lượt sinh AI/ngày. Vui lòng nâng cấp gói PRO để tiếp tục!`,
+        isLimitReached: true,
       })
     }
 

@@ -1,0 +1,192 @@
+{
+	"info": {
+		"_postman_id": "sepay-payment-testing-collection",
+		"name": "TaskFlow - SePay Payment Integration Test",
+		"description": "Bộ Request Test API Backend Thanh toán SePay & Nâng cấp tài khoản PRO",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "1. Đăng nhập (Lấy Cookie / Auth)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"email\": \"testuser@example.com\",\n  \"password\": \"12345678\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:5001/api/auth/signin",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5001",
+					"path": [
+						"api",
+						"auth",
+						"signin"
+					]
+				}
+			}
+		},
+		{
+			"name": "2. Tạo đơn thanh toán (VietQR)",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:5001/api/payments/create-order",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5001",
+					"path": [
+						"api",
+						"payments",
+						"create-order"
+					]
+				}
+			}
+		},
+		{
+			"name": "3. Polling kiểm tra trạng thái đơn",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:5001/api/payments/status/TF849201",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5001",
+					"path": [
+						"api",
+						"payments",
+						"status",
+						"TF849201"
+					]
+				}
+			}
+		},
+		{
+			"name": "4. Giả lập Webhook SePay (Chuẩn tiền & Mã)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"content\": \"TF849201 Thanh toan nang cap PRO\",\n  \"transferAmount\": 99000,\n  \"referenceCode\": \"FT261029301293\",\n  \"gateway\": \"MBBank\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:5001/api/payments/webhook/sepay",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5001",
+					"path": [
+						"api",
+						"payments",
+						"webhook",
+						"sepay"
+					]
+				}
+			}
+		},
+		{
+			"name": "5. Giả lập Webhook SePay (Chuyển THIẾU tiền)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"content\": \"TF849201 Chuyen thieu tien\",\n  \"transferAmount\": 50000\n}"
+				},
+				"url": {
+					"raw": "http://localhost:5001/api/payments/webhook/sepay",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5001",
+					"path": [
+						"api",
+						"payments",
+						"webhook",
+						"sepay"
+					]
+				}
+			}
+		},
+		{
+			"name": "6. Admin - Xem danh sách đơn chờ xử lý (Queue)",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:5001/api/admin/payments/pending-resolutions",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5001",
+					"path": [
+						"api",
+						"admin",
+						"payments",
+						"pending-resolutions"
+					]
+				}
+			}
+		},
+		{
+			"name": "7. Admin - Duyệt thủ công 1-Click",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"userId\": \"USER_ID_HERE\",\n  \"daysToAdd\": 30,\n  \"adminNote\": \"Đã xác nhận khách chuyển bù 49k qua Zalo\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:5001/api/admin/payments/TRANSACTION_ID_HERE/resolve",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5001",
+					"path": [
+						"api",
+						"admin",
+						"payments",
+						"TRANSACTION_ID_HERE",
+						"resolve"
+					]
+				}
+			}
+		}
+	]
+}

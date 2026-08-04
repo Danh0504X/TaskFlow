@@ -21,6 +21,8 @@ const buildUserInfo = (user) => ({
   isEmailVerified: user.isEmailVerified,
   status: user.status,
   role: user.role,
+  plan: user.plan || 'FREE',
+  currentPlanExpiresAt: user.currentPlanExpiresAt || null,
   hasPassword: Boolean(user.passwordHash || user.hasPassword), 
 })
 

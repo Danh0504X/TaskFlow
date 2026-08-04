@@ -6,6 +6,8 @@ import userRoute from './userRoute.js'
 import meRoute from './meRoute.js'
 import notificationRoute from './notificationRoute.js'
 import aiRoute from '../modules/ai/routes/ai.routes.js'
+import paymentRoute from './paymentRoute.js'
+import adminPaymentRoute from './adminPaymentRoute.js'
 
 const router = express.Router()
 
@@ -21,7 +23,11 @@ router.use('/email', emailRoute)
 router.use('/admin/users', userRoute)
 router.use('/me', meRoute)
 router.use('/notifications', notificationRoute)
+router.use('/payments', paymentRoute)
+router.use('/v1/payments', paymentRoute)
+router.use('/admin/payments', adminPaymentRoute)
 // Beta/Demo — AI Lab (modules/ai/**), additive-only: xem modules/ai/routes/ai.routes.js
 router.use('/projects/:projectId/ai', aiRoute)
 
 export default router
+
