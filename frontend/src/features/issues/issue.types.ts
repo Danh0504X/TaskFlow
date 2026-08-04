@@ -57,7 +57,7 @@ export interface Issue {
   // khi issue được tạo/gửi lên (payload) hoặc lấy thẳng từ model chưa populate.
   parentIssueId?: string | IssueParentRef | null
   epicName?: string
-  assigneeId?: string | null
+  assigneeId?: string | IssueMember | null
   assignee?: IssueMember
   orderIndex?: number
   aiGenerated?: boolean

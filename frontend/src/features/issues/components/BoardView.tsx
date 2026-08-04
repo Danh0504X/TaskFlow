@@ -92,20 +92,25 @@ const BoardView = ({
     status: IssueStatus
     orderIndex: number
     incompleteCount: number
+    subtasks: { _id: string; title: string; status: IssueStatus }[]
   } | null>(null)
 
   // [NEW] R2.4: State cho SubtaskWarningModal (MEMBER kéo sang IN_REVIEW có subtask chưa xong).
-  const [subtaskWarning, setSubtaskWarning] = useState<{ incompleteCount: number } | null>(null)
+  const [subtaskWarning, setSubtaskWarning] = useState<{
+    incompleteCount: number
+    subtasks: { _id: string; title: string; status: IssueStatus }[]
+  } | null>(null)
 
   const sortedIssues = [...localIssues].sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0))
   const { query, setQuery, filtered } = useIssueSearch(sortedIssues)
 
+  const getAssigneeId = (assigneeId?: string | { _id: string } | null) =>
+    typeof assigneeId === 'object' && assigneeId !== null ? assigneeId._id : assigneeId
+
   // [NEW] R1.1: MEMBER chỉ được kéo task được gán cho mình.
   const canDrag = (issue: Issue): boolean => {
     if (isOwner) return true
-    const assigneeIdStr = typeof issue.assigneeId === 'object' && issue.assigneeId !== null
-      ? (issue.assigneeId as any)._id
-      : issue.assigneeId
+    const assigneeIdStr = getAssigneeId(issue.assigneeId)
     return Boolean(assigneeIdStr && currentUserId && String(assigneeIdStr) === String(currentUserId))
   }
 
@@ -221,17 +226,6 @@ const BoardView = ({
     }
   }
 
-  // Đếm subtask chưa DONE của 1 task dựa trên allIssues.
-  const countIncompleteSubtasks = (taskId: string): number => {
-    if (!allIssues) return 0
-    return allIssues.filter(
-      (i) =>
-        i.type === ISSUE_TYPE.SUBTASK &&
-        (typeof i.parentIssueId === 'string' ? i.parentIssueId : i.parentIssueId?._id) === taskId &&
-        i.status !== 'DONE',
-    ).length
-  }
-
   const handleDragEnd = (event: DragEndEvent) => {
     const { active } = event
     const issueId = active.id as string
@@ -257,7 +251,8 @@ const BoardView = ({
         originalIssue?.status !== finalIssue.status ||
         originalIssue?.orderIndex !== finalIssue.orderIndex
       ) {
-        const incompleteCount = countIncompleteSubtasks(issueId)
+        const subtasks = getSubtasksByTaskId(issueId)
+        const incompleteCount = subtasks.filter((s) => s.status !== 'DONE').length
 
         // [NEW] R2.1: OWNER kéo sang DONE + có subtask chưa xong -> hiện ConfirmDoneDialog.
         if (isOwner && finalIssue.status === 'DONE' && incompleteCount > 0) {
@@ -266,6 +261,7 @@ const BoardView = ({
             status: finalIssue.status,
             orderIndex: finalIssue.orderIndex ?? 0,
             incompleteCount,
+            subtasks,
           })
           setActiveId(null)
           lastOverId.current = null
@@ -274,7 +270,7 @@ const BoardView = ({
 
         // [NEW] R2.4: MEMBER kéo sang IN_REVIEW + có subtask chưa xong -> hiện cảnh báo (không chặn).
         if (!isOwner && finalIssue.status === 'IN_REVIEW' && incompleteCount > 0) {
-          setSubtaskWarning({ incompleteCount })
+          setSubtaskWarning({ incompleteCount, subtasks })
         }
 
         onDragEnd(issueId, finalIssue.status, finalIssue.orderIndex ?? 0)
@@ -320,6 +316,21 @@ const BoardView = ({
     )
     if (subtasks.length === 0) return undefined
     return { done: subtasks.filter((s) => s.status === 'DONE').length, total: subtasks.length }
+  }
+
+  const getSubtasksByTaskId = (taskId: string) => {
+    if (!allIssues) return []
+    return allIssues
+      .filter(
+        (i) =>
+          i.type === ISSUE_TYPE.SUBTASK &&
+          (typeof i.parentIssueId === 'string' ? i.parentIssueId : i.parentIssueId?._id) === taskId,
+      )
+      .map((subtask) => ({
+        _id: subtask._id,
+        title: subtask.title,
+        status: subtask.status,
+      }))
   }
 
   if (isLoading) {
@@ -392,6 +403,7 @@ const BoardView = ({
       <SubtaskWarningModal
         open={subtaskWarning !== null}
         incompleteCount={subtaskWarning?.incompleteCount ?? 0}
+        subtasks={subtaskWarning?.subtasks ?? []}
         onClose={() => setSubtaskWarning(null)}
       />
     </div>
