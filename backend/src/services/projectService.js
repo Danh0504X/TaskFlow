@@ -557,6 +557,55 @@ const declineInvitation = async (projectId, userId, token) => {
   return toProjectDTO(updatedProject)
 }
 
+const removeMember = async (projectId, ownerUserId, targetUserId) => {
+  ensureValidObjectId(projectId, 'project id')
+  ensureValidObjectId(ownerUserId, 'owner user id')
+  ensureValidObjectId(targetUserId, 'target user id')
+
+  if (ownerUserId.toString() === targetUserId.toString()) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Chủ dự án không thể tự xóa chính mình')
+  }
+
+  const project = await Project.findOne({ _id: projectId, isDeleted: false })
+  if (!project) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Project not found')
+  }
+
+  const member = project.members.find(
+    (m) => m.userId.toString() === targetUserId.toString()
+  )
+
+  if (!member || member.status === 'REMOVED') {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Thành viên không hoạt động hoặc không tồn tại trong dự án')
+  }
+
+  member.status = 'REMOVED'
+  await project.save()
+
+  // Chuyển toàn bộ task đang gán cho user bị xóa thành unassigned (assigneeId = null)
+  await Issue.updateMany(
+    { projectId, assigneeId: targetUserId, isDeleted: false },
+    { $set: { assigneeId: null } }
+  )
+
+  // Gửi thông báo trong hệ thống cho thành viên bị xóa
+  await notificationService.createNotification({
+    userId: targetUserId,
+    actorId: ownerUserId,
+    projectId: project._id,
+    type: 'INVITATION',
+    entityType: 'PROJECT',
+    entityId: project._id,
+    title: 'Bị xóa khỏi dự án',
+    message: `Bạn đã bị xóa khỏi dự án "${project.name}" bởi Trưởng nhóm.`,
+  })
+
+  const updatedProject = await Project.findById(projectId)
+    .populate({ path: 'members.userId', select: 'fullName avatarUrl' })
+
+  return toProjectDTO(updatedProject)
+}
+
 export const projectService = {
   createProject,
   inviteMembers,
@@ -571,5 +620,6 @@ export const projectService = {
   leaveProject,
   acceptInvitation,
   declineInvitation,
+  removeMember,
 }
 

@@ -298,6 +298,8 @@ const ProjectWorkspacePage = () => {
         open={isMembersModalOpen}
         onClose={() => setIsMembersModalOpen(false)}
         members={project.members}
+        projectId={project._id}
+        isOwner={isOwner}
       />
     </div>
   )

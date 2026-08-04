@@ -1,37 +1,23 @@
 import { useState, type ReactNode } from 'react'
 import { motion } from 'motion/react'
-import { ArrowRight, Calendar, Clock, Layers, CheckCircle2 } from 'lucide-react'
+import { Calendar, Clock, Layers, CheckCircle2, Trash2, Pencil } from 'lucide-react'
 import Avatar from '@/components/ui/Avatar'
 import Spinner from '@/components/ui/Spinner'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { useProjectIssues } from '@/features/issues/hooks/useIssues'
 import { useProject } from '../hooks/useProject'
-import { useLeaveProject } from '../hooks/useProjectMutations'
+import { useLeaveProject, useRemoveMember } from '../hooks/useProjectMutations'
 import { formatDate } from '@/lib/format'
 import { useAuthStore } from '@/features/auth/authStore'
 import { staggerContainer, fadeUpItem } from '@/lib/motion'
+import type { ProjectMember } from '../project.types'
+import ProjectEditModal from './ProjectEditModal'
+
 
 interface ProjectSummaryTabProps {
   projectId: string
 }
 
-// Hoạt động gần đây CHƯA có backend (activity log) -> giữ mock tĩnh theo yêu cầu.
-const activities = [
-  {
-    id: 'a1',
-    user: { name: 'Sarah Miller', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=80&q=80' },
-    action: "đã chuyển trạng thái",
-    issueKey: 'NEB-04',
-    newValue: 'DONE',
-  },
-  {
-    id: 'a2',
-    user: { name: 'James Wilson', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=80&q=80' },
-    action: 'đã bình luận về',
-    issueKey: 'NEB-03',
-    comment: 'Đã hoàn thành kiểm thử cục bộ, phản hồi trả về chính xác.',
-  },
-]
 
 /** Vỏ card dùng chung cho toàn bộ tab — phẳng, viền mảnh, không shadow, tự stagger fade-up. */
 const SummaryCard = ({ className = '', children }: { className?: string; children: ReactNode }) => (
@@ -58,6 +44,22 @@ const ProjectSummaryTab = ({ projectId }: ProjectSummaryTabProps) => {
     })
   }
 
+  const [deletingMember, setDeletingMember] = useState<ProjectMember | null>(null)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const removeMemberMutation = useRemoveMember()
+
+  const handleConfirmRemoveMember = () => {
+    if (!deletingMember) return
+    removeMemberMutation.mutate(
+      { projectId, userId: deletingMember.userId },
+      {
+        onSuccess: () => {
+          setDeletingMember(null)
+        },
+      }
+    )
+  }
+
   if (isProjectLoading || isIssuesLoading) {
     return (
       <div className="py-24 flex justify-center text-muted">
@@ -73,6 +75,18 @@ const ProjectSummaryTab = ({ projectId }: ProjectSummaryTabProps) => {
       </div>
     )
   }
+
+  // --- 0. Lọc & sắp xếp thành viên dự án ---
+  const activeAndPendingMembers = project.members.filter((m) => m.status !== 'REMOVED')
+  const sortedMembers = [...activeAndPendingMembers].sort((a, b) => {
+    if (a.role === 'OWNER') return -1
+    if (b.role === 'OWNER') return 1
+
+    if (a.status === 'ACTIVE' && b.status === 'PENDING') return -1
+    if (a.status === 'PENDING' && b.status === 'ACTIVE') return 1
+
+    return 0
+  })
 
   // --- 1. Thống kê trạng thái công việc chung ---
   const totalIssues = issues.length
@@ -254,10 +268,22 @@ const ProjectSummaryTab = ({ projectId }: ProjectSummaryTabProps) => {
 
         {/* Card 2: Hạn chót & Tiến độ */}
         <SummaryCard className="flex flex-col justify-between min-h-[300px]">
-          <h3 className="text-base font-semibold text-ink mb-4 flex items-center gap-2">
-            <Clock size={18} className="text-pastel-yellow-ink" />
-            <span>Hạn chót & Tiến độ</span>
-          </h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-base font-semibold text-ink flex items-center gap-2">
+              <Clock size={18} className="text-pastel-yellow-ink" />
+              <span>Hạn chót & Tiến độ</span>
+            </h3>
+            {isOwner && (
+              <button
+                type="button"
+                onClick={() => setIsEditModalOpen(true)}
+                className="p-1.5 text-muted hover:text-ink rounded-md hover:bg-canvas transition-colors"
+                title="Sửa thông tin dự án"
+              >
+                <Pencil size={15} />
+              </button>
+            )}
+          </div>
 
           <div className="flex-grow flex flex-col justify-center space-y-5">
             <div className="space-y-1">
@@ -341,32 +367,57 @@ const ProjectSummaryTab = ({ projectId }: ProjectSummaryTabProps) => {
       {/* Hàng 2: Hoạt động gần đây & Phân tải công việc */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
-        {/* Hoạt động gần đây */}
+        {/* Thành viên dự án */}
         <SummaryCard className="flex flex-col h-[320px]">
-          <h3 className="text-base font-semibold text-ink mb-4">Hoạt động gần đây</h3>
+          <h3 className="text-base font-semibold text-ink mb-4">Thành viên dự án</h3>
           <motion.div variants={staggerContainer} initial="hidden" animate="show" className="flex-1 overflow-y-auto space-y-4 pr-1 scrollbar-thin">
-            {activities.map((act) => (
-              <motion.div key={act.id} variants={fadeUpItem} className="flex gap-3 items-start p-3 hover:bg-canvas rounded-lg transition-colors">
-                <Avatar src={act.user.avatar} name={act.user.name} size={32} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-ink leading-relaxed">
-                    <span className="font-semibold">{act.user.name}</span> {act.action}{' '}
-                    <span className="font-semibold text-brand">{act.issueKey}</span>
-                  </p>
-                  {act.newValue && (
-                    <div className="flex items-center gap-2 mt-1.5">
-                      <ArrowRight size={10} className="text-muted" />
-                      <span className="px-2 py-0.5 bg-pastel-green text-pastel-green-ink rounded text-[9px] font-bold uppercase">
-                        {act.newValue}
+            {sortedMembers.map((member) => {
+              const displayName = member.user?.fullName || 'Thành viên hệ thống'
+              const avatarUrl = member.user?.avatarUrl
+              const isOwnerRole = member.role === 'OWNER'
+              const isPending = member.status === 'PENDING'
+
+              return (
+                <motion.div
+                  key={member.userId}
+                  variants={fadeUpItem}
+                  className="flex items-center justify-between p-3 hover:bg-canvas rounded-lg transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <Avatar src={avatarUrl} name={displayName} size={32} />
+                    <div className="flex flex-col">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-ink">{displayName}</span>
+                        {isOwnerRole && (
+                          <span className="text-[9px] font-bold bg-pastel-blue text-pastel-blue-ink px-1.5 py-0.5 rounded-full uppercase tracking-wider">
+                            Owner
+                          </span>
+                        )}
+                        {isPending && (
+                          <span className="text-[9px] font-semibold bg-pastel-yellow text-pastel-yellow-ink px-1.5 py-0.5 rounded-full">
+                            Chờ xác nhận
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[10px] text-muted mt-0.5">
+                        Tham gia ngày: {formatDate(member.joinedAt)}
                       </span>
                     </div>
+                  </div>
+
+                  {isOwner && !isOwnerRole && (
+                    <button
+                      type="button"
+                      onClick={() => setDeletingMember(member)}
+                      className="p-1.5 text-muted hover:text-pastel-red-ink rounded-md hover:bg-pastel-red transition-colors shrink-0"
+                      title="Xóa thành viên"
+                    >
+                      <Trash2 size={15} />
+                    </button>
                   )}
-                  {act.comment && (
-                    <p className="text-[11px] text-muted italic mt-1 bg-canvas p-2 rounded-lg border border-hairline">{act.comment}</p>
-                  )}
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              )
+            })}
           </motion.div>
         </SummaryCard>
 
@@ -450,6 +501,25 @@ const ProjectSummaryTab = ({ projectId }: ProjectSummaryTabProps) => {
         loading={leaveMutation.isPending}
         onConfirm={handleLeaveConfirm}
         onClose={() => setIsLeaveConfirmOpen(false)}
+      />
+
+      {/* Modal xác nhận xóa thành viên */}
+      <ConfirmDialog
+        open={deletingMember !== null}
+        title="Xóa thành viên"
+        message={`Bạn có chắc chắn muốn xóa thành viên "${deletingMember?.user?.fullName || 'Thành viên này'}" ra khỏi dự án? Tất cả các công việc đang gán cho họ sẽ trở thành "Chưa phân công".`}
+        confirmText="Xóa thành viên"
+        danger
+        loading={removeMemberMutation.isPending}
+        onConfirm={handleConfirmRemoveMember}
+        onClose={() => setDeletingMember(null)}
+      />
+
+      {/* Modal chỉnh sửa thông tin dự án */}
+      <ProjectEditModal
+        open={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        project={project}
       />
     </motion.div>
   )

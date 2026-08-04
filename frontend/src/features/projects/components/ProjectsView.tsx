@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { FolderKanban, Plus, RotateCcw, Archive, Mail } from 'lucide-react'
 import PageHeader from '@/components/layout/PageHeader'
 import PageHeaderButton from '@/components/layout/PageHeaderButton'
@@ -40,7 +40,18 @@ const ProjectsView = () => {
   const [editing, setEditing] = useState<Project | null>(null)
   const [deleting, setDeleting] = useState<Project | null>(null)
   const [leaving, setLeaving] = useState<Project | null>(null)
-  const [showInvitations, setShowInvitations] = useState(false)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [showInvitations, setShowInvitations] = useState(
+    searchParams.get('openInvitations') === 'true'
+  )
+
+  useEffect(() => {
+    if (searchParams.get('openInvitations') === 'true') {
+      const nextParams = new URLSearchParams(searchParams)
+      nextParams.delete('openInvitations')
+      setSearchParams(nextParams, { replace: true })
+    }
+  }, [searchParams, setSearchParams])
 
   const invitationCount = invitations?.length ?? 0
 

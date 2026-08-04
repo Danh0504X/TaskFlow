@@ -102,5 +102,12 @@ export const projectApi = {
   declineInvitation: async (projectId: string, token?: string): Promise<void> => {
     await api.post(`/projects/${projectId}/invitation/decline`, token ? { token } : {})
   },
+
+  /** DELETE /projects/:projectId/members/:userId — xóa thành viên khỏi dự án. */
+  removeMember: async (projectId: string, userId: string): Promise<Project> => {
+    const res = await api.delete<ApiResponse<Project>>(`/projects/${projectId}/members/${userId}`)
+    return res.data.data
+  },
 }
+
 

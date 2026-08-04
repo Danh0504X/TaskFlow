@@ -20,7 +20,14 @@ export const useNotificationClick = (onCloseDropdown?: () => void) => {
     // 3. Điều hướng dựa theo thực tế loại thực thể
     switch (notif.entityType) {
       case 'PROJECT':
-        navigate(`/projects/${notif.entityId}`)
+        if (notif.title === 'Lời mời tham gia dự án') {
+          navigate('/projects?openInvitations=true')
+        } else if (notif.title === 'Bị xóa khỏi dự án') {
+          // Do nothing
+          break
+        } else {
+          navigate(`/projects/${notif.entityId}`)
+        }
         break
 
       case 'SPRINT':
