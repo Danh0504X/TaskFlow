@@ -13,6 +13,7 @@ import {
   leaveProject,
   acceptInvitation,
   declineInvitation,
+  removeMember,
 } from '../controllers/projectController.js'
 import { protectedRoute } from '../middlewares/authMiddleware.js'
 import { authorizeProjectRole } from '../middlewares/projectAuthMiddleware.js'
@@ -79,6 +80,13 @@ router.post(
   '/:projectId/leave',
   authorizeProjectRole('OWNER', 'MEMBER'),
   leaveProject,
+)
+
+// Xóa thành viên khỏi dự án: chỉ OWNER mới được phép.
+router.delete(
+  '/:projectId/members/:userId',
+  authorizeProjectRole('OWNER'),
+  removeMember,
 )
 
 // Chấp nhận / từ chối lời mời: chỉ cần đăng nhập (status: PENDING nên không check role)

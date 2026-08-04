@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Check, Mail, X as XIcon } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
@@ -18,6 +19,7 @@ interface ProjectInvitationsModalProps {
  * cho phép chấp nhận/từ chối ngay tại chỗ thay vì phải mở link trong email.
  */
 const ProjectInvitationsModal = ({ open, onClose }: ProjectInvitationsModalProps) => {
+  const navigate = useNavigate()
   const { data: invitations, isLoading } = useProjectInvitations()
   const acceptMutation = useAcceptInvitation()
   const declineMutation = useDeclineInvitation()
@@ -28,7 +30,16 @@ const ProjectInvitationsModal = ({ open, onClose }: ProjectInvitationsModalProps
 
   const handleAccept = (projectId: string) => {
     setProcessingId(projectId)
-    acceptMutation.mutate({ projectId }, { onSettled: () => setProcessingId(null) })
+    acceptMutation.mutate(
+      { projectId },
+      {
+        onSuccess: () => {
+          onClose()
+          navigate(`/projects/${projectId}`)
+        },
+        onSettled: () => setProcessingId(null)
+      }
+    )
   }
 
   const handleDecline = (projectId: string) => {

@@ -142,4 +142,16 @@ export const declineInvitation = asyncHandler(async (req, res) => {
   })
 })
 
+// Xóa thành viên khỏi dự án.
+export const removeMember = asyncHandler(async (req, res) => {
+  const { projectId, userId } = req.params
+  const result = await projectService.removeMember(projectId, req.user._id, userId)
+
+  res.status(StatusCodes.OK).json({
+    message: 'Removed member successfully',
+    data: result,
+  })
+})
+
+
 

@@ -147,4 +147,20 @@ export const usePermanentDeleteProject = () => {
   })
 }
 
+export const useRemoveMember = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ projectId, userId }: { projectId: string; userId: string }) =>
+      projectApi.removeMember(projectId, userId),
+    onSuccess: (_, { projectId }) => {
+      qc.invalidateQueries({ queryKey: projectKeys.lists() })
+      qc.invalidateQueries({ queryKey: projectKeys.detail(projectId) })
+      qc.invalidateQueries({ queryKey: ['issues', projectId] })
+      toast.success('Đã xóa thành viên ra khỏi dự án thành công')
+    },
+    onError: (error) => toast.error(getApiErrorMessage(error)),
+  })
+}
+
+
 
