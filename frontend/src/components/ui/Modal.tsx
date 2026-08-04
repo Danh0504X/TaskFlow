@@ -4,7 +4,7 @@ import { AlertTriangle, CheckCircle2, Info, Sparkles, X } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
 export type ModalTone = 'brand' | 'success' | 'danger' | 'info'
-export type ModalLayout = 'center' | 'compact' | 'sheet'
+export type ModalLayout = 'center' | 'compact' | 'sheet' | 'wide'
 
 interface ModalProps {
   open: boolean
@@ -16,7 +16,8 @@ interface ModalProps {
   className?: string
   /** Sắc thái modal — quyết định màu icon ở header. Mặc định 'brand' (form tạo/sửa thông thường, trung tính). */
   tone?: ModalTone
-  /** Bố cục: 'center' (mặc định, form thường), 'compact' (xác nhận ngắn gọn), 'sheet' (trượt lên từ đáy). */
+  /** Bố cục: 'center' (mặc định, form thường), 'compact' (xác nhận ngắn gọn), 'sheet' (trượt lên từ đáy),
+   * 'wide' (rộng, dùng cho nội dung nhiều cột như modal Sinh AI + lịch sử). */
   layout?: ModalLayout
   /** Icon tuỳ chỉnh ở header, thay cho icon mặc định theo `tone`. Chỉ hiện khi có `title`. */
   icon?: ReactNode
@@ -35,6 +36,7 @@ const layoutMaxWidth: Record<ModalLayout, string> = {
   center: 'max-w-lg',
   compact: 'max-w-sm',
   sheet: 'max-w-lg',
+  wide: 'max-w-7xl',
 }
 
 /**

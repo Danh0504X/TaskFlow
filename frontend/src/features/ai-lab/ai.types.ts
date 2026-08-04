@@ -54,12 +54,22 @@ export interface AiDraftIssue {
   createdIssueId: string | null
 }
 
+/** Bản rút gọn của epic nguồn, do backend populate vào `sourceEntityId` khi trả về (EPIC_TO_TASK). */
+export interface AiSourceEpicRef {
+  _id: string
+  title: string
+}
+
 /** 1 lượt sinh (PM bấm "Sinh Epic" từ requirement, hoặc "Sinh Task" từ 1 epic có sẵn). */
 export interface AiGeneration {
   _id: string
   projectId: string
   generationType: AiGenerationType
-  sourceEntityId: string | null
+  // EPIC_TO_TASK: object đã populate (epic nguồn) — null nếu epic đã bị xoá.
+  // REQ_TO_EPIC: luôn null (dùng inputPrompt thay để biết "sinh từ yêu cầu nào").
+  sourceEntityId: AiSourceEpicRef | null
+  // Chỉ có giá trị khi generationType = REQ_TO_EPIC (BE lưu '' cho EPIC_TO_TASK).
+  inputPrompt: string
   status: AiGenerationStatus
   provider: string | null
   model: string | null
