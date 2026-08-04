@@ -12,15 +12,15 @@ const ISSUE_TYPES = ['EPIC', 'TASK', 'SUBTASK', 'BUG']
 const ISSUE_STATUSES = ['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE']
 const ISSUE_PRIORITIES = ['LOW', 'MEDIUM', 'HIGH', 'URGENT']
 
-// [NEW] R1.2: MEMBER chỉ được chuyển status theo chiều tiến (không kéo ngược, không tự kéo sang DONE).
+// [NEW] R1.2: MEMBER được kéo task theo chiều tiến hoặc kéo ngược cột (nhưng không tự chuyển sang DONE).
 const MEMBER_ALLOWED_TRANSITIONS = {
   TODO: ['IN_PROGRESS'],
-  IN_PROGRESS: ['IN_REVIEW'],
-  IN_REVIEW: [], // MEMBER không tự chuyển đi đâu từ IN_REVIEW
-  DONE: [],
+  IN_PROGRESS: ['TODO', 'IN_REVIEW'],
+  IN_REVIEW: ['IN_PROGRESS', 'TODO'],
+  DONE: ['IN_REVIEW', 'IN_PROGRESS', 'TODO'],
 }
 
-// Kiểm tra quyền chuyển status: OWNER không bị hạn chế, MEMBER chỉ được chiều tiến.
+// Kiểm tra quyền chuyển status: OWNER không bị hạn chế, MEMBER chỉ được chuyển trong phạm vi allowed.
 const ensureStatusTransitionAllowed = (role, currentStatus, newStatus) => {
   if (role === 'OWNER') return // OWNER không bị hạn chế
   if (currentStatus === newStatus) return // giữ nguyên thì OK
@@ -29,7 +29,7 @@ const ensureStatusTransitionAllowed = (role, currentStatus, newStatus) => {
   if (!allowed.includes(newStatus)) {
     throw new ApiError(
       StatusCodes.FORBIDDEN,
-      `Bạn chỉ được chuyển task theo chiều tiến (${currentStatus} → ${allowed.join(' hoặc ') || 'không được tự chuyển'})`,
+      `Bạn không có quyền chuyển task từ ${currentStatus} sang ${newStatus}`,
     )
   }
 }
