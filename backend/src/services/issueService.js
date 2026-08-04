@@ -12,6 +12,28 @@ const ISSUE_TYPES = ['EPIC', 'TASK', 'SUBTASK', 'BUG']
 const ISSUE_STATUSES = ['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE']
 const ISSUE_PRIORITIES = ['LOW', 'MEDIUM', 'HIGH', 'URGENT']
 
+// [NEW] R1.2: MEMBER chỉ được chuyển status theo chiều tiến (không kéo ngược, không tự kéo sang DONE).
+const MEMBER_ALLOWED_TRANSITIONS = {
+  TODO: ['IN_PROGRESS'],
+  IN_PROGRESS: ['IN_REVIEW'],
+  IN_REVIEW: [], // MEMBER không tự chuyển đi đâu từ IN_REVIEW
+  DONE: [],
+}
+
+// Kiểm tra quyền chuyển status: OWNER không bị hạn chế, MEMBER chỉ được chiều tiến.
+const ensureStatusTransitionAllowed = (role, currentStatus, newStatus) => {
+  if (role === 'OWNER') return // OWNER không bị hạn chế
+  if (currentStatus === newStatus) return // giữ nguyên thì OK
+
+  const allowed = MEMBER_ALLOWED_TRANSITIONS[currentStatus] ?? []
+  if (!allowed.includes(newStatus)) {
+    throw new ApiError(
+      StatusCodes.FORBIDDEN,
+      `Bạn chỉ được chuyển task theo chiều tiến (${currentStatus} → ${allowed.join(' hoặc ') || 'không được tự chuyển'})`,
+    )
+  }
+}
+
 // Field populate dùng chung để trả assignee/epic dạng object thay vì ObjectId thô.
 const ASSIGNEE_POPULATE = { path: 'assigneeId', select: 'fullName avatarUrl' }
 const PARENT_ISSUE_POPULATE = { path: 'parentIssueId', select: 'title type' }
@@ -409,7 +431,8 @@ const updateIssue = async (projectId, issueId, body = {}, projectKey, project, u
 // Cập nhật riêng status của issue (dành cho cả MEMBER) — cũng là endpoint chính cho
 // kéo-thả trên Board/Backlog nên nhận thêm `orderIndex` (optional) để 1 lần gọi xử lý
 // được cả đổi cột lẫn đổi vị trí, không cần rơi về PUT (OWNER-only) chỉ vì orderIndex.
-const updateIssueStatus = async (projectId, issueId, body = {}, projectKey, project) => {
+// [MODIFIED] Nhận thêm `userId` và `projectRole` để áp dụng R1.1 + R1.2.
+const updateIssueStatus = async (projectId, issueId, body = {}, projectKey, project, userId, projectRole) => {
   ensureValidObjectId(projectId, 'project id')
   ensureValidObjectId(issueId, 'issue id')
 
@@ -424,6 +447,14 @@ const updateIssueStatus = async (projectId, issueId, body = {}, projectKey, proj
   }
 
   await ensureIssueStatusChangeAllowed(project, issue)
+
+  // [NEW] R1.1: MEMBER chỉ được cập nhật issue được gán cho mình.
+  if (projectRole === 'MEMBER' && issue.assigneeId?.toString() !== userId?.toString()) {
+    throw new ApiError(StatusCodes.FORBIDDEN, 'Bạn chỉ có thể cập nhật trạng thái task được gán cho bạn')
+  }
+
+  // [NEW] R1.2: Kiểm tra chiều chuyển status hợp lệ.
+  ensureStatusTransitionAllowed(projectRole, issue.status, status)
 
   const update = { status }
   if (orderIndex !== undefined) {

@@ -122,6 +122,7 @@ const ScrumBoardContainer = ({ projectId, onSelectIssue, onGoToBacklog }: ScrumB
 
       <BoardView
         issues={taskIssues}
+        allIssues={sprintIssues ?? []}
         columns={COLUMNS}
         isLoading={issuesLoading}
         disabled={false}
@@ -130,6 +131,7 @@ const ScrumBoardContainer = ({ projectId, onSelectIssue, onGoToBacklog }: ScrumB
         projectId={projectId}
         quickAddSprintId={activeSprint._id}
         isOwner={isOwner}
+        currentUserId={currentUser?._id ?? ''}
       />
 
       {isOwner && (
