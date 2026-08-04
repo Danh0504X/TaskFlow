@@ -39,18 +39,25 @@ const BoardColumn = ({ title, status, issues, onSelectIssue, projectId, quickAdd
 
       <div className="flex-1 overflow-y-auto space-y-2.5 pr-1 scrollbar-thin">
         <SortableContext items={issueIds} strategy={verticalListSortingStrategy}>
-          {issues.map((issue) => (
-            <SortableItem key={issue._id} id={issue._id}>
-              <IssueCard
-                issue={issue}
-                projectId={projectId}
-                isOwner={isOwner}
-                onClick={() => onSelectIssue(issue.key)}
-                isDraggable={isOwner || issue.assigneeId === currentUserId}
-                subtaskStats={getSubtaskStats(issue._id)}
-              />
-            </SortableItem>
-          ))}
+          {issues.map((issue) => {
+            const assigneeIdStr = typeof issue.assigneeId === 'object' && issue.assigneeId !== null
+              ? (issue.assigneeId as any)._id
+              : issue.assigneeId
+            const isDraggable = isOwner || Boolean(assigneeIdStr && currentUserId && String(assigneeIdStr) === String(currentUserId))
+
+            return (
+              <SortableItem key={issue._id} id={issue._id} disabled={!isDraggable}>
+                <IssueCard
+                  issue={issue}
+                  projectId={projectId}
+                  isOwner={isOwner}
+                  onClick={() => onSelectIssue(issue.key)}
+                  isDraggable={isDraggable}
+                  subtaskStats={getSubtaskStats(issue._id)}
+                />
+              </SortableItem>
+            )
+          })}
         </SortableContext>
 
         {isOwner ? (

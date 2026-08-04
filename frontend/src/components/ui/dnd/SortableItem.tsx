@@ -21,11 +21,11 @@ export const SortableItem = ({ id, children, disabled = false }: SortableItemPro
   const style = {
     transform: CSS.Transform.toString(transform),
     transition: transition || undefined,
-    cursor: disabled ? 'default' : 'grab',
+    cursor: disabled ? undefined : 'grab',
   }
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+    <div ref={setNodeRef} style={style} {...(disabled ? {} : attributes)} {...(disabled ? {} : listeners)}>
       {/* Làm mờ item gốc khi đang kéo thay vì thay bằng khung placeholder chiều cao cố định
        * -> tự khớp đúng chiều cao thật của item (card Board cao, dòng Backlog thấp), tránh
        * các item khác bị đẩy lên/xuống một khoảng lớn do lệch chiều cao giả với chiều cao thật. */}

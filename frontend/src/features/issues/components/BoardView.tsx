@@ -25,12 +25,12 @@ export interface BoardColumnDef {
   title: string
 }
 
-// [NEW] R1.2: Bảng chuyển status hợp lệ cho MEMBER — phía client (guard kéo-thả).
+// [NEW] R1.2: Bảng chuyển status hợp lệ cho MEMBER — phía client (guard kéo-thả cho phép tiến/lùi, trừ tự chuyển sang DONE).
 const MEMBER_ALLOWED_TRANSITIONS: Record<IssueStatus, IssueStatus[]> = {
   TODO: ['IN_PROGRESS'],
-  IN_PROGRESS: ['IN_REVIEW'],
-  IN_REVIEW: [],
-  DONE: [],
+  IN_PROGRESS: ['TODO', 'IN_REVIEW'],
+  IN_REVIEW: ['IN_PROGRESS', 'TODO'],
+  DONE: ['IN_REVIEW', 'IN_PROGRESS', 'TODO'],
 }
 
 interface BoardViewProps {
@@ -103,7 +103,10 @@ const BoardView = ({
   // [NEW] R1.1: MEMBER chỉ được kéo task được gán cho mình.
   const canDrag = (issue: Issue): boolean => {
     if (isOwner) return true
-    return issue.assigneeId === currentUserId
+    const assigneeIdStr = typeof issue.assigneeId === 'object' && issue.assigneeId !== null
+      ? (issue.assigneeId as any)._id
+      : issue.assigneeId
+    return Boolean(assigneeIdStr && currentUserId && String(assigneeIdStr) === String(currentUserId))
   }
 
   const mouseSensor = useSensor(MouseSensor, {
@@ -125,8 +128,8 @@ const BoardView = ({
   const handleDragStart = (event: DragStartEvent) => {
     // [NEW] R1.1: Kiểm tra quyền kéo ngay khi bắt đầu drag.
     const issue = localIssues.find((i) => i._id === (event.active.id as string))
-    if (issue && !canDrag(issue)) {
-      // Không setActiveId -> dnd-kit sẽ không có active item -> drag bị hủy silently.
+    if (!issue || !canDrag(issue)) {
+      setActiveId(null)
       return
     }
     setActiveId(event.active.id as string)
@@ -137,17 +140,17 @@ const BoardView = ({
     const { active, over } = event
     if (!over) return
 
-    const activeId = active.id as string
+    const activeIdStr = active.id as string
     const overId = over.id as string
 
-    if (activeId === overId) return
+    if (activeIdStr === overId) return
+
+    const activeIssue = localIssues.find((i) => i._id === activeIdStr)
+    if (!activeIssue || !canDrag(activeIssue)) return
 
     // Tối ưu hóa: Tránh re-render liên tục nếu chuột di chuyển nhanh trong phạm vi cùng một card
     if (lastOverId.current === overId) return
     lastOverId.current = overId
-
-    const activeIssue = localIssues.find((i) => i._id === activeId)
-    if (!activeIssue) return
 
     // Xác định status của container đích
     let targetStatus: IssueStatus | null = null
@@ -165,7 +168,7 @@ const BoardView = ({
 
     const currentStatus = activeIssue.status
 
-    // [NEW] R1.2: Guard phía client — MEMBER không được kéo sang cột ngoài chiều tiến.
+    // [NEW] R1.2: Guard phía client — MEMBER không được kéo sang cột ngoài danh sách cho phép.
     // Chặn ngay ở handleDragOver để card không "nhảy" vào cột không hợp lệ trong UI.
     if (!isOwner && currentStatus !== targetStatus) {
       const allowed = MEMBER_ALLOWED_TRANSITIONS[currentStatus] ?? []
@@ -176,10 +179,10 @@ const BoardView = ({
     if (currentStatus !== targetStatus) {
       setLocalIssues((prev) => {
         return prev.map((item) => {
-          if (item._id === activeId) {
+          if (item._id === activeIdStr) {
             // Tìm các issue đang có ở cột đích (không gồm chính nó) để tính index mới
             const destIssues = prev
-              .filter((i) => i.status === targetStatus && i._id !== activeId)
+              .filter((i) => i.status === targetStatus && i._id !== activeIdStr)
               .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0))
 
             let targetIndex = destIssues.length
@@ -200,7 +203,7 @@ const BoardView = ({
       // Trường hợp 2: Kéo trong cùng một cột nhưng đổi vị trí
       setLocalIssues((prev) => {
         const destIssues = prev
-          .filter((i) => i.status === targetStatus && i._id !== activeId)
+          .filter((i) => i.status === targetStatus && i._id !== activeIdStr)
           .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0))
 
         const overIndexInCol = destIssues.findIndex((i) => i._id === overId)
@@ -209,7 +212,7 @@ const BoardView = ({
         const newOrder = calculateNewOrderIndex(destIssues, overIndexInCol)
 
         return prev.map((item) => {
-          if (item._id === activeId) {
+          if (item._id === activeIdStr) {
             return { ...item, orderIndex: newOrder }
           }
           return item
@@ -235,8 +238,19 @@ const BoardView = ({
 
     // Tìm trạng thái sau khi kéo thả của issue để cập nhật API
     const finalIssue = localIssues.find((i) => i._id === issueId)
-    if (finalIssue) {
+    if (finalIssue && canDrag(finalIssue)) {
       const originalIssue = issues.find((i) => i._id === issueId)
+
+      // Kiểm tra chuyển status có hợp lệ cho MEMBER không
+      if (!isOwner && originalIssue && originalIssue.status !== finalIssue.status) {
+        const allowed = MEMBER_ALLOWED_TRANSITIONS[originalIssue.status] ?? []
+        if (!allowed.includes(finalIssue.status)) {
+          setLocalIssues(issues)
+          setActiveId(null)
+          lastOverId.current = null
+          return
+        }
+      }
 
       // Chỉ gọi API nếu thực sự có sự thay đổi về cột hoặc vị trí
       if (
@@ -261,11 +275,12 @@ const BoardView = ({
         // [NEW] R2.4: MEMBER kéo sang IN_REVIEW + có subtask chưa xong -> hiện cảnh báo (không chặn).
         if (!isOwner && finalIssue.status === 'IN_REVIEW' && incompleteCount > 0) {
           setSubtaskWarning({ incompleteCount })
-          // Vẫn cho phép drag end bình thường (gọi API tiếp tục bên dưới).
         }
 
         onDragEnd(issueId, finalIssue.status, finalIssue.orderIndex ?? 0)
       }
+    } else {
+      setLocalIssues(issues)
     }
 
     setActiveId(null)
