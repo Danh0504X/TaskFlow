@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { motion, useReducedMotion } from 'motion/react'
-import { X, Send, Plus } from 'lucide-react'
+import { X, Send, Plus, Sparkles } from 'lucide-react'
 import Avatar from '@/components/ui/Avatar'
 import Spinner from '@/components/ui/Spinner'
 import IssueTypeIcon from '@/components/ui/IssueTypeIcon'
 import { useAuthStore } from '@/features/auth/authStore'
+import { useAiModalStore } from '@/features/ai-lab/aiModalStore'
 import { useProject } from '@/features/projects/hooks/useProject'
 import { useUpdateIssue, useUpdateIssueStatus, useCreateIssue } from '../hooks/useIssueMutations'
 import { useProjectIssues } from '../hooks/useIssues'
@@ -108,6 +109,7 @@ const IssueDetailPanel = ({ issue, projectId, isLoading, onClose, onSelectIssue 
 
   const userMemberRecord = project?.members?.find((m) => m.userId === currentUser?._id)
   const isOwner = userMemberRecord?.role === 'OWNER'
+  const openAiForEpic = useAiModalStore((state) => state.openForEpic)
 
   // `useCreateIssue`/`useUpdateIssue`/`useUpdateIssueStatus` (dùng chung toàn app) chỉ
   // `invalidateQueries` sau khi lưu -> UI phải đợi thêm 1 lượt GET nền mới thấy thay đổi,
@@ -298,10 +300,22 @@ const IssueDetailPanel = ({ issue, projectId, isLoading, onClose, onSelectIssue 
           <>
             <div className="flex-1 overflow-y-auto p-6 space-y-5 scrollbar-thin">
               <div>
-                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-pastel-blue text-pastel-blue-ink rounded text-[9px] font-bold uppercase tracking-wider mb-2">
-                  <IssueTypeIcon type={issue.type} size={11} />
-                  {issue.type}
-                </span>
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-pastel-blue text-pastel-blue-ink rounded text-[9px] font-bold uppercase tracking-wider">
+                    <IssueTypeIcon type={issue.type} size={11} />
+                    {issue.type}
+                  </span>
+                  {/* Beta — AI Lab: chỉ epic mới bóc được thành task, chỉ OWNER dùng được. */}
+                  {issue.type === ISSUE_TYPE.EPIC && isOwner && (
+                    <button
+                      type="button"
+                      onClick={() => openAiForEpic(projectId, issue._id, issue.title)}
+                      className="flex items-center gap-1 text-[10px] font-bold text-brand hover:underline"
+                    >
+                      <Sparkles size={11} /> Sinh Task bằng AI
+                    </button>
+                  )}
+                </div>
                 {isEditingTitle ? (
                   <input
                     ref={titleInputRef}

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Layers } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import Badge from '@/components/ui/Badge'
 import ProjectPicker from '../components/ProjectPicker'
@@ -7,6 +8,43 @@ import GenerationStatus from '../components/GenerationStatus'
 import DraftTable from '../components/DraftTable'
 import { useGenerations } from '../hooks/useGenerations'
 import { useGenerationPolling } from '../hooks/useGenerationPolling'
+import { getGenerationContextLabel } from '../ai.utils'
+import type { AiGeneration } from '../ai.types'
+
+interface RecentGenerationListProps {
+  title: string
+  generations: AiGeneration[]
+  activeGenerationId: string | null
+  onSelect: (id: string) => void
+}
+
+/** 1 cột lịch sử của ĐÚNG 1 generationType — tách riêng Req→Epic và Epic→Task thành 2 cột song
+ * song (thay vì trộn chung 1 hàng như trước) để không lẫn 2 loại lượt sinh vào nhau. */
+const RecentGenerationList = ({ title, generations, activeGenerationId, onSelect }: RecentGenerationListProps) => (
+  <div className="space-y-1.5">
+    <p className="text-[10px] font-bold uppercase tracking-wide text-muted">{title}</p>
+    {generations.length === 0 ? (
+      <p className="text-[11px] text-subtle">Chưa có lượt sinh nào</p>
+    ) : (
+      <div className="flex flex-col gap-1.5">
+        {generations.slice(0, 5).map((gen) => (
+          <button
+            key={gen._id}
+            type="button"
+            onClick={() => onSelect(gen._id)}
+            className={cn(
+              'flex flex-col items-start gap-0.5 rounded-lg border px-3 py-1.5 text-left transition-colors',
+              activeGenerationId === gen._id ? 'border-brand/40 bg-canvas' : 'border-hairline hover:bg-canvas',
+            )}
+          >
+            <span className="w-full truncate text-xs font-semibold text-ink">{getGenerationContextLabel(gen)}</span>
+            <span className="text-[10px] text-subtle">{new Date(gen.createdAt).toLocaleString('vi-VN')}</span>
+          </button>
+        ))}
+      </div>
+    )}
+  </div>
+)
 
 /** AI Lab (Beta/Demo) — PM chọn dự án -> nhập requirement (Req->Epic) hoặc chọn 1 epic
  * (Epic->Task) -> AI đề xuất draft -> PM duyệt (sửa/thêm tay/xoá/chấp nhận/từ chối) -> chấp
@@ -45,27 +83,23 @@ const AiLabPage = () => {
           <GenerateForm projectId={projectId} onCreated={setActiveGenerationId} />
 
           {generations && generations.length > 0 && (
-            <div className="border-t border-hairline pt-4">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-subtle">
+            <div className="space-y-3 border-t border-hairline pt-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-subtle">
                 Lượt sinh gần đây
               </p>
-              <div className="flex flex-wrap gap-2">
-                {generations.slice(0, 8).map((gen) => (
-                  <button
-                    key={gen._id}
-                    type="button"
-                    onClick={() => setActiveGenerationId(gen._id)}
-                    className={cn(
-                      'rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors',
-                      activeGenerationId === gen._id
-                        ? 'border-brand/40 bg-canvas text-ink'
-                        : 'border-hairline text-muted hover:bg-canvas hover:text-ink',
-                    )}
-                  >
-                    {gen.generationType === 'REQ_TO_EPIC' ? 'Req → Epic' : 'Epic → Task'} ·{' '}
-                    {new Date(gen.createdAt).toLocaleString('vi-VN')}
-                  </button>
-                ))}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <RecentGenerationList
+                  title="Từ yêu cầu (Epic)"
+                  generations={generations.filter((g) => g.generationType === 'REQ_TO_EPIC')}
+                  activeGenerationId={activeGenerationId}
+                  onSelect={setActiveGenerationId}
+                />
+                <RecentGenerationList
+                  title="Từ Epic (Task)"
+                  generations={generations.filter((g) => g.generationType === 'EPIC_TO_TASK')}
+                  activeGenerationId={activeGenerationId}
+                  onSelect={setActiveGenerationId}
+                />
               </div>
             </div>
           )}
@@ -74,6 +108,11 @@ const AiLabPage = () => {
 
       {projectId && activeGenerationId && activeGeneration && (
         <section className="space-y-4">
+          <div className="flex items-start gap-2 rounded-lg border border-hairline bg-surface px-3 py-2">
+            <Layers size={14} className="mt-0.5 shrink-0 text-brand" />
+            <p className="text-xs text-ink">{getGenerationContextLabel(activeGeneration, 160)}</p>
+          </div>
+
           <GenerationStatus
             status={activeGeneration.status}
             errorMessage={activeGeneration.errorMessage}

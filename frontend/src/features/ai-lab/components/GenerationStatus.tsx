@@ -2,19 +2,13 @@ import { AlertTriangle } from 'lucide-react'
 import Spinner from '@/components/ui/Spinner'
 import Button from '@/components/ui/Button'
 import type { AiGenerationStatus } from '../ai.types'
+import { GENERATION_STATUS_LABEL } from '../ai.utils'
 
 interface GenerationStatusProps {
   status: AiGenerationStatus
   errorMessage?: string | null
   onRetry?: () => void
   retrying?: boolean
-}
-
-const STATUS_LABEL: Record<AiGenerationStatus, string> = {
-  PENDING: 'Đang chờ xử lý...',
-  PROCESSING: 'AI đang phân tích và sinh issue...',
-  COMPLETED: 'Hoàn tất',
-  FAILED: 'Sinh thất bại',
 }
 
 /** Banner trạng thái lượt sinh — component cha (AiLabPage) chỉ render DraftTable khi COMPLETED,
@@ -27,7 +21,7 @@ const GenerationStatus = ({ status, errorMessage, onRetry, retrying }: Generatio
       <div className="flex items-start gap-3 rounded-lg border border-pastel-red-ink/25 bg-pastel-red p-4">
         <AlertTriangle size={18} className="mt-0.5 shrink-0 text-pastel-red-ink" />
         <div className="flex-1">
-          <p className="text-sm font-semibold text-pastel-red-ink">{STATUS_LABEL.FAILED}</p>
+          <p className="text-sm font-semibold text-pastel-red-ink">{GENERATION_STATUS_LABEL.FAILED}</p>
           <p className="mt-1 text-xs text-pastel-red-ink/80">
             {errorMessage || 'Đã có lỗi xảy ra khi gọi AI. Vui lòng thử lại.'}
           </p>
@@ -44,7 +38,7 @@ const GenerationStatus = ({ status, errorMessage, onRetry, retrying }: Generatio
   return (
     <div className="flex items-center gap-3 rounded-lg border border-hairline bg-surface p-4">
       <Spinner className="h-5 w-5 text-brand" />
-      <p className="text-sm font-medium text-ink">{STATUS_LABEL[status]}</p>
+      <p className="text-sm font-medium text-ink">{GENERATION_STATUS_LABEL[status]}</p>
     </div>
   )
 }
