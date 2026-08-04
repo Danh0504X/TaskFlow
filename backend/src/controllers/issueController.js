@@ -59,7 +59,15 @@ export const updateIssue = asyncHandler(async (req, res) => {
 // Cập nhật riêng status của issue.
 export const updateIssueStatus = asyncHandler(async (req, res) => {
   const { projectId, issueId } = req.params
-  const result = await issueService.updateIssueStatus(projectId, issueId, req.body, req.project.key, req.project)
+  const result = await issueService.updateIssueStatus(
+    projectId,
+    issueId,
+    req.body,
+    req.project.key,
+    req.project,
+    req.user._id,      // [NEW] R1.1
+    req.projectRole,   // [NEW] R1.2 — đã có từ authorizeProjectRole middleware
+  )
 
   res.status(StatusCodes.OK).json({
     message: 'Issue status updated successfully',

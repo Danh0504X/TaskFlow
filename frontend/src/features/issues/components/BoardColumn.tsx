@@ -16,9 +16,13 @@ interface BoardColumnProps {
   quickAddSprintId: string | null
   /** Chỉ OWNER được tạo issue (khớp quyền tạo issue ở backend) -> ẩn khung quick-add với MEMBER. */
   isOwner: boolean
+  /** [NEW] R1.1: ID user hiện tại (dùng cho cursor khác nhau: MEMBER chỉ kéo task của mình). */
+  currentUserId: string
+  /** [NEW] R2.3: Hàm tính subtask stats cho từng task. */
+  getSubtaskStats: (taskId: string) => { done: number; total: number } | undefined
 }
 
-const BoardColumn = ({ title, status, issues, onSelectIssue, projectId, quickAddSprintId, isOwner }: BoardColumnProps) => {
+const BoardColumn = ({ title, status, issues, onSelectIssue, projectId, quickAddSprintId, isOwner, currentUserId, getSubtaskStats }: BoardColumnProps) => {
   const issueIds = issues.map((i) => i._id)
 
   return (
@@ -37,7 +41,14 @@ const BoardColumn = ({ title, status, issues, onSelectIssue, projectId, quickAdd
         <SortableContext items={issueIds} strategy={verticalListSortingStrategy}>
           {issues.map((issue) => (
             <SortableItem key={issue._id} id={issue._id}>
-              <IssueCard issue={issue} projectId={projectId} isOwner={isOwner} onClick={() => onSelectIssue(issue.key)} />
+              <IssueCard
+                issue={issue}
+                projectId={projectId}
+                isOwner={isOwner}
+                onClick={() => onSelectIssue(issue.key)}
+                isDraggable={isOwner || issue.assigneeId === currentUserId}
+                subtaskStats={getSubtaskStats(issue._id)}
+              />
             </SortableItem>
           ))}
         </SortableContext>

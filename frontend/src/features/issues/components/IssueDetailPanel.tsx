@@ -398,7 +398,7 @@ const IssueDetailPanel = ({ issue, projectId, isLoading, onClose, onSelectIssue 
                               { onSuccess: upsertIssueInCache },
                             )
                           }
-                          readOnly={false}
+                          readOnly={!isOwner && subtask.assigneeId !== currentUser?._id}
                         />
                         <button
                           type="button"

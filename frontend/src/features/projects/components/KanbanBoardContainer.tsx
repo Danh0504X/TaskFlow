@@ -48,6 +48,7 @@ const KanbanBoardContainer = ({ projectId, onSelectIssue }: KanbanBoardContainer
   return (
     <BoardView
       issues={taskIssues}
+      allIssues={issues ?? []}
       columns={COLUMNS}
       isLoading={isLoading}
       disabled={false}
@@ -56,6 +57,7 @@ const KanbanBoardContainer = ({ projectId, onSelectIssue }: KanbanBoardContainer
       projectId={projectId}
       quickAddSprintId={null}
       isOwner={isOwner}
+      currentUserId={currentUser?._id ?? ''}
     />
   )
 }
