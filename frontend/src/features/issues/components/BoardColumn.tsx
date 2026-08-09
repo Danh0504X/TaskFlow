@@ -40,10 +40,10 @@ const BoardColumn = ({ title, status, issues, onSelectIssue, projectId, quickAdd
       <div className="flex-1 overflow-y-auto space-y-2.5 pr-1 scrollbar-thin">
         <SortableContext items={issueIds} strategy={verticalListSortingStrategy}>
           {issues.map((issue) => {
-            const assigneeIdStr = typeof issue.assigneeId === 'object' && issue.assigneeId !== null
-              ? (issue.assigneeId as any)._id
-              : issue.assigneeId
-            const isDraggable = isOwner || Boolean(assigneeIdStr && currentUserId && String(assigneeIdStr) === String(currentUserId))
+            const getAssigneeId = (assigneeId?: string | { _id: string } | null) =>
+            typeof assigneeId === 'object' && assigneeId !== null ? assigneeId._id : assigneeId
+          const assigneeIdStr = getAssigneeId(issue.assigneeId)
+          const isDraggable = isOwner || Boolean(assigneeIdStr && currentUserId && String(assigneeIdStr) === String(currentUserId))
 
             return (
               <SortableItem key={issue._id} id={issue._id} disabled={!isDraggable}>

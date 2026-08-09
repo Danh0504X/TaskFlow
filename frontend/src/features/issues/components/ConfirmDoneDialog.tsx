@@ -1,5 +1,4 @@
 import Modal from '@/components/ui/Modal'
-import { AlertTriangle } from 'lucide-react'
 
 interface ConfirmDoneDialogProps {
   open: boolean
@@ -9,7 +8,7 @@ interface ConfirmDoneDialogProps {
 }
 
 /**
- * [R2.1] Dialog xác nhận khi OWNER kéo Task sang DONE nhưng còn subtask chưa xong.
+ * [R2.1] Dialog xác nhận khi OWNER kéo Task sang DONE nhưng còn Sub-task chưa hoàn thành.
  * Dùng lại Modal có sẵn (tone='danger', layout='compact').
  */
 const ConfirmDoneDialog = ({ open, incompleteCount, onConfirm, onCancel }: ConfirmDoneDialogProps) => {
@@ -17,7 +16,7 @@ const ConfirmDoneDialog = ({ open, incompleteCount, onConfirm, onCancel }: Confi
     <Modal
       open={open}
       onClose={onCancel}
-      title="Còn việc con chưa hoàn thành"
+      title="Còn Sub-task chưa hoàn thành"
       tone="danger"
       layout="compact"
       footer={
@@ -41,11 +40,11 @@ const ConfirmDoneDialog = ({ open, incompleteCount, onConfirm, onCancel }: Confi
     >
       <p className="text-sm text-ink leading-relaxed">
         Task này còn{' '}
-        <span className="font-bold text-pastel-red-ink">{incompleteCount}</span> việc con chưa hoàn thành.
+        <span className="font-bold text-pastel-red-ink">{incompleteCount}</span> Sub-task chưa hoàn thành.
       </p>
       <p className="text-xs text-muted mt-1.5 leading-relaxed">
         Bạn có chắc muốn chuyển task sang <span className="font-semibold text-ink">DONE</span> không?
-        Các việc con sẽ giữ nguyên trạng thái hiện tại.
+        Các Sub-task sẽ giữ nguyên trạng thái hiện tại.
       </p>
     </Modal>
   )

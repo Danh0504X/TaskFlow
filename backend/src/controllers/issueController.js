@@ -75,6 +75,24 @@ export const updateIssueStatus = asyncHandler(async (req, res) => {
   })
 })
 
+// Từ chối Task đang ở trạng thái IN_REVIEW (bắt buộc nhập lý do).
+export const rejectIssue = asyncHandler(async (req, res) => {
+  const { projectId, issueId } = req.params
+  const { reason } = req.body
+  const result = await issueService.rejectIssue(
+    projectId,
+    issueId,
+    req.user._id,
+    req.projectRole,
+    reason,
+  )
+
+  res.status(StatusCodes.OK).json({
+    message: 'Issue rejected successfully',
+    data: result,
+  })
+})
+
 // Xóa issue (xóa cứng).
 export const deleteIssue = asyncHandler(async (req, res) => {
   const { projectId, issueId } = req.params

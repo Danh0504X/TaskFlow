@@ -96,3 +96,24 @@ export const useDeleteIssue = (projectId: string) => {
     onError: (error) => toast.error(getApiErrorMessage(error)),
   })
 }
+
+export const useRejectIssue = (projectId: string) => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      issueId,
+      reason,
+    }: {
+      issueId: string
+      reason: string
+    }) => issueApi.reject(projectId, issueId, reason),
+    onSuccess: (updated) => {
+      qc.invalidateQueries({ queryKey: issueKeys.lists() })
+      qc.invalidateQueries({
+        queryKey: issueKeys.detail(projectId, updated._id),
+      })
+      toast.success('Đã từ chối công việc và đẩy về cột Cần làm')
+    },
+    onError: (error) => toast.error(getApiErrorMessage(error)),
+  })
+}

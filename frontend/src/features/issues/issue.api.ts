@@ -77,6 +77,19 @@ export const issueApi = {
     return res.data.data
   },
 
+  /** POST /projects/:projectId/issues/:issueId/reject — từ chối task đang ở IN_REVIEW (chỉ OWNER). */
+  reject: async (
+    projectId: string,
+    issueId: string,
+    reason: string,
+  ): Promise<Issue> => {
+    const res = await api.post<ApiResponse<Issue>>(
+      `/projects/${projectId}/issues/${issueId}/reject`,
+      { reason },
+    )
+    return res.data.data
+  },
+
   /** DELETE /projects/:projectId/issues/:issueId — xoá hẳn issue (kèm xoá hẳn subtask con). */
   remove: async (projectId: string, issueId: string): Promise<Issue> => {
     const res = await api.delete<ApiResponse<Issue>>(

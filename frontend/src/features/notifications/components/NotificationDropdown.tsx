@@ -120,7 +120,7 @@ export const NotificationDropdown = ({ notifications, onClose }: NotificationDro
                 {notif.actorId ? (
                   <Avatar
                     src={notif.actorId.avatarUrl ?? undefined}
-                    name={notif.actorId.displayName}
+                    name={notif.actorId.fullName}
                     size={28}
                   />
                 ) : (

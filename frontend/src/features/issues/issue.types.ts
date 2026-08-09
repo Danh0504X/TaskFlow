@@ -41,6 +41,14 @@ export interface IssueParentRef {
   type: IssueType
 }
 
+/** Lịch sử từ chối task khi ở trạng thái IN_REVIEW. */
+export interface RejectionRecord {
+  _id?: string
+  reason: string
+  rejectedBy: IssueMember | string
+  rejectedAt: string
+}
+
 export interface Issue {
   _id: string
   key: string
@@ -57,10 +65,11 @@ export interface Issue {
   // khi issue được tạo/gửi lên (payload) hoặc lấy thẳng từ model chưa populate.
   parentIssueId?: string | IssueParentRef | null
   epicName?: string
-  assigneeId?: string | null
+  assigneeId?: string | IssueMember | null
   assignee?: IssueMember
   orderIndex?: number
   aiGenerated?: boolean
+  rejectionHistory?: RejectionRecord[]
   createdAt: string
   updatedAt: string
 }

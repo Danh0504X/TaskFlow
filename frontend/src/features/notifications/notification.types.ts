@@ -3,11 +3,11 @@ export interface NotificationItem {
   userId: string
   actorId: {
     _id: string
-    displayName: string
+    fullName: string
     avatarUrl?: string | null
   } | null
   projectId: string | null
-  type: 'INVITATION' | 'SPRINT_STARTED' | 'SPRINT_COMPLETED' | 'TASK_ASSIGNED' | 'MENTIONED' | 'AI_COMPLETED'
+  type: 'INVITATION' | 'SPRINT_STARTED' | 'SPRINT_COMPLETED' | 'TASK_ASSIGNED' | 'MENTIONED' | 'AI_COMPLETED' | 'TASK_REJECTED'
   entityType: 'PROJECT' | 'SPRINT' | 'ISSUE'
   entityId: string
   title: string
