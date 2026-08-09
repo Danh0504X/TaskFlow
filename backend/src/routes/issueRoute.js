@@ -6,6 +6,7 @@ import {
   getIssueById,
   updateIssue,
   updateIssueStatus,
+  rejectIssue,
   deleteIssue,
 } from '../controllers/issueController.js'
 import { protectedRoute } from '../middlewares/authMiddleware.js'
@@ -46,6 +47,13 @@ router.put(
   '/:issueId',
   authorizeProjectRole('OWNER'),
   updateIssue,
+)
+
+// Từ chối task đang ở IN_REVIEW: chỉ OWNER.
+router.post(
+  '/:issueId/reject',
+  authorizeProjectRole('OWNER'),
+  rejectIssue,
 )
 
 // Cập nhật riêng status: OWNER, MEMBER.

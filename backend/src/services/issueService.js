@@ -37,6 +37,7 @@ const ensureStatusTransitionAllowed = (role, currentStatus, newStatus) => {
 // Field populate dùng chung để trả assignee/epic dạng object thay vì ObjectId thô.
 const ASSIGNEE_POPULATE = { path: 'assigneeId', select: 'fullName avatarUrl' }
 const PARENT_ISSUE_POPULATE = { path: 'parentIssueId', select: 'title type' }
+const REJECTION_POPULATE = { path: 'rejectionHistory.rejectedBy', select: 'fullName avatarUrl' }
 
 const ensureValidObjectId = (id, label = 'id') => {
   if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -62,12 +63,29 @@ const toIssueDTO = (issue, projectKey) => {
     ? obj.parentIssueId.title
     : undefined
 
+  const rejectionHistory = Array.isArray(obj.rejectionHistory)
+    ? obj.rejectionHistory.map((item) => {
+      const rejectedBy = item.rejectedBy && typeof item.rejectedBy === 'object'
+        ? {
+          _id: item.rejectedBy._id,
+          fullName: item.rejectedBy.fullName,
+          avatarUrl: item.rejectedBy.avatarUrl ?? null,
+        }
+        : item.rejectedBy
+      return {
+        ...item,
+        rejectedBy,
+      }
+    })
+    : []
+
   return {
     ...obj,
     key: `${projectKey}-${obj.issueNumber}`,
     assigneeId: assignee ? assignee._id : obj.assigneeId,
     assignee,
     epicName,
+    rejectionHistory,
   }
 }
 
@@ -277,6 +295,7 @@ const getIssuesByProject = async (projectId, query = {}, projectKey) => {
     .sort({ orderIndex: 1 })
     .populate(ASSIGNEE_POPULATE)
     .populate(PARENT_ISSUE_POPULATE)
+    .populate(REJECTION_POPULATE)
     .lean()
 
   return issues.map((issue) => toIssueDTO(issue, projectKey))
@@ -296,6 +315,7 @@ const getIssuesBySprint = async (projectId, sprintId, projectKey) => {
     .sort({ orderIndex: 1 })
     .populate(ASSIGNEE_POPULATE)
     .populate(PARENT_ISSUE_POPULATE)
+    .populate(REJECTION_POPULATE)
     .lean()
 
   return issues.map((issue) => toIssueDTO(issue, projectKey))
@@ -309,6 +329,7 @@ const getIssueById = async (projectId, issueId, projectKey) => {
   const issue = await Issue.findOne({ _id: issueId, projectId, isDeleted: false })
     .populate(ASSIGNEE_POPULATE)
     .populate(PARENT_ISSUE_POPULATE)
+    .populate(REJECTION_POPULATE)
 
   if (!issue) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Issue not found')
@@ -407,7 +428,7 @@ const updateIssue = async (projectId, issueId, body = {}, projectKey, project, u
 
   Object.assign(issue, payload)
   await issue.save()
-  await issue.populate([ASSIGNEE_POPULATE, PARENT_ISSUE_POPULATE])
+  await issue.populate([ASSIGNEE_POPULATE, PARENT_ISSUE_POPULATE, REJECTION_POPULATE])
 
   // Gửi thông báo gán việc
   if (oldAssigneeId !== newAssigneeId && newAssigneeId && userId && newAssigneeId !== userId.toString()) {
@@ -463,7 +484,7 @@ const updateIssueStatus = async (projectId, issueId, body = {}, projectKey, proj
 
   issue.set(update)
   await issue.save()
-  await issue.populate([ASSIGNEE_POPULATE, PARENT_ISSUE_POPULATE])
+  await issue.populate([ASSIGNEE_POPULATE, PARENT_ISSUE_POPULATE, REJECTION_POPULATE])
 
   return toIssueDTO(issue, projectKey)
 }
@@ -511,6 +532,69 @@ const getMyIssues = async (userId) => {
     })
 }
 
+// Từ chối Task đang ở trạng thái IN_REVIEW (chỉ dành cho OWNER).
+const rejectIssue = async (projectId, issueId, userId, projectRole, reason) => {
+  ensureValidObjectId(projectId, 'project id')
+  ensureValidObjectId(issueId, 'issue id')
+
+  if (projectRole !== 'OWNER') {
+    throw new ApiError(StatusCodes.FORBIDDEN, 'Chỉ chủ sở hữu dự án mới có quyền từ chối công việc')
+  }
+
+  if (!reason || !reason.trim()) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Lý do từ chối không được để trống')
+  }
+
+  const issue = await Issue.findOne({ _id: issueId, projectId, isDeleted: false })
+  if (!issue) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Issue not found')
+  }
+
+  if (issue.status !== 'IN_REVIEW') {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Chỉ có thể từ chối công việc đang ở trạng thái Đang đánh giá (IN_REVIEW)')
+  }
+
+  const project = await Project.findById(projectId).select('key').lean()
+  if (!project) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Project not found')
+  }
+
+  const trimmedReason = reason.trim()
+
+  issue.status = 'TODO'
+  if (!Array.isArray(issue.rejectionHistory)) {
+    issue.rejectionHistory = []
+  }
+  issue.rejectionHistory.push({
+    reason: trimmedReason,
+    rejectedBy: userId,
+    rejectedAt: new Date(),
+  })
+
+  await issue.save()
+  await issue.populate([ASSIGNEE_POPULATE, PARENT_ISSUE_POPULATE, REJECTION_POPULATE])
+
+  // Gửi thông báo cho người thực hiện (nếu có và khác người từ chối)
+  if (issue.assigneeId) {
+    const assigneeStr = issue.assigneeId._id ? issue.assigneeId._id.toString() : issue.assigneeId.toString()
+    if (assigneeStr !== userId.toString()) {
+      const issueKey = `${project.key}-${issue.issueNumber}`
+      await notificationService.createNotification({
+        userId: assigneeStr,
+        actorId: userId,
+        projectId,
+        type: 'TASK_REJECTED',
+        entityType: 'ISSUE',
+        entityId: issue._id,
+        title: 'Công việc bị từ chối duyệt',
+        message: `Công việc "${issue.title}" (${issueKey}) đã bị từ chối. Lý do: ${trimmedReason}`,
+      })
+    }
+  }
+
+  return toIssueDTO(issue, project.key)
+}
+
 export const issueService = {
   createIssue,
   getIssuesByProject,
@@ -518,6 +602,7 @@ export const issueService = {
   getIssueById,
   updateIssue,
   updateIssueStatus,
+  rejectIssue,
   deleteIssue,
   getMyIssues,
 }

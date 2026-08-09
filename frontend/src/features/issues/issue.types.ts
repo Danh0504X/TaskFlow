@@ -41,6 +41,14 @@ export interface IssueParentRef {
   type: IssueType
 }
 
+/** Lịch sử từ chối task khi ở trạng thái IN_REVIEW. */
+export interface RejectionRecord {
+  _id?: string
+  reason: string
+  rejectedBy: IssueMember | string
+  rejectedAt: string
+}
+
 export interface Issue {
   _id: string
   key: string
@@ -61,6 +69,7 @@ export interface Issue {
   assignee?: IssueMember
   orderIndex?: number
   aiGenerated?: boolean
+  rejectionHistory?: RejectionRecord[]
   createdAt: string
   updatedAt: string
 }

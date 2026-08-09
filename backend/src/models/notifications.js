@@ -21,7 +21,7 @@ const notificationSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ['INVITATION', 'SPRINT_STARTED', 'SPRINT_COMPLETED', 'TASK_ASSIGNED', 'MENTIONED', 'AI_COMPLETED'],
+      enum: ['INVITATION', 'SPRINT_STARTED', 'SPRINT_COMPLETED', 'TASK_ASSIGNED', 'MENTIONED', 'AI_COMPLETED', 'TASK_REJECTED'],
       required: true,
     },
     entityType: {

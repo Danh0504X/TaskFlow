@@ -100,6 +100,25 @@ const issueSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+
+    rejectionHistory: [
+      {
+        reason: {
+          type: String,
+          required: true,
+          trim: true,
+        },
+        rejectedBy: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'user',
+          required: true,
+        },
+        rejectedAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
   },
   {
     timestamps: true,

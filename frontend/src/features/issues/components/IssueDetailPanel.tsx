@@ -1,19 +1,20 @@
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { motion, useReducedMotion } from 'motion/react'
-import { X, Send, Plus } from 'lucide-react'
+import { X, Send, Plus, XCircle, AlertTriangle, History, Sparkles } from 'lucide-react'
 import Avatar from '@/components/ui/Avatar'
 import Spinner from '@/components/ui/Spinner'
 import IssueTypeIcon from '@/components/ui/IssueTypeIcon'
 import { useAuthStore } from '@/features/auth/authStore'
 import { useProject } from '@/features/projects/hooks/useProject'
-import { useUpdateIssue, useUpdateIssueStatus, useCreateIssue } from '../hooks/useIssueMutations'
+import { useUpdateIssue, useUpdateIssueStatus, useCreateIssue, useRejectIssue } from '../hooks/useIssueMutations'
 import { useProjectIssues } from '../hooks/useIssues'
 import { issueKeys } from '../issue.keys'
 import StatusPicker from './StatusPicker'
 import PriorityPicker from './PriorityPicker'
 import AssigneePicker from './AssigneePicker'
 import EpicPicker from './EpicPicker'
+import RejectIssueModal from './RejectIssueModal'
 import { ISSUE_TYPE, type Issue, type IssueStatus, type IssuePriority } from '../issue.types'
 
 interface Comment {
@@ -30,7 +31,7 @@ interface IssueDetailPanelProps {
   projectId: string
   isLoading?: boolean
   onClose: () => void
-  /** Mở panel này cho 1 issue khác theo key — dùng để "đi vào" 1 subtask từ danh sách việc con. */
+  /** Mở panel này cho 1 issue khác theo key — dùng để "đi vào" 1 subtask từ danh sách sub-task. */
   onSelectIssue: (key: string) => void
 }
 
@@ -45,7 +46,7 @@ interface SubtaskQuickAddProps {
   pending: boolean
 }
 
-/** Ô nhập luôn hiển thị ở cuối danh sách việc con — Enter hoặc bấm nút gửi để tạo, không cần mở rộng trước. */
+/** Ô nhập luôn hiển thị ở cuối danh sách sub-task — Enter hoặc bấm nút gửi để tạo, không cần mở rộng trước. */
 const SubtaskQuickAdd = ({ onSubmit, pending }: SubtaskQuickAddProps) => {
   const [value, setValue] = useState('')
 
@@ -74,7 +75,7 @@ const SubtaskQuickAdd = ({ onSubmit, pending }: SubtaskQuickAddProps) => {
         disabled={pending}
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="Thêm việc con..."
+        placeholder="Thêm sub-task..."
         className="flex-1 min-w-0 bg-surface border border-hairline rounded-lg px-3 py-2 text-xs font-semibold text-ink outline-none focus:ring-2 focus:ring-brand/15 focus:border-ink/20 placeholder:text-subtle disabled:opacity-60"
       />
       <button
@@ -103,11 +104,13 @@ const IssueDetailPanel = ({ issue, projectId, isLoading, onClose, onSelectIssue 
   const updateMutation = useUpdateIssue(projectId)
   const silentUpdateMutation = useUpdateIssue(projectId, { silent: true })
   const statusMutation = useUpdateIssueStatus(projectId)
+  const rejectMutation = useRejectIssue(projectId)
   const createSubtaskMutation = useCreateIssue(projectId, { silent: true })
   const reduceMotion = useReducedMotion()
 
   const userMemberRecord = project?.members?.find((m) => m.userId === currentUser?._id)
   const isOwner = userMemberRecord?.role === 'OWNER'
+  const [showRejectModal, setShowRejectModal] = useState(false)
 
   // `useCreateIssue`/`useUpdateIssue`/`useUpdateIssueStatus` (dùng chung toàn app) chỉ
   // `invalidateQueries` sau khi lưu -> UI phải đợi thêm 1 lượt GET nền mới thấy thay đổi,
@@ -322,10 +325,57 @@ const IssueDetailPanel = ({ issue, projectId, isLoading, onClose, onSelectIssue 
                 )}
               </div>
 
+              {/* [NEW] Thanh nút Từ chối dành riêng cho Owner khi task đang ở IN_REVIEW */}
+              {isOwner && issue.status === 'IN_REVIEW' && (
+                <div className="p-3 bg-pastel-yellow/15 border border-pastel-yellow/30 rounded-lg flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-ink">
+                    <Sparkles size={15} className="text-pastel-yellow-ink shrink-0" />
+                    <span>Task đang chờ duyệt:</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowRejectModal(true)}
+                    disabled={rejectMutation.isPending}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-pastel-red text-pastel-red-ink hover:bg-pastel-red/70 rounded-lg text-xs font-bold transition-colors shadow-sm"
+                    title="Từ chối Task"
+                  >
+                    <XCircle size={14} />
+                    Từ chối
+                  </button>
+                </div>
+              )}
+
+              {/* [NEW] Banner hiển thị Lý do từ chối gần nhất (nếu có) */}
+              {issue.rejectionHistory && issue.rejectionHistory.length > 0 && (
+                <div className="p-3.5 bg-pastel-red/15 border border-pastel-red/30 rounded-lg space-y-1.5">
+                  <div className="flex items-center justify-between text-pastel-red-ink font-bold text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <AlertTriangle size={14} />
+                      <span>Lý do từ chối gần nhất</span>
+                    </div>
+                    <span className="text-[10px] text-muted font-normal">
+                      {new Date(issue.rejectionHistory[issue.rejectionHistory.length - 1].rejectedAt).toLocaleString('vi-VN')}
+                    </span>
+                  </div>
+                  <p className="text-xs text-ink font-medium leading-relaxed italic bg-surface/80 p-2.5 rounded-md border border-pastel-red/20">
+                    "{issue.rejectionHistory[issue.rejectionHistory.length - 1].reason}"
+                  </p>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-4 p-4 border border-hairline rounded-lg bg-canvas">
                 <div className="space-y-1.5">
                   <span className="text-[10px] font-bold text-muted uppercase tracking-wider">Trạng thái</span>
-                  <StatusPicker value={status} onChange={setStatus} />
+                  <StatusPicker
+                    value={status}
+                    onChange={(nextStatus) => {
+                      if (issue.status === 'IN_REVIEW' && nextStatus === 'TODO' && isOwner) {
+                        setShowRejectModal(true)
+                        return
+                      }
+                      setStatus(nextStatus)
+                    }}
+                  />
                 </div>
 
                 <div className="space-y-1.5">
@@ -338,7 +388,7 @@ const IssueDetailPanel = ({ issue, projectId, isLoading, onClose, onSelectIssue 
                   <div className="flex items-center gap-2">
                     <AssigneePicker
                       projectId={projectId}
-                      value={issue.assigneeId ?? null}
+                      value={typeof issue.assigneeId === 'object' && issue.assigneeId !== null ? issue.assigneeId._id : (issue.assigneeId ?? null)}
                       onChange={handleAssigneeChange}
                       size={22}
                       readOnly={!isOwner}
@@ -367,7 +417,7 @@ const IssueDetailPanel = ({ issue, projectId, isLoading, onClose, onSelectIssue 
               {canHaveSubtasks && (
                 <div className="space-y-2.5 pt-1">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-ink uppercase tracking-wider">Việc con</span>
+                    <span className="text-xs font-semibold text-ink uppercase tracking-wider">Sub-task</span>
                     {subtasks.length > 0 && (
                       <span className="text-[10px] font-bold text-muted">
                         {doneSubtasks}/{subtasks.length} hoàn thành
@@ -409,7 +459,7 @@ const IssueDetailPanel = ({ issue, projectId, isLoading, onClose, onSelectIssue 
                         </button>
                         <AssigneePicker
                           projectId={projectId}
-                          value={subtask.assigneeId ?? null}
+                          value={typeof subtask.assigneeId === 'object' && subtask.assigneeId !== null ? subtask.assigneeId._id : (subtask.assigneeId ?? null)}
                           onChange={(userId) =>
                             silentUpdateMutation.mutate(
                               { issueId: subtask._id, payload: { assigneeId: userId } },
@@ -436,6 +486,38 @@ const IssueDetailPanel = ({ issue, projectId, isLoading, onClose, onSelectIssue 
                   className="w-full bg-surface border border-hairline rounded-lg px-4 py-3 text-xs font-medium focus:ring-2 focus:ring-brand/15 focus:border-ink/20 outline-none transition-all resize-none leading-relaxed"
                 />
               </div>
+
+              {/* [NEW] Mục Lịch sử từ chối nếu công việc đã từng bị từ chối duyệt */}
+              {issue.rejectionHistory && issue.rejectionHistory.length > 0 && (
+                <div className="space-y-3 pt-4 border-t border-hairline">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-ink uppercase tracking-wider">
+                    <History size={13} className="text-muted" />
+                    <span>Lịch sử từ chối ({issue.rejectionHistory.length})</span>
+                  </div>
+                  <div className="space-y-2.5 max-h-48 overflow-y-auto pr-1 scrollbar-thin">
+                    {[...issue.rejectionHistory].reverse().map((item, idx) => {
+                      const authorName = typeof item.rejectedBy === 'object' && item.rejectedBy ? item.rejectedBy.fullName : 'Chủ sở hữu'
+                      const authorAvatar = typeof item.rejectedBy === 'object' && item.rejectedBy ? item.rejectedBy.avatarUrl : null
+                      return (
+                        <div key={item._id || idx} className="p-3 bg-canvas border border-hairline rounded-lg space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Avatar src={authorAvatar} name={authorName} size={20} />
+                              <span className="text-xs font-bold text-ink">{authorName}</span>
+                            </div>
+                            <span className="text-[10px] text-muted font-medium">
+                              {new Date(item.rejectedAt).toLocaleString('vi-VN')}
+                            </span>
+                          </div>
+                          <p className="text-xs text-ink font-semibold leading-relaxed bg-surface p-2.5 rounded border border-hairline">
+                            {item.reason}
+                          </p>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-4 pt-4 border-t border-hairline">
                 <label className="text-xs font-semibold text-ink uppercase tracking-wider block">Thảo luận & Bình luận</label>
@@ -477,6 +559,28 @@ const IssueDetailPanel = ({ issue, projectId, isLoading, onClose, onSelectIssue 
           </>
         )}
       </motion.div>
+
+      {showRejectModal && issue && (
+        <RejectIssueModal
+          open={showRejectModal}
+          issueTitle={issue.title}
+          issueKey={issue.key}
+          isPending={rejectMutation.isPending}
+          onConfirm={(reason) => {
+            rejectMutation.mutate(
+              { issueId: issue._id, reason },
+              {
+                onSuccess: (updated) => {
+                  setShowRejectModal(false)
+                  setStatus('TODO')
+                  upsertIssueInCache(updated)
+                },
+              },
+            )
+          }}
+          onCancel={() => setShowRejectModal(false)}
+        />
+      )}
     </>
   )
 }
