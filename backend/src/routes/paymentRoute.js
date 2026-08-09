@@ -1,7 +1,9 @@
 import express from 'express'
 import {
   createPaymentOrder,
+  getPendingOrder,
   checkPaymentStatus,
+  getUserTransactionHistory,
   handleSePayWebhook,
 } from '../controllers/paymentController.js'
 import { protectedRoute } from '../middlewares/authMiddleware.js'
@@ -14,6 +16,8 @@ router.post('/sepay-webhook', handleSePayWebhook)
 
 // Các route yêu cầu người dùng đăng nhập
 router.post('/create-order', protectedRoute, createPaymentOrder)
+router.get('/pending-order', protectedRoute, getPendingOrder)
 router.get('/status/:paymentCode', protectedRoute, checkPaymentStatus)
+router.get('/history', protectedRoute, getUserTransactionHistory)
 
 export default router
