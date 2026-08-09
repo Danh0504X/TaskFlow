@@ -39,6 +39,9 @@ const AiGenerateEpicModal = ({ open, onClose, projectId }: AiGenerateEpicModalPr
   const [currentIndex, setCurrentIndex] = useState(0)
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [resultGenerationId, setResultGenerationId] = useState<string | null>(null)
+  // Mặc định TẮT — bấm "Tạo" là sinh epic thẳng, không qua bước hỏi-đáp (PM tự quyết đánh đổi
+  // tốc độ vs độ sát yêu cầu, xem text cạnh switch trong bước INPUT).
+  const [clarifyEnabled, setClarifyEnabled] = useState(false)
 
   const clarifyMutation = useClarifyRequirement(projectId)
   const createMutation = useCreateGeneration(projectId)
@@ -54,6 +57,7 @@ const AiGenerateEpicModal = ({ open, onClose, projectId }: AiGenerateEpicModalPr
     setCurrentIndex(0)
     setAnswers({})
     setResultGenerationId(null)
+    setClarifyEnabled(false)
   }
 
   const handleClose = () => {
@@ -90,13 +94,20 @@ const AiGenerateEpicModal = ({ open, onClose, projectId }: AiGenerateEpicModalPr
     )
   }
 
-  const handleAskClarify = () => {
+  // Bấm "Tạo" ở bước INPUT: bật switch làm rõ -> qua clarify trước (như cũ, có thể tự bỏ qua
+  // hỏi nếu AI thấy req đã đủ rõ); tắt switch -> bỏ qua clarify hoàn toàn, sinh epic thẳng.
+  const handleCreateFromInput = () => {
     const parsed = generateFromRequirementSchema.safeParse({ inputPrompt })
     if (!parsed.success) {
       setInputError(parsed.error.issues[0]?.message ?? 'Yêu cầu không hợp lệ')
       return
     }
     setInputError(null)
+
+    if (!clarifyEnabled) {
+      submitGeneration({})
+      return
+    }
 
     clarifyMutation.mutate(
       { inputPrompt: parsed.data.inputPrompt },
@@ -135,8 +146,12 @@ const AiGenerateEpicModal = ({ open, onClose, projectId }: AiGenerateEpicModalPr
           <Button variant="secondary" onClick={handleClose}>
             Đóng
           </Button>
-          <Button variant="primary" onClick={handleAskClarify} loading={clarifyMutation.isPending}>
-            Tiếp theo
+          <Button
+            variant="primary"
+            onClick={handleCreateFromInput}
+            loading={clarifyEnabled ? clarifyMutation.isPending : createMutation.isPending}
+          >
+            Tạo
           </Button>
         </>
       ) : step === 'QUESTIONS' ? (
@@ -192,9 +207,33 @@ const AiGenerateEpicModal = ({ open, onClose, projectId }: AiGenerateEpicModalPr
                 </span>
               </div>
               {inputError && <p className={fieldErrorClass}>{inputError}</p>}
-              <p className="pt-1 text-[10px] text-subtle">
-                AI sẽ hỏi thêm vài câu làm rõ trước khi sinh Epic, nếu requirement đã đủ chi tiết thì bỏ qua bước này.
-              </p>
+
+              <div className="flex items-start justify-between gap-3 rounded-lg border border-hairline bg-canvas/40 p-3">
+                <div>
+                  <p className="text-xs font-semibold text-ink">Làm rõ yêu cầu trước khi tạo</p>
+                  <p className="mt-0.5 text-[10px] italic text-subtle">
+                    AI sẽ hỏi thêm khi cần để kết quả sát với yêu cầu hơn. Tắt để tạo ngay.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={clarifyEnabled}
+                  aria-label="Làm rõ yêu cầu trước khi tạo"
+                  onClick={() => setClarifyEnabled((v) => !v)}
+                  className={cn(
+                    'relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors',
+                    clarifyEnabled ? 'bg-ink' : 'bg-hairline',
+                  )}
+                >
+                  <span
+                    className={cn(
+                      'inline-block h-3.5 w-3.5 transform rounded-full bg-surface transition-transform',
+                      clarifyEnabled ? 'translate-x-4' : 'translate-x-1',
+                    )}
+                  />
+                </button>
+              </div>
             </div>
           )}
 
