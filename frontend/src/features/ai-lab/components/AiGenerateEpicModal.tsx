@@ -154,19 +154,24 @@ const AiGenerateEpicModal = ({ open, onClose, projectId }: AiGenerateEpicModalPr
         </Button>
       )
     }>
-      <div className="grid grid-cols-[220px_1fr] gap-5">
-        <div className="space-y-3">
-          <Button variant="secondary" size="sm" className="w-full" onClick={handleStartNew}>
+      {/* Khung cố định (h-[65vh]) — không co giãn theo lượng nội dung mỗi cột, để modal luôn
+          cùng 1 kích thước dù đang ở bước nào / có bao nhiêu lịch sử hay draft. Mỗi cột tự cuộn
+          riêng bên trong (`overflow-y-auto` + `h-full`), không đụng tới cột còn lại. */}
+      <div className="grid h-[65vh] grid-cols-[220px_1fr] gap-5">
+        <div className="flex h-full flex-col gap-3">
+          <Button variant="secondary" size="sm" className="w-full shrink-0" onClick={handleStartNew}>
             + Sinh yêu cầu mới
           </Button>
-          <AiGenerationHistoryPanel
-            projectId={projectId}
-            activeGenerationId={resultGenerationId}
-            onSelect={handleSelectHistory}
-          />
+          <div className="min-h-0 flex-1">
+            <AiGenerationHistoryPanel
+              projectId={projectId}
+              activeGenerationId={resultGenerationId}
+              onSelect={handleSelectHistory}
+            />
+          </div>
         </div>
 
-        <div className="max-h-[70vh] overflow-y-auto pr-1">
+        <div className="h-full overflow-y-auto pr-1">
           {step === 'INPUT' && (
             <div className="space-y-1.5">
               <label className="text-xs font-semibold uppercase tracking-wider text-ink">Yêu cầu nghiệp vụ</label>

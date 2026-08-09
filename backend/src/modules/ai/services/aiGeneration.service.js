@@ -251,6 +251,11 @@ const clarifyRequirement = async (projectId, requestedBy, body = {}) => {
   }
 }
 
+// Populate sourceEntityId -> title epic nguồn, để FE hiện được "sinh từ epic nào" trong danh
+// sách lượt sinh (EPIC_TO_TASK). REQ_TO_EPIC không có sourceEntityId (null) -> FE dùng inputPrompt
+// (đã có sẵn trong document, không cần populate) để hiện "sinh từ yêu cầu nào".
+const SOURCE_EPIC_POPULATE = { path: 'sourceEntityId', select: 'title' }
+
 const listGenerations = async (projectId, filters = {}) => {
   ensureValidObjectId(projectId, 'project id')
 
@@ -258,7 +263,10 @@ const listGenerations = async (projectId, filters = {}) => {
   if (filters.status) filter.status = filters.status
   if (filters.generationType) filter.generationType = filters.generationType
 
-  return AiGeneration.find(filter).sort({ createdAt: -1 }).lean()
+  return AiGeneration.find(filter)
+    .sort({ createdAt: -1 })
+    .populate(SOURCE_EPIC_POPULATE)
+    .lean()
 }
 
 /**
@@ -348,7 +356,7 @@ const getUsageStats = async (filters = {}) => {
 const getGeneration = async (generationId) => {
   ensureValidObjectId(generationId, 'generation id')
 
-  const generation = await AiGeneration.findById(generationId).lean()
+  const generation = await AiGeneration.findById(generationId).populate(SOURCE_EPIC_POPULATE).lean()
   if (!generation) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Generation not found')
   }

@@ -177,7 +177,7 @@ const ProjectWorkspacePage = () => {
 
             {/* Avatar Stack Thành viên */}
             {project.members && project.members.length > 0 && (
-              <div 
+              <div
                 onClick={() => setIsMembersModalOpen(true)}
                 className="flex items-center -space-x-1.5 cursor-pointer hover:opacity-90 transition-opacity ml-1.5 shrink-0"
                 title="Xem danh sách thành viên"
@@ -311,6 +311,8 @@ const ProjectWorkspacePage = () => {
         open={isMembersModalOpen}
         onClose={() => setIsMembersModalOpen(false)}
         members={project.members}
+        projectId={project._id}
+        isOwner={isOwner}
       />
 
       <AiGenerateEpicModal

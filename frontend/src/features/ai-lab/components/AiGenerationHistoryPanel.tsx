@@ -13,8 +13,9 @@ interface AiGenerationHistoryPanelProps {
 }
 
 /** Cột lịch sử bên trái modal "Sinh Epic bằng AI" — chỉ liệt kê lượt REQ_TO_EPIC (không CLARIFY,
- * không EPIC_TO_TASK vì modal này không dùng luồng đó). Cao tối đa ~5-6 dòng rồi tự cuộn riêng,
- * không ảnh hưởng vùng nội dung bên phải (xem `max-h-[420px] overflow-y-auto` bên dưới). */
+ * không EPIC_TO_TASK vì modal này không dùng luồng đó). Luôn chiếm trọn chiều cao khung cố định
+ * do component cha (AiGenerateEpicModal) cấp qua flex `h-full` — thiếu nội dung thì để trống,
+ * dư thì tự cuộn riêng bên trong, không đụng tới scroll của cột bên phải. */
 const AiGenerationHistoryPanel = ({ projectId, activeGenerationId, onSelect }: AiGenerationHistoryPanelProps) => {
   const { data: generations, isLoading } = useGenerations(projectId)
 
@@ -24,18 +25,22 @@ const AiGenerationHistoryPanel = ({ projectId, activeGenerationId, onSelect }: A
 
   if (isLoading) {
     return (
-      <div className="flex items-center gap-2 text-xs text-subtle">
+      <div className="flex h-full items-center gap-2 text-xs text-subtle">
         <Spinner /> Đang tải...
       </div>
     )
   }
 
   if (history.length === 0) {
-    return <p className="text-xs text-subtle">Chưa có lượt sinh nào.</p>
+    return (
+      <div className="flex h-full items-center justify-center text-center">
+        <p className="text-xs text-subtle">Chưa có lượt sinh nào.</p>
+      </div>
+    )
   }
 
   return (
-    <div className="max-h-[420px] space-y-1.5 overflow-y-auto pr-1">
+    <div className="h-full space-y-1.5 overflow-y-auto pr-1">
       {history.map((gen) => {
         const isActive = activeGenerationId === gen._id
 
