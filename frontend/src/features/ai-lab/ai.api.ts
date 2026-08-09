@@ -6,6 +6,8 @@ import type {
   AiDraftIssue,
   AiGeneration,
   AiGenerationDetail,
+  ClarifyRequirementPayload,
+  ClarifyRequirementResponse,
   CreateGenerationPayload,
   CreateGenerationResponse,
   EditDraftPayload,
@@ -21,6 +23,19 @@ export const aiApi = {
   ): Promise<CreateGenerationResponse> => {
     const res = await api.post<ApiResponse<CreateGenerationResponse>>(
       `/projects/${projectId}/ai/generations`,
+      payload,
+    )
+    return res.data.data
+  },
+
+  /** POST /projects/:projectId/ai/clarify — AI hỏi làm rõ TRƯỚC khi tạo lượt REQ_TO_EPIC thật,
+   * xử lý đồng bộ (200 ngay, không phải 202 nền như createGeneration). */
+  clarify: async (
+    projectId: string,
+    payload: ClarifyRequirementPayload,
+  ): Promise<ClarifyRequirementResponse> => {
+    const res = await api.post<ApiResponse<ClarifyRequirementResponse>>(
+      `/projects/${projectId}/ai/clarify`,
       payload,
     )
     return res.data.data

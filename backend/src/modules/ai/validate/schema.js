@@ -29,3 +29,42 @@ export const buildResponseSchema = (generationType, domainKeys) => ({
   },
   required: ['issues'],
 })
+
+// Stage A của REQ_TO_EPIC (xem aiRunner.js) — trích thực thể/tính năng trước khi gom epic.
+const entityItemSchema = () => ({
+  type: 'OBJECT',
+  properties: {
+    key: { type: 'STRING' },
+    name: { type: 'STRING' },
+    description: { type: 'STRING' },
+    sourceQuote: { type: 'STRING' },
+  },
+  required: ['key', 'name', 'description', 'sourceQuote'],
+})
+
+export const buildEntityExtractionSchema = () => ({
+  type: 'OBJECT',
+  properties: {
+    entities: { type: 'ARRAY', items: entityItemSchema() },
+  },
+  required: ['entities'],
+})
+
+// AI hỏi làm rõ trước REQ_TO_EPIC (xem controllers/aiGeneration.controller.js clarifyRequirement).
+const clarifyQuestionSchema = () => ({
+  type: 'OBJECT',
+  properties: {
+    key: { type: 'STRING' },
+    question: { type: 'STRING' },
+    options: { type: 'ARRAY', items: { type: 'STRING' } },
+  },
+  required: ['key', 'question', 'options'],
+})
+
+export const buildClarifyResponseSchema = () => ({
+  type: 'OBJECT',
+  properties: {
+    questions: { type: 'ARRAY', items: clarifyQuestionSchema() },
+  },
+  required: ['questions'],
+})

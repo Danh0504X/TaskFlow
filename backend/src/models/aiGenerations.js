@@ -17,9 +17,11 @@ const aiGenerationSchema = new mongoose.Schema(
       required: true,
     },
 
+    // CLARIFY: lượt AI hỏi làm rõ trước khi PM tạo lượt REQ_TO_EPIC thật — xử lý đồng bộ,
+    // không tạo AiDraftIssue, nhưng vẫn tính vào quota checkAiLimit (đếm chung AiGeneration).
     generationType: {
       type: String,
-      enum: ['REQ_TO_EPIC', 'EPIC_TO_TASK'],
+      enum: ['REQ_TO_EPIC', 'EPIC_TO_TASK', 'CLARIFY'],
       required: true,
     },
 
@@ -73,6 +75,36 @@ const aiGenerationSchema = new mongoose.Schema(
     errorMessage: {
       type: String,
       default: null,
+    },
+
+    // Kết quả bước trích thực thể/tính năng (Stage A của REQ_TO_EPIC, xem aiRunner.js) — lưu lại
+    // để PM/dev xem AI đã hiểu requirement thành những thực thể gì trước khi thấy epic. Rỗng với
+    // EPIC_TO_TASK/CLARIFY.
+    extractedEntities: {
+      type: [
+        {
+          _id: false,
+          key: String,
+          name: String,
+          description: String,
+          sourceQuote: String,
+        },
+      ],
+      default: [],
+    },
+
+    // Câu hỏi làm rõ do AI sinh khi generationType='CLARIFY' — PM trả lời rồi gửi lại dưới dạng
+    // `clarifications` ở lượt REQ_TO_EPIC thật (field clarifications ở trên).
+    clarifyingQuestions: {
+      type: [
+        {
+          _id: false,
+          key: String,
+          question: String,
+          options: [String],
+        },
+      ],
+      default: [],
     },
   },
   {

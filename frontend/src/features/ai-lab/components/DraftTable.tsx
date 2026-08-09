@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { CheckSquare, Square } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
@@ -142,45 +142,33 @@ const DraftTable = ({ projectId, generationId, drafts }: DraftTableProps) => {
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-hairline bg-surface">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-hairline text-left text-xs font-semibold uppercase tracking-wider text-subtle">
-              <th className="w-8 px-3 py-2" />
-              <th className="px-3 py-2">Loại</th>
-              <th className="px-3 py-2">Tiêu đề</th>
-              <th className="px-3 py-2">Ưu tiên</th>
-              <th className="px-3 py-2">Phạm vi</th>
-              <th className="px-3 py-2">Nguồn</th>
-              <th className="px-3 py-2">Trạng thái</th>
-              <th className="px-3 py-2" />
-            </tr>
-          </thead>
-          <tbody>
-            {tree.map(({ root, children }) => (
-              <Fragment key={root._id}>
-                <DraftRow
-                  draft={root}
-                  checked={selected.has(root.tempId)}
-                  onToggle={() => toggle(root)}
-                  onEdit={() => setEditingDraft(root)}
-                  onDelete={() => setConfirmDeleteId(root._id)}
-                />
+      <div className="space-y-2">
+        {tree.map(({ root, children }) => (
+          <div key={root._id} className="space-y-1.5">
+            <DraftRow
+              draft={root}
+              checked={selected.has(root.tempId)}
+              onToggle={() => toggle(root)}
+              onEdit={() => setEditingDraft(root)}
+              onDelete={() => setConfirmDeleteId(root._id)}
+            />
+            {children.length > 0 && (
+              <div className="ml-5 space-y-1.5 border-l-2 border-hairline pl-3">
                 {children.map((child) => (
                   <DraftRow
                     key={child._id}
                     draft={child}
-                    indent
+                    nested
                     checked={selected.has(child.tempId)}
                     onToggle={() => toggle(child)}
                     onEdit={() => setEditingDraft(child)}
                     onDelete={() => setConfirmDeleteId(child._id)}
                   />
                 ))}
-              </Fragment>
-            ))}
-          </tbody>
-        </table>
+              </div>
+            )}
+          </div>
+        ))}
       </div>
 
       {selected.size > 0 && (

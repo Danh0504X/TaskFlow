@@ -70,11 +70,21 @@ const formatErrors = (errors = []) => {
     .join('\n')}`
 }
 
-const buildReqToEpicUserPrompt = (context, previousErrors) => {
-  const { inputPrompt, clarifications, existingTitles } = context
+const formatEntities = (entities = []) =>
+  entities.length > 0
+    ? entities.map((e) => `- ${e.name}: ${e.description} (trích: "${e.sourceQuote}")`).join('\n')
+    : '(không có)'
+
+// Stage A của REQ_TO_EPIC — trích thực thể/tính năng TRƯỚC khi gom epic (gọi AI riêng, xem
+// aiRunner.js runEntityExtractionStage). Tách khỏi buildReqToEpicUserPrompt để bước "tiếp đất"
+// có kết quả XUẤT RA thật (kiểm/lưu/hiển thị được), không còn là chỉ dẫn "nghĩ thầm" ẩn trong
+// 1 lệnh gọi gộp chung với bước gom epic.
+const buildEntityExtractionUserPrompt = (context) => {
+  const { inputPrompt, clarifications } = context
 
   return `
-NHIỆM VỤ: REQ_TO_EPIC — đọc requirement, đề xuất các EPIC bám sát nghiệp vụ của dự án.
+NHIỆM VỤ: TRÍCH THỰC THỂ — đọc requirement, liệt kê các THỰC THỂ và TÍNH NĂNG nghiệp vụ cụ thể
+được nhắc tới, làm nguyên liệu cho bước gom Epic ở lệnh gọi SAU (bước này KHÔNG sinh Epic).
 
 REQUIREMENT CỦA PM:
 """
@@ -84,29 +94,91 @@ ${inputPrompt}
 CÂU TRẢ LỜI LÀM RÕ CỦA PM (object câu hỏi đóng — có thể rỗng):
 ${clarifications ? JSON.stringify(clarifications) : '(không có)'}
 
+CÁCH LÀM:
+- Đọc kỹ requirement (và câu trả lời làm rõ nếu có), liệt kê từng THỰC THỂ/TÍNH NĂNG nghiệp vụ
+  cụ thể (danh từ nghiệp vụ: ví dụ "khóa học", "bài giảng", "quiz", "thanh toán", "chứng chỉ",
+  "doanh thu giảng viên"...).
+- MỖI thực thể BẮT BUỘC kèm "sourceQuote" — trích NGUYÊN VĂN câu/cụm từ trong requirement chứng
+  minh thực thể đó có thật trong đề. KHÔNG suy diễn, KHÔNG bịa thực thể không có trong đề.
+- KHÔNG gom nhóm thành epic ở bước này — chỉ liệt kê thực thể/tính năng rời rạc, càng đầy đủ
+  càng tốt, bước sau sẽ tự gom.
+
+YÊU CẦU OUTPUT:
+- Mỗi thực thể: "key" duy nhất (vd "EN1","EN2"...), "name" ngắn gọn, "description" giải thích
+  1 câu, "sourceQuote" trích nguyên văn không rỗng.
+- Nếu requirement quá ngắn/mơ hồ: chỉ liệt kê những gì THỰC SỰ có trong đề, không bịa thêm.`.trim()
+}
+
+export const buildEntityExtractionPrompt = (context, previousErrors = []) => ({
+  system: basePrompt(),
+  user: buildEntityExtractionUserPrompt(context) + formatErrors(previousErrors),
+})
+
+const buildReqToEpicUserPrompt = (context, previousErrors) => {
+  const { inputPrompt, clarifications, existingTitles, entities } = context
+
+  return `
+NHIỆM VỤ: REQ_TO_EPIC — từ danh sách thực thể/tính năng đã trích ở bước trước, đề xuất các EPIC
+bám sát nghiệp vụ của dự án.
+
+REQUIREMENT GỐC CỦA PM (tham khảo ngữ cảnh/giọng văn — thực thể đã được trích sẵn ở dưới, KHÔNG
+cần tự đọc lại requirement để tìm thực thể nữa):
+"""
+${inputPrompt}
+"""
+
+CÂU TRẢ LỜI LÀM RÕ CỦA PM (object câu hỏi đóng — có thể rỗng):
+${clarifications ? JSON.stringify(clarifications) : '(không có)'}
+
+THỰC THỂ/TÍNH NĂNG ĐÃ TRÍCH TỪ REQUIREMENT (nguyên liệu chính để gom epic — DÙNG NGUYÊN danh
+sách này, không tự trích thêm thực thể khác ngoài danh sách):
+${formatEntities(entities)}
+
 EPIC ĐÃ CÓ SẴN (KHÔNG đề xuất trùng hoặc gần trùng ý nghĩa):
 ${formatExisting(existingTitles)}
 
-CÁCH LÀM — theo đúng 3 bước, chỉ XUẤT RA kết quả bước 3:
-1) TIẾP ĐẤT (nghĩ thầm, không xuất): đọc requirement và liệt kê ra các THỰC THỂ và TÍNH NĂNG
-   cụ thể được nhắc tới (danh từ nghiệp vụ: ví dụ "khóa học", "bài giảng", "quiz", "thanh toán",
-   "chứng chỉ", "doanh thu giảng viên"...). Đây là nguyên liệu chính để đặt epic.
-2) GOM THÀNH EPIC: nhóm các thực thể/tính năng liên quan thành epic, ĐẶT TÊN THEO NGHIỆP VỤ đó
-   (nhắc đúng thực thể). Số lượng epic tùy độ lớn của req — req nhỏ thì ít epic nhưng phải sát,
-   KHÔNG độn thêm epic chung chung cho đủ số.
-3) SOÁT SÓT bằng checklist miền: kiểm xem requirement có NGỤ Ý mảng nào (đăng nhập? phân quyền?
-   thông báo?) mà bước 2 bỏ sót không. CHỈ thêm epic cho mảng requirement thật sự ngụ ý; mảng
-   không liên quan thì bỏ. Epic thêm ở bước này vẫn phải gắn thực thể của dự án, không đặt tên trần.
+CÁCH LÀM — theo đúng 2 bước, chỉ XUẤT RA kết quả bước 2:
+1) GOM THÀNH EPIC: nhóm các thực thể/tính năng ở trên thành epic, ĐẶT TÊN THEO NGHIỆP VỤ đó
+   (nhắc đúng thực thể). Số lượng epic tùy độ lớn của danh sách thực thể — danh sách ngắn thì ít
+   epic nhưng phải sát, KHÔNG độn thêm epic chung chung cho đủ số.
+2) SOÁT SÓT bằng checklist miền: kiểm xem danh sách thực thể có NGỤ Ý mảng nào (đăng nhập? phân
+   quyền? thông báo?) mà bước 1 bỏ sót không. CHỈ thêm epic cho mảng thật sự ngụ ý; mảng không
+   liên quan thì bỏ. Epic thêm ở bước này vẫn phải gắn thực thể của dự án, không đặt tên trần.
 
 YÊU CẦU OUTPUT:
 - Mỗi epic: type="EPIC", parentTempId=null, tempId duy nhất (vd "E1","E2"...), domainKey hợp lệ.
 - title nhắc THỰC THỂ CỤ THỂ của dự án (không phải tên miền trơ trọi).
-- scopePreview: 3–8 dòng, MỖI dòng nhắc một thực thể/tính năng cụ thể lấy từ requirement
-  (không viết chung chung kiểu "tạo, sửa, xoá dữ liệu").
-- Nếu requirement quá ngắn/mơ hồ: KHÔNG bịa nhu cầu. Sinh ít epic bám đúng chữ trong đề, và với
-  mỗi epic ghi ở đầu description một dòng "Giả định:" nêu rõ giả định tối thiểu bạn đã dùng.
+- scopePreview: 3–8 dòng, MỖI dòng nhắc một thực thể/tính năng cụ thể lấy từ danh sách thực thể
+  ở trên (không viết chung chung kiểu "tạo, sửa, xoá dữ liệu").
+- Nếu danh sách thực thể quá ít/mơ hồ: KHÔNG bịa nhu cầu. Sinh ít epic bám đúng thực thể đã có,
+  và với mỗi epic ghi ở đầu description một dòng "Giả định:" nêu rõ giả định tối thiểu bạn đã dùng.
 ${formatErrors(previousErrors)}`.trim()
 }
+
+// AI hỏi làm rõ TRƯỚC khi PM tạo lượt REQ_TO_EPIC thật (xem clarifyRequirement trong
+// aiGeneration.service.js) — chỉ hỏi khi requirement thật sự thiếu dữ kiện trọng yếu.
+const buildClarifyUserPrompt = (inputPrompt) => `
+NHIỆM VỤ: HỎI LÀM RÕ — đọc requirement, CHỈ hỏi khi thật sự thiếu thông tin trọng yếu để thiết
+kế Epic sau này (quy mô người dùng, ràng buộc nghiệp vụ, phạm vi, vai trò...). KHÔNG hỏi cho có,
+KHÔNG hỏi thứ đã rõ trong đề.
+
+REQUIREMENT CỦA PM:
+"""
+${inputPrompt}
+"""
+
+YÊU CẦU OUTPUT:
+- Tối đa 5 câu hỏi, mỗi câu dạng ĐÓNG (trắc nghiệm) với 2–6 lựa chọn "options" cụ thể — PM chỉ
+  cần bấm chọn, KHÔNG hỏi dạng tự luận.
+- Nếu requirement đã đủ rõ để thiết kế Epic mà không cần hỏi thêm -> trả "questions": [] (mảng
+  rỗng), KHÔNG cố hỏi cho đủ số.
+- Mỗi câu: "key" duy nhất (vd "Q1","Q2"...), "question" ngắn gọn, "options" là các lựa chọn cụ
+  thể (không để PM tự gõ).`.trim()
+
+export const buildClarifyPrompt = (inputPrompt, previousErrors = []) => ({
+  system: basePrompt(),
+  user: buildClarifyUserPrompt(inputPrompt) + formatErrors(previousErrors),
+})
 
 const buildEpicToTaskUserPrompt = (context, previousErrors) => {
   const { sourceEpic, existingTitles } = context

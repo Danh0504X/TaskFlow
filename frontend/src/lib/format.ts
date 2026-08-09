@@ -21,6 +21,27 @@ export const formatDayMonth = (value: string | null | undefined): { day: string;
   }
 }
 
+/** Thời gian tương đối kiểu "5 phút trước" — quá 7 ngày thì trả về ngày cụ thể (formatDate). */
+export const formatRelativeTime = (value: string | null | undefined): string => {
+  if (!value) return '—'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return '—'
+
+  const diffSec = Math.floor((Date.now() - date.getTime()) / 1000)
+  if (diffSec < 60) return 'Vừa xong'
+
+  const diffMin = Math.floor(diffSec / 60)
+  if (diffMin < 60) return `${diffMin} phút trước`
+
+  const diffHour = Math.floor(diffMin / 60)
+  if (diffHour < 24) return `${diffHour} giờ trước`
+
+  const diffDay = Math.floor(diffHour / 24)
+  if (diffDay < 7) return `${diffDay} ngày trước`
+
+  return formatDate(value)
+}
+
 /** Số ngày còn lại tới 1 mốc thời gian, tính theo ngày lịch (âm nếu đã qua). */
 export const daysUntil = (value: string | null | undefined): number | null => {
   if (!value) return null
