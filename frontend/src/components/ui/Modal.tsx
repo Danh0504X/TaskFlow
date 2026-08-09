@@ -16,8 +16,7 @@ interface ModalProps {
   className?: string
   /** Sắc thái modal — quyết định màu icon ở header. Mặc định 'brand' (form tạo/sửa thông thường, trung tính). */
   tone?: ModalTone
-  /** Bố cục: 'center' (mặc định, form thường), 'compact' (xác nhận ngắn gọn), 'sheet' (trượt lên từ đáy),
-   * 'wide' (rộng, dùng cho nội dung nhiều cột như modal Sinh AI + lịch sử). */
+  /** Bố cục: 'center' (mặc định, form thường), 'compact' (xác nhận ngắn gọn), 'sheet' (trượt lên từ đáy). */
   layout?: ModalLayout
   /** Icon tuỳ chỉnh ở header, thay cho icon mặc định theo `tone`. Chỉ hiện khi có `title`. */
   icon?: ReactNode
@@ -36,7 +35,8 @@ const layoutMaxWidth: Record<ModalLayout, string> = {
   center: 'max-w-lg',
   compact: 'max-w-sm',
   sheet: 'max-w-lg',
-  wide: 'max-w-7xl',
+  // Cho nội dung cần bố cục nhiều cột (vd modal AI Lab: sidebar lịch sử + khu vực sinh).
+  wide: 'max-w-4xl',
 }
 
 /**
@@ -46,7 +46,8 @@ const layoutMaxWidth: Record<ModalLayout, string> = {
  * `tone` chỉ đổi màu icon-chip ở header (brand = trung tính mặc định, success/danger/info
  * dùng đúng pastel đã dùng cho badge/trạng thái trong app). `layout` đổi kích thước + cách
  * vào màn hình: 'compact' cho xác nhận ngắn, 'sheet' trượt lên từ đáy màn hình (hợp cho nội
- * dung dài trên mobile). Cả 2 đều thuần visual — không đổi hành vi đóng/mở.
+ * dung dài trên mobile), 'wide' cho nội dung cần bố cục nhiều cột. Đều thuần visual — không
+ * đổi hành vi đóng/mở.
 */
 const Modal = ({
   open,

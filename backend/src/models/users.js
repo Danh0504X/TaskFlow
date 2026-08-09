@@ -70,6 +70,19 @@ const userSchema = new mongoose.Schema(
       enum: Object.values(USER_ROLE),
       default: USER_ROLE.USER,
     },
+
+    // Gói tài khoản người dùng ('FREE' hoặc 'PRO')
+    plan: {
+      type: String,
+      enum: ['FREE', 'PRO'],
+      default: 'FREE',
+    },
+
+    // Ngày hết hạn gói PRO (null nếu tài khoản là FREE)
+    currentPlanExpiresAt: {
+      type: Date,
+      default: null,
+    },
   },
   {
     // Bật cả createdAt + updatedAt để trang Profile theo dõi lần sửa gần nhất.

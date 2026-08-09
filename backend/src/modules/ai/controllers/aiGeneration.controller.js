@@ -15,6 +15,17 @@ export const createGeneration = asyncHandler(async (req, res) => {
   })
 })
 
+// AI hỏi làm rõ TRƯỚC khi tạo lượt REQ_TO_EPIC thật -> 200 đồng bộ (khác 202 nền của createGeneration).
+export const clarifyRequirement = asyncHandler(async (req, res) => {
+  const { projectId } = req.params
+  const result = await aiGenerationService.clarifyRequirement(projectId, req.user._id, req.body)
+
+  res.status(StatusCodes.OK).json({
+    message: 'Đã sinh câu hỏi làm rõ',
+    data: result,
+  })
+})
+
 export const listGenerations = asyncHandler(async (req, res) => {
   const { projectId } = req.params
   const result = await aiGenerationService.listGenerations(projectId, req.query)

@@ -1,12 +1,11 @@
-import { Fragment, useMemo, useRef, useState, type KeyboardEvent } from 'react'
-import { CheckSquare, Plus, Square } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { CheckSquare, Square } from 'lucide-react'
 import Button from '@/components/ui/Button'
-import type { AiDraftIssue, AiDraftType } from '../ai.types'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
+import type { AiDraftIssue } from '../ai.types'
 import { useAcceptDrafts } from '../hooks/useAcceptDrafts'
 import { useRejectDrafts } from '../hooks/useRejectDrafts'
 import { useDeleteDraft } from '../hooks/useDeleteDraft'
-import { useEditDraft } from '../hooks/useEditDraft'
-import { useAddDraft } from '../hooks/useAddDraft'
 import DraftRow from './DraftRow'
 import DraftEditModal from './DraftEditModal'
 import AddDraftModal from './AddDraftModal'
@@ -16,88 +15,6 @@ interface DraftTableProps {
   projectId: string
   generationId: string
   drafts: AiDraftIssue[]
-}
-
-interface QuickAddRowProps {
-  defaultType: AiDraftType
-  pending: boolean
-  onSubmit: (title: string) => void
-}
-
-/** Hàng "+" thêm nhanh ở cuối bảng — bấm + hiện input, Enter tạo NGAY và GIỮ input mở/focus để
- * gõ tiếp món kế tiếp (không cần bấm + lại mỗi lần) — cùng cơ chế với SubtaskQuickAdd đã dùng
- * ở IssueDetailPanel, chỉ khác domain (draft AI thay vì subtask thật). */
-const QuickAddRow = ({ defaultType, pending, onSubmit }: QuickAddRowProps) => {
-  const [isAdding, setIsAdding] = useState(false)
-  const [value, setValue] = useState('')
-  const inputRef = useRef<HTMLInputElement>(null)
-
-  const commit = () => {
-    const trimmed = value.trim()
-    if (!trimmed || pending) return
-    onSubmit(trimmed)
-    setValue('')
-    // Giữ input mở + focus để gõ tiếp ngay, không cần bấm "+" lại.
-    requestAnimationFrame(() => inputRef.current?.focus())
-  }
-
-  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      commit()
-    } else if (e.key === 'Escape') {
-      setIsAdding(false)
-      setValue('')
-    }
-  }
-
-  if (!isAdding) {
-    return (
-      <tr>
-        <td colSpan={8} className="px-3 py-2">
-          <button
-            type="button"
-            onClick={() => {
-              setIsAdding(true)
-              requestAnimationFrame(() => inputRef.current?.focus())
-            }}
-            className="flex items-center gap-1.5 text-xs font-semibold text-muted hover:text-brand transition-colors"
-          >
-            <Plus size={14} /> Thêm {defaultType === 'EPIC' ? 'epic' : 'task'} nhanh
-          </button>
-        </td>
-      </tr>
-    )
-  }
-
-  return (
-    <tr>
-      <td colSpan={8} className="px-3 py-2">
-        <div className="flex items-center gap-2">
-          <input
-            ref={inputRef}
-            value={value}
-            disabled={pending}
-            onChange={(e) => setValue(e.target.value)}
-            onKeyDown={handleKeyDown}
-            onBlur={() => {
-              if (!value.trim()) setIsAdding(false)
-            }}
-            placeholder={`Tên ${defaultType === 'EPIC' ? 'epic' : 'task'} mới, Enter để thêm...`}
-            className="flex-1 min-w-0 rounded-lg border border-hairline bg-surface px-3 py-1.5 text-xs font-semibold text-ink outline-none focus:ring-2 focus:ring-brand/15 focus:border-ink/20 disabled:opacity-60"
-          />
-          <button
-            type="button"
-            onClick={commit}
-            disabled={!value.trim() || pending}
-            className="shrink-0 rounded-lg bg-pastel-blue p-1.5 text-pastel-blue-ink transition-colors hover:bg-ink hover:text-canvas disabled:opacity-40"
-          >
-            <Plus size={14} />
-          </button>
-        </div>
-      </td>
-    </tr>
-  )
 }
 
 /**
@@ -110,12 +27,11 @@ const DraftTable = ({ projectId, generationId, drafts }: DraftTableProps) => {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [editingDraft, setEditingDraft] = useState<AiDraftIssue | null>(null)
   const [adding, setAdding] = useState(false)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
   const acceptMutation = useAcceptDrafts(projectId, generationId)
   const rejectMutation = useRejectDrafts(projectId, generationId)
   const deleteMutation = useDeleteDraft(projectId, generationId)
-  const editMutation = useEditDraft(projectId, generationId)
-  const addMutation = useAddDraft(projectId, generationId)
 
   const byTempId = useMemo(() => new Map(drafts.map((d) => [d.tempId, d])), [drafts])
 
@@ -158,9 +74,6 @@ const DraftTable = ({ projectId, generationId, drafts }: DraftTableProps) => {
 
   const selectedDraftIds = drafts.filter((d) => selected.has(d.tempId)).map((d) => d._id)
   const epicOptions = drafts.filter((d) => d.type === 'EPIC')
-  // Suy ra loại mặc định cho hàng "thêm nhanh": mẻ có epic (REQ_TO_EPIC) -> thêm epic mới;
-  // mẻ toàn task (EPIC_TO_TASK) -> thêm task mới.
-  const quickAddDefaultType: AiDraftType = epicOptions.length > 0 || drafts.length === 0 ? 'EPIC' : 'TASK'
 
   const handleAcceptAll = () => {
     if (selectableTempIds.length === 0) return
@@ -173,10 +86,6 @@ const DraftTable = ({ projectId, generationId, drafts }: DraftTableProps) => {
 
   const handleRejectSelected = () => {
     rejectMutation.mutate(selectedDraftIds, { onSuccess: () => setSelected(new Set()) })
-  }
-
-  const handleQuickAdd = (title: string) => {
-    addMutation.mutate({ title, type: quickAddDefaultType, priority: 'MEDIUM' })
   }
 
   if (drafts.length === 0) {
@@ -233,50 +142,33 @@ const DraftTable = ({ projectId, generationId, drafts }: DraftTableProps) => {
         </div>
       </div>
 
-      {/* max-h + overflow-y-auto: bảng dài (nhiều task) tự cuộn dọc BÊN TRONG chính nó, không
-          kéo dài cả modal/trang — thead sticky để vẫn thấy tên cột khi đã cuộn xuống dưới. */}
-      <div className="max-h-[380px] overflow-x-auto overflow-y-auto rounded-lg border border-hairline bg-surface">
-        <table className="w-full text-sm">
-          <thead className="sticky top-0 z-10 bg-surface">
-            <tr className="border-b border-hairline text-left text-xs font-semibold uppercase tracking-wider text-subtle">
-              <th className="w-8 px-3 py-2" />
-              <th className="px-3 py-2">Loại</th>
-              <th className="px-3 py-2">Tiêu đề</th>
-              <th className="px-3 py-2">Ưu tiên</th>
-              <th className="px-3 py-2">Phạm vi</th>
-              <th className="px-3 py-2">Nguồn</th>
-              <th className="px-3 py-2">Trạng thái</th>
-              <th className="px-3 py-2" />
-            </tr>
-          </thead>
-          <tbody>
-            {tree.map(({ root, children }) => (
-              <Fragment key={root._id}>
-                <DraftRow
-                  draft={root}
-                  checked={selected.has(root.tempId)}
-                  onToggle={() => toggle(root)}
-                  onEdit={() => setEditingDraft(root)}
-                  onQuickRename={(title) => editMutation.mutate({ draftId: root._id, payload: { title } })}
-                  onDelete={() => deleteMutation.mutate(root._id)}
-                />
+      <div className="space-y-2">
+        {tree.map(({ root, children }) => (
+          <div key={root._id} className="space-y-1.5">
+            <DraftRow
+              draft={root}
+              checked={selected.has(root.tempId)}
+              onToggle={() => toggle(root)}
+              onEdit={() => setEditingDraft(root)}
+              onDelete={() => setConfirmDeleteId(root._id)}
+            />
+            {children.length > 0 && (
+              <div className="ml-5 space-y-1.5 border-l-2 border-hairline pl-3">
                 {children.map((child) => (
                   <DraftRow
                     key={child._id}
                     draft={child}
-                    indent
+                    nested
                     checked={selected.has(child.tempId)}
                     onToggle={() => toggle(child)}
                     onEdit={() => setEditingDraft(child)}
-                    onQuickRename={(title) => editMutation.mutate({ draftId: child._id, payload: { title } })}
-                    onDelete={() => deleteMutation.mutate(child._id)}
+                    onDelete={() => setConfirmDeleteId(child._id)}
                   />
                 ))}
-              </Fragment>
-            ))}
-            <QuickAddRow defaultType={quickAddDefaultType} pending={addMutation.isPending} onSubmit={handleQuickAdd} />
-          </tbody>
-        </table>
+              </div>
+            )}
+          </div>
+        ))}
       </div>
 
       {selected.size > 0 && (
@@ -295,12 +187,6 @@ const DraftTable = ({ projectId, generationId, drafts }: DraftTableProps) => {
         onClose={() => setEditingDraft(null)}
         projectId={projectId}
         generationId={generationId}
-        parentTitle={editingDraft?.parentTempId ? byTempId.get(editingDraft.parentTempId)?.title : null}
-        childTitles={
-          editingDraft?.type === 'EPIC'
-            ? drafts.filter((d) => d.parentTempId === editingDraft.tempId).map((d) => d.title)
-            : []
-        }
       />
 
       <AddDraftModal
@@ -309,6 +195,19 @@ const DraftTable = ({ projectId, generationId, drafts }: DraftTableProps) => {
         projectId={projectId}
         generationId={generationId}
         epicOptions={epicOptions}
+      />
+
+      <ConfirmDialog
+        open={!!confirmDeleteId}
+        title="Xoá draft"
+        message="Bạn có chắc muốn xoá draft này? Hành động không thể hoàn tác."
+        danger
+        loading={deleteMutation.isPending}
+        onClose={() => setConfirmDeleteId(null)}
+        onConfirm={() => {
+          if (!confirmDeleteId) return
+          deleteMutation.mutate(confirmDeleteId, { onSuccess: () => setConfirmDeleteId(null) })
+        }}
       />
     </div>
   )

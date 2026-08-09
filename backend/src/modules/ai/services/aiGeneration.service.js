@@ -5,7 +5,7 @@ import AiDraftIssue from '../../../models/aiDraftIssues.js'
 import Issue from '../../../models/issues.js'
 import Project from '../../../models/projects.js'
 import ApiError from '../../../utils/ApiError.js'
-import { runAiGeneration } from '../aiRunner.js'
+import { runAiGeneration, runAiClarify } from '../aiRunner.js'
 
 // Beta/Demo — AI Lab. Layered giống issueService.js: Routes -> Controllers -> Services -> Models,
 // validate thủ công + ApiError (module này không dùng zod/validateMiddleware, theo đúng cách
@@ -97,7 +97,7 @@ const runWorker = async (generationId) => {
       }
     }
 
-    const { items, tokensUsed, provider, model, rawOutput } = await runAiGeneration(
+    const { items, tokensUsed, provider, model, rawOutput, entities } = await runAiGeneration(
       generation.generationType,
       context,
     )
@@ -124,6 +124,8 @@ const runWorker = async (generationId) => {
     generation.model = model
     generation.tokensUsed = tokensUsed || 0
     generation.rawOutput = rawOutput
+    // Kết quả Stage A (trích thực thể) của REQ_TO_EPIC — rỗng với EPIC_TO_TASK, xem aiRunner.js.
+    generation.extractedEntities = entities || []
     await generation.save()
   } catch (error) {
     console.error('>> [aiGeneration.runWorker] Error:', error)
@@ -196,10 +198,58 @@ const createGeneration = async (projectId, requestedBy, body = {}) => {
   return { generationId: generation._id, status: generation.status }
 }
 
-// Populate sourceEntityId -> title epic nguồn, để FE hiện được "sinh từ epic nào" trong danh
-// sách lượt sinh (EPIC_TO_TASK). REQ_TO_EPIC không có sourceEntityId (null) -> FE dùng inputPrompt
-// (đã có sẵn trong document, không cần populate) để hiện "sinh từ yêu cầu nào".
-const SOURCE_EPIC_POPULATE = { path: 'sourceEntityId', select: 'title' }
+/**
+ * AI hỏi làm rõ TRƯỚC khi PM tạo lượt REQ_TO_EPIC thật — 1 lệnh gọi AI đồng bộ (không nền, không
+ * tạo AiDraftIssue). Lưu thành 1 AiGeneration với generationType='CLARIFY' để: (1) tính chung
+ * vào quota checkAiLimit (middleware chỉ đếm AiGeneration.countDocuments, không cần sửa gì), và
+ * (2) giữ lại audit token/lỗi thật đã tiêu, giống pattern runWorker đang dùng.
+ */
+const clarifyRequirement = async (projectId, requestedBy, body = {}) => {
+  ensureValidObjectId(projectId, 'project id')
+
+  const { inputPrompt } = body
+  if (!inputPrompt || !inputPrompt.trim()) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'inputPrompt is required')
+  }
+  if (inputPrompt.length > 5000) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'inputPrompt tối đa 5000 ký tự')
+  }
+
+  const trimmedPrompt = inputPrompt.trim()
+
+  try {
+    const { questions, tokensUsed, provider, model } = await runAiClarify(trimmedPrompt)
+
+    const generation = await AiGeneration.create({
+      projectId,
+      requestedBy,
+      generationType: 'CLARIFY',
+      inputPrompt: trimmedPrompt,
+      status: 'COMPLETED',
+      clarifyingQuestions: questions,
+      tokensUsed: tokensUsed || 0,
+      provider,
+      model,
+    })
+
+    return { generationId: generation._id, questions }
+  } catch (error) {
+    // Ghi lại chi phí thật đã tiêu (nếu có gọi AI trước khi lỗi) thay vì để mất dấu — cùng
+    // pattern với runWorker khi generation FAILED.
+    await AiGeneration.create({
+      projectId,
+      requestedBy,
+      generationType: 'CLARIFY',
+      inputPrompt: trimmedPrompt,
+      status: 'FAILED',
+      errorMessage: error.message || 'AI clarify failed',
+      tokensUsed: error.tokensUsed || 0,
+      provider: error.provider || null,
+      model: error.model || null,
+    })
+    throw error
+  }
+}
 
 const listGenerations = async (projectId, filters = {}) => {
   ensureValidObjectId(projectId, 'project id')
@@ -208,10 +258,7 @@ const listGenerations = async (projectId, filters = {}) => {
   if (filters.status) filter.status = filters.status
   if (filters.generationType) filter.generationType = filters.generationType
 
-  return AiGeneration.find(filter)
-    .sort({ createdAt: -1 })
-    .populate(SOURCE_EPIC_POPULATE)
-    .lean()
+  return AiGeneration.find(filter).sort({ createdAt: -1 }).lean()
 }
 
 /**
@@ -301,7 +348,7 @@ const getUsageStats = async (filters = {}) => {
 const getGeneration = async (generationId) => {
   ensureValidObjectId(generationId, 'generation id')
 
-  const generation = await AiGeneration.findById(generationId).populate(SOURCE_EPIC_POPULATE).lean()
+  const generation = await AiGeneration.findById(generationId).lean()
   if (!generation) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Generation not found')
   }
@@ -516,6 +563,7 @@ const acceptDrafts = async (generationId, tempIds, requestedBy) => {
 
 export const aiGenerationService = {
   createGeneration,
+  clarifyRequirement,
   listGenerations,
   getGeneration,
   getUsageStats,

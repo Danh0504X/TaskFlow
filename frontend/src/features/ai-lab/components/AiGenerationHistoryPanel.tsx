@@ -1,76 +1,76 @@
-import { History } from 'lucide-react'
+import { Sparkles } from 'lucide-react'
 import { cn } from '@/lib/cn'
+import { formatRelativeTime } from '@/lib/format'
 import Spinner from '@/components/ui/Spinner'
 import { useGenerations } from '../hooks/useGenerations'
-import type { AiModalContext } from '../aiModalStore'
-import type { AiGenerationStatus } from '../ai.types'
+import { AI_GENERATION_TYPE } from '../ai.types'
+import { GENERATION_STATUS_STYLE, GENERATION_STATUS_LABEL } from '../ai.constants'
 
 interface AiGenerationHistoryPanelProps {
   projectId: string
-  context: AiModalContext
   activeGenerationId: string | null
-  onSelect: (id: string) => void
+  onSelect: (generationId: string) => void
 }
 
-const STATUS_DOT: Record<AiGenerationStatus, string> = {
-  PENDING: 'bg-subtle',
-  PROCESSING: 'bg-pastel-blue-ink animate-pulse',
-  COMPLETED: 'bg-pastel-green-ink',
-  FAILED: 'bg-pastel-red-ink',
-}
-
-/** Cột lịch sử bên phải modal — chỉ hiện đúng lịch sử KHỚP ngữ cảnh đang mở (REQ_TO_EPIC của cả
- * project, hoặc EPIC_TO_TASK của ĐÚNG epic đang xem) để không lẫn lịch sử của epic khác vào. */
-const AiGenerationHistoryPanel = ({ projectId, context, activeGenerationId, onSelect }: AiGenerationHistoryPanelProps) => {
+/** Cột lịch sử bên trái modal "Sinh Epic bằng AI" — chỉ liệt kê lượt REQ_TO_EPIC (không CLARIFY,
+ * không EPIC_TO_TASK vì modal này không dùng luồng đó). Cao tối đa ~5-6 dòng rồi tự cuộn riêng,
+ * không ảnh hưởng vùng nội dung bên phải (xem `max-h-[420px] overflow-y-auto` bên dưới). */
+const AiGenerationHistoryPanel = ({ projectId, activeGenerationId, onSelect }: AiGenerationHistoryPanelProps) => {
   const { data: generations, isLoading } = useGenerations(projectId)
 
-  const filtered = (generations ?? []).filter((gen) => {
-    if (gen.generationType !== context.generationType) return false
-    if (context.generationType === 'EPIC_TO_TASK') {
-      return gen.sourceEntityId?._id === context.sourceEntityId
-    }
-    return true
-  })
+  const history = (generations ?? []).filter(
+    (gen) => gen.generationType === AI_GENERATION_TYPE.REQ_TO_EPIC,
+  )
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center gap-2 text-xs text-subtle">
+        <Spinner /> Đang tải...
+      </div>
+    )
+  }
+
+  if (history.length === 0) {
+    return <p className="text-xs text-subtle">Chưa có lượt sinh nào.</p>
+  }
 
   return (
-    <div className="flex h-full min-w-0 flex-col border-l border-hairline pl-4">
-      <p className="mb-2 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-muted">
-        <History size={12} /> Lịch sử
-      </p>
+    <div className="max-h-[420px] space-y-1.5 overflow-y-auto pr-1">
+      {history.map((gen) => {
+        const isActive = activeGenerationId === gen._id
 
-      {isLoading ? (
-        <div className="flex items-center gap-2 text-xs text-subtle">
-          <Spinner /> Đang tải...
-        </div>
-      ) : filtered.length === 0 ? (
-        <p className="text-[11px] text-subtle">Chưa có lượt sinh nào</p>
-      ) : (
-        <div className="flex-1 space-y-1.5 overflow-y-auto scrollbar-thin pr-1">
-          {filtered.map((gen) => (
-            <button
-              key={gen._id}
-              type="button"
-              onClick={() => onSelect(gen._id)}
-              className={cn(
-                'flex w-full items-center gap-2 rounded-lg border px-2.5 py-1.5 text-left transition-colors',
-                activeGenerationId === gen._id
-                  ? 'border-brand/40 bg-canvas'
-                  : 'border-hairline hover:bg-canvas',
-              )}
-            >
-              <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full', STATUS_DOT[gen.status])} />
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-[11px] font-semibold text-ink">
-                  #{gen._id.slice(-6)}
+        return (
+          <button
+            key={gen._id}
+            type="button"
+            onClick={() => onSelect(gen._id)}
+            className={cn(
+              'flex w-full items-start gap-2 rounded-lg border px-2.5 py-2 text-left transition-colors',
+              isActive ? 'border-ink bg-canvas' : 'border-hairline hover:bg-canvas/60',
+            )}
+          >
+            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-brand/8 text-brand">
+              <Sparkles size={12} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[11px] font-semibold text-ink">
+                {gen.inputPrompt || 'Yêu cầu không có tiêu đề'}
+              </p>
+              <div className="mt-0.5 flex items-center justify-between gap-2">
+                <span className="text-[9px] text-subtle">{formatRelativeTime(gen.createdAt)}</span>
+                <span
+                  className={cn(
+                    'shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-semibold',
+                    GENERATION_STATUS_STYLE[gen.status],
+                  )}
+                >
+                  {GENERATION_STATUS_LABEL[gen.status]}
                 </span>
-                <span className="block text-[10px] text-subtle">
-                  {new Date(gen.createdAt).toLocaleString('vi-VN')}
-                </span>
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
+              </div>
+            </div>
+          </button>
+        )
+      })}
     </div>
   )
 }

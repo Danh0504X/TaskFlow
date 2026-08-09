@@ -12,6 +12,8 @@ export interface UserInfo {
   isEmailVerified: boolean
   status: string
   role?: string
+  plan?: 'FREE' | 'PRO'
+  currentPlanExpiresAt?: string | null
   hasPassword: boolean; 
 }
 

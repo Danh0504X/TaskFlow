@@ -3,10 +3,9 @@ import { useParams, useNavigate, useLocation, useSearchParams } from 'react-rout
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { ArrowLeft, Plus, Sparkles, UserPlus } from 'lucide-react'
 import { useAuthStore } from '@/features/auth/authStore'
-import { useAiModalStore } from '@/features/ai-lab/aiModalStore'
-import AiQuickGenerateModal from '@/features/ai-lab/components/AiQuickGenerateModal'
 import ProjectInviteModal from '../components/ProjectInviteModal'
 import ProjectMembersModal from '../components/ProjectMembersModal'
+import AiGenerateEpicModal from '@/features/ai-lab/components/AiGenerateEpicModal'
 import Spinner from '@/components/ui/Spinner'
 import Avatar from '@/components/ui/Avatar'
 import { cn } from '@/lib/cn'
@@ -103,6 +102,7 @@ const ProjectWorkspacePage = () => {
   const [isCreateIssueOpen, setIsCreateIssueOpen] = useState(false)
   const [isInviteOpen, setIsInviteOpen] = useState(false)
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false)
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false)
 
   const [searchParams, setSearchParams] = useSearchParams()
   const activeIssueId = searchParams.get('issueId')
@@ -110,7 +110,6 @@ const ProjectWorkspacePage = () => {
   const currentUser = useAuthStore((state) => state.user)
   const userMemberRecord = project?.members?.find((m) => m.userId === currentUser?._id)
   const isOwner = userMemberRecord?.role === 'OWNER'
-  const openAiForRequirement = useAiModalStore((state) => state.openForRequirement)
 
   // Dùng chung cache với các tab Summary/List/Board/Backlog (cùng queryKey) -> không
   // tốn thêm request, chỉ để tra ra issue đầy đủ cho panel chi tiết theo key đã chọn.
@@ -206,6 +205,17 @@ const ProjectWorkspacePage = () => {
           </div>
 
           <div className="flex items-center gap-2.5 shrink-0">
+            {/* AI Lab (Beta) chỉ dành cho OWNER — khớp authorizeProjectRole('OWNER') chặn mọi
+                route /ai ở backend, cùng điều kiện gate với nút "Thêm thành viên" bên dưới. */}
+            {isOwner && (
+              <button
+                onClick={() => setIsAiModalOpen(true)}
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-surface text-ink border border-hairline rounded-lg text-xs font-semibold hover:border-ink/20 transition-colors active:scale-[0.98]"
+              >
+                <Sparkles size={14} className="text-muted" />
+                <span>Sinh Epic bằng AI</span>
+              </button>
+            )}
             {isOwner && (
               <button
                 onClick={() => setIsInviteOpen(true)}
@@ -213,16 +223,6 @@ const ProjectWorkspacePage = () => {
               >
                 <UserPlus size={14} className="text-muted" />
                 <span>Thêm thành viên</span>
-              </button>
-            )}
-            {/* Beta — AI Lab: chỉ OWNER dùng được (khớp authorizeProjectRole('OWNER') ở BE). */}
-            {isOwner && (
-              <button
-                onClick={() => openAiForRequirement(project._id)}
-                className="flex items-center gap-1.5 px-3.5 py-2 bg-surface text-ink border border-hairline rounded-lg text-xs font-semibold hover:border-ink/20 transition-colors active:scale-[0.98]"
-              >
-                <Sparkles size={14} className="text-brand" />
-                <span>Sinh bằng AI</span>
               </button>
             )}
             <button
@@ -311,11 +311,13 @@ const ProjectWorkspacePage = () => {
         open={isMembersModalOpen}
         onClose={() => setIsMembersModalOpen(false)}
         members={project.members}
-        projectId={project._id}
-        isOwner={isOwner}
       />
 
-      <AiQuickGenerateModal />
+      <AiGenerateEpicModal
+        open={isAiModalOpen}
+        onClose={() => setIsAiModalOpen(false)}
+        projectId={project._id}
+      />
     </div>
   )
 }

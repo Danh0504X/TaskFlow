@@ -1,5 +1,10 @@
 import { aiEnv } from '../config/aiEnv.js'
-import { stubGenerateReqToEpic, stubGenerateEpicToTask } from './stubProvider.js'
+import {
+  stubGenerateReqToEpic,
+  stubGenerateEpicToTask,
+  stubGenerateEntities,
+  stubGenerateClarifyQuestions,
+} from './stubProvider.js'
 
 // Beta/Demo — AI Lab. Adapter chuẩn hoá cho mọi provider: generateStructured(...) luôn trả
 // { json, tokensUsed, provider, model }. `generationType`/`stubContext` chỉ được stub dùng
@@ -143,18 +148,25 @@ const resolveProvider = () => {
   return configured
 }
 
+const STUB_MODEL = { provider: 'stub', model: 'stub-deterministic-v1' }
+
+// generationType ở đây gồm cả 2 giá trị nội bộ KHÔNG lưu DB ('ENTITY_EXTRACTION' — Stage A của
+// REQ_TO_EPIC, 'CLARIFY' — hỏi làm rõ) bên cạnh 2 giá trị generation thật ('REQ_TO_EPIC',
+// 'EPIC_TO_TASK') — xem aiRunner.js.
 const callStub = ({ generationType, stubContext }) => {
+  if (generationType === 'ENTITY_EXTRACTION') {
+    return Promise.resolve({ json: { entities: stubGenerateEntities(stubContext) }, tokensUsed: 0, ...STUB_MODEL })
+  }
+  if (generationType === 'CLARIFY') {
+    return Promise.resolve({ json: { questions: stubGenerateClarifyQuestions(stubContext) }, tokensUsed: 0, ...STUB_MODEL })
+  }
+
   const issues =
     generationType === 'REQ_TO_EPIC'
       ? stubGenerateReqToEpic(stubContext)
       : stubGenerateEpicToTask(stubContext)
 
-  return Promise.resolve({
-    json: { issues },
-    tokensUsed: 0,
-    provider: 'stub',
-    model: 'stub-deterministic-v1',
-  })
+  return Promise.resolve({ json: { issues }, tokensUsed: 0, ...STUB_MODEL })
 }
 
 /**

@@ -4,9 +4,13 @@
 
 import type { IssuePriority } from '@/features/issues/issue.types'
 
+// CLARIFY chỉ để LỌC/HIỂN THỊ (1 lượt AI hỏi làm rõ cũng là 1 AiGeneration ở backend) — KHÔNG
+// dùng làm generationType khi tạo lượt sinh từ FE, backend createGeneration không chấp nhận giá
+// trị này (xem POST /projects/:id/ai/clarify — endpoint riêng, tự tạo generation phía server).
 export const AI_GENERATION_TYPE = {
   REQ_TO_EPIC: 'REQ_TO_EPIC',
   EPIC_TO_TASK: 'EPIC_TO_TASK',
+  CLARIFY: 'CLARIFY',
 } as const
 export type AiGenerationType = (typeof AI_GENERATION_TYPE)[keyof typeof AI_GENERATION_TYPE]
 
@@ -54,27 +58,38 @@ export interface AiDraftIssue {
   createdIssueId: string | null
 }
 
-/** Bản rút gọn của epic nguồn, do backend populate vào `sourceEntityId` khi trả về (EPIC_TO_TASK). */
-export interface AiSourceEpicRef {
-  _id: string
-  title: string
+/** Thực thể/tính năng AI trích ra từ requirement TRƯỚC khi gom epic (Stage A của REQ_TO_EPIC ở
+ * backend, xem aiRunner.js) — chỉ để tham khảo/audit, không phải dữ liệu chỉnh sửa được. */
+export interface ExtractedEntity {
+  key: string
+  name: string
+  description: string
+  sourceQuote: string
 }
 
-/** 1 lượt sinh (PM bấm "Sinh Epic" từ requirement, hoặc "Sinh Task" từ 1 epic có sẵn). */
+/** 1 câu hỏi AI sinh ra khi PM gọi POST /ai/clarify trước lúc tạo lượt REQ_TO_EPIC thật. */
+export interface ClarifyingQuestion {
+  key: string
+  question: string
+  options: string[]
+}
+
+/** 1 lượt sinh (PM bấm "Sinh Epic" từ requirement, hoặc "Sinh Task" từ 1 epic có sẵn — hoặc 1
+ * lượt CLARIFY hỏi làm rõ, xem AI_GENERATION_TYPE.CLARIFY). */
 export interface AiGeneration {
   _id: string
   projectId: string
   generationType: AiGenerationType
-  // EPIC_TO_TASK: object đã populate (epic nguồn) — null nếu epic đã bị xoá.
-  // REQ_TO_EPIC: luôn null (dùng inputPrompt thay để biết "sinh từ yêu cầu nào").
-  sourceEntityId: AiSourceEpicRef | null
-  // Chỉ có giá trị khi generationType = REQ_TO_EPIC (BE lưu '' cho EPIC_TO_TASK).
-  inputPrompt: string
+  sourceEntityId: string | null
   status: AiGenerationStatus
+  /** Yêu cầu gốc PM nhập (rỗng với EPIC_TO_TASK — cha lúc đó là sourceEntityId, không phải văn bản). */
+  inputPrompt: string
   provider: string | null
   model: string | null
   tokensUsed: number
   errorMessage: string | null
+  extractedEntities: ExtractedEntity[]
+  clarifyingQuestions: ClarifyingQuestion[]
   createdAt: string
 }
 
@@ -98,6 +113,16 @@ export interface CreateGenerationPayload {
 export interface CreateGenerationResponse {
   generationId: string
   status: AiGenerationStatus
+}
+
+export interface ClarifyRequirementPayload {
+  inputPrompt: string
+}
+
+/** Response POST /ai/clarify — questions rỗng nghĩa là requirement đã đủ rõ, không cần hỏi thêm. */
+export interface ClarifyRequirementResponse {
+  generationId: string
+  questions: ClarifyingQuestion[]
 }
 
 export interface AddDraftPayload {

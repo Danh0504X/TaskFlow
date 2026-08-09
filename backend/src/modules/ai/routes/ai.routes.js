@@ -1,6 +1,7 @@
 import express from 'express'
 import {
   createGeneration,
+  clarifyRequirement,
   listGenerations,
   getGeneration,
   addManualDraft,
@@ -23,7 +24,9 @@ router.use(protectedRoute)
 // hiện tại, tương đương "PM" trong tài liệu thiết kế tính năng) được dùng AI Lab. MEMBER bị 403.
 router.use(authorizeProjectRole('OWNER'))
 
-// checkAiLimit chỉ áp cho route TẠO lượt sinh mới — list/detail/accept/reject không tốn quota.
+// checkAiLimit áp cho route TẠO lượt sinh mới VÀ route hỏi làm rõ (CLARIFY cũng là 1
+// AiGeneration, tính chung quota 15 lượt/ngày) — list/detail/accept/reject không tốn quota.
+router.post('/clarify', checkAiLimit, clarifyRequirement)
 router.post('/generations', checkAiLimit, createGeneration)
 router.get('/generations', listGenerations)
 router.get('/generations/:genId', getGeneration)
