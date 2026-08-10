@@ -3,7 +3,11 @@ import dns from 'dns';
 import { env } from '../config/environment.js';
 
 // Đặt DNS custom (Google & Cloudflare) để tránh lỗi querySrv ECONNREFUSED do DNS của ISP Việt Nam
-dns.setServers(['8.8.8.8', '1.1.1.1']);
+try {
+    dns.setServers(['8.8.8.8', '1.1.1.1']);
+} catch (e) {
+    // Ignore if not supported
+}
 
 export const connectDB = async () => {
     try {

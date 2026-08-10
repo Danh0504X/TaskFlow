@@ -2,6 +2,7 @@ import { Zap, Crown, Sparkles, Eye } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { fadeUpItem } from '@/lib/motion'
 import { useAuthStore } from '@/features/auth/authStore'
+import { useAiQuota } from '@/features/ai-lab/hooks/useAiQuota'
 
 interface AiQuotaCardProps {
   onOpenPricing?: () => void
@@ -10,8 +11,14 @@ interface AiQuotaCardProps {
 
 export function AiQuotaCard({ onOpenPricing, onOpenUpgrade }: AiQuotaCardProps) {
   const { user } = useAuthStore()
+  // Dữ liệu thật từ GET /me/ai-quota — cùng logic đếm/kiểm PRO với checkAiLimit.js (middleware
+  // chặn tạo lượt sinh), nên số hiển thị ở đây luôn khớp số thật đang bị chặn/còn lại.
+  const { data: quota, isLoading } = useAiQuota()
 
-  const isPro = user?.plan === 'PRO' && user?.currentPlanExpiresAt && new Date(user.currentPlanExpiresAt) > new Date()
+  const isPro = quota?.isPro ?? (user?.plan === 'PRO' && user?.currentPlanExpiresAt && new Date(user.currentPlanExpiresAt) > new Date())
+  const used = quota?.used ?? 0
+  const limit = quota?.limit ?? 15
+  const usedRatio = limit > 0 ? Math.min((used / limit) * 100, 100) : 0
 
   return (
     <motion.section variants={fadeUpItem} className="bg-surface border border-hairline rounded-lg p-5 relative overflow-hidden space-y-4">
@@ -29,7 +36,12 @@ export function AiQuotaCard({ onOpenPricing, onOpenUpgrade }: AiQuotaCardProps) 
         </div>
       </div>
 
-      {isPro ? (
+      {isLoading ? (
+        <div className="space-y-3 animate-pulse">
+          <div className="h-7 w-28 rounded bg-canvas" />
+          <div className="h-2 w-full rounded-full bg-canvas" />
+        </div>
+      ) : isPro ? (
         <div className="space-y-3">
           <div className="flex justify-between items-end">
             <span className="text-2xl font-bold text-amber-500 flex items-center gap-1">
@@ -63,13 +75,16 @@ export function AiQuotaCard({ onOpenPricing, onOpenUpgrade }: AiQuotaCardProps) 
         <div className="space-y-3">
           <div className="flex justify-between items-end">
             <span className="text-2xl font-semibold text-ink leading-none">
-              5 <span className="text-sm font-normal text-subtle">/ 5 lượt/ngày</span>
+              {used} <span className="text-sm font-normal text-subtle">/ {limit} lượt/ngày</span>
             </span>
             <span className="text-xs font-bold text-amber-500">Tài khoản FREE</span>
           </div>
 
           <div className="w-full h-2 bg-canvas rounded-full overflow-hidden">
-            <div className="h-full bg-amber-500 rounded-full transition-all duration-1000 ease-out w-full" />
+            <div
+              className="h-full bg-amber-500 rounded-full transition-all duration-1000 ease-out"
+              style={{ width: `${usedRatio}%` }}
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-2 pt-1">

@@ -11,11 +11,15 @@ import {
 } from '../controllers/issueController.js'
 import { protectedRoute } from '../middlewares/authMiddleware.js'
 import { authorizeProjectRole } from '../middlewares/projectAuthMiddleware.js'
+import commentRoute from './commentRoute.js'
 
 // mergeParams: true để lấy :projectId từ route cha (/projects/:projectId/issues).
 const router = express.Router({ mergeParams: true })
 
 router.use(protectedRoute)
+
+// Nested comment route: /projects/:projectId/issues/:issueId/comments
+router.use('/:issueId/comments', commentRoute)
 
 // Xem danh sách / chi tiết: OWNER, MEMBER.
 router.get(

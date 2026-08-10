@@ -1,6 +1,5 @@
 import { z } from 'zod'
 import { ISSUE_PRIORITY } from '@/features/issues/issue.types'
-import { AI_DRAFT_TYPE } from './ai.types'
 
 // Schema validate form "Sinh Epic từ yêu cầu" — chặn rỗng/quá ngắn ở FE trước khi gọi BE
 // (BE cũng tự kiểm lại, xem aiGeneration.service.js#createGeneration).
@@ -33,14 +32,3 @@ export const draftEditSchema = z.object({
   priority: priorityEnum,
 })
 export type DraftEditValues = z.infer<typeof draftEditSchema>
-
-// PM tự thêm 1 draft tay (AddDraftModal).
-export const addDraftSchema = z.object({
-  title: z.string().trim().min(1, 'Tiêu đề là bắt buộc').max(200, 'Tiêu đề tối đa 200 ký tự'),
-  description: z.string().trim().max(5000, 'Mô tả tối đa 5000 ký tự').optional(),
-  type: z.enum([AI_DRAFT_TYPE.EPIC, AI_DRAFT_TYPE.TASK]),
-  priority: priorityEnum,
-  // Chỉ dùng khi type=TASK — gắn vào 1 epic (AI hoặc tay) đã có trong cùng mẻ.
-  parentTempId: z.string().optional(),
-})
-export type AddDraftValues = z.infer<typeof addDraftSchema>

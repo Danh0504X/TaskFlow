@@ -6,6 +6,7 @@ import type {
   AiDraftIssue,
   AiGeneration,
   AiGenerationDetail,
+  AiQuota,
   ClarifyRequirementPayload,
   ClarifyRequirementResponse,
   CreateGenerationPayload,
@@ -13,9 +14,18 @@ import type {
   EditDraftPayload,
 } from './ai.types'
 
-// Lớp gọi API cho AI Lab. Mọi endpoint nested dưới project: /projects/:projectId/ai/...
-// Backend luôn trả { message, data } -> ta bóc lấy `data` trả về cho hook dùng.
+// Lớp gọi API cho AI Lab. Đa số endpoint nested dưới project: /projects/:projectId/ai/...,
+// riêng getMyQuota gọi /me/ai-quota (hạn mức tính theo USER, không theo project — xem
+// backend/src/middlewares/checkAiLimit.js). Backend luôn trả { message, data } -> ta bóc lấy
+// `data` trả về cho hook dùng.
 export const aiApi = {
+  /** GET /me/ai-quota — số lượt sinh AI user hiện tại đã dùng hôm nay / hạn mức (widget "Hạn
+   * mức AI" ở trang Hồ sơ). PRO còn hạn -> isPro=true, used luôn là 0 (không giới hạn). */
+  getMyQuota: async (): Promise<AiQuota> => {
+    const res = await api.get<ApiResponse<AiQuota>>('/me/ai-quota')
+    return res.data.data
+  },
+
   /** POST /projects/:projectId/ai/generations — trả 202 ngay, xử lý AI ở nền. */
   createGeneration: async (
     projectId: string,

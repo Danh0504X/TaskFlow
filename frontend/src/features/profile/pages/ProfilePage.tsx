@@ -28,7 +28,6 @@ export function ProfilePage() {
       })
       .catch(() => {})
   }, [setUser])
-
   const isPro = user?.plan === 'PRO' && user?.currentPlanExpiresAt && new Date(user.currentPlanExpiresAt) > new Date()
 
   return (

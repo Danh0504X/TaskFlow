@@ -121,7 +121,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                   <p className="text-xs text-subtle">Mở khóa sức mạnh AI tối đa cho công việc cá nhân</p>
 
                   <div className="flex items-baseline gap-1">
-                    <span className="text-3xl font-extrabold text-amber-500">99.000 đ</span>
+                    <span className="text-3xl font-extrabold text-amber-500">2.000 đ</span>
                     <span className="text-xs text-subtle">/ 30 ngày (Thanh toán 1 lần)</span>
                   </div>
 

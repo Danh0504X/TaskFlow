@@ -60,3 +60,14 @@ export const toDateInputValue = (value: string | null | undefined): string => {
   if (Number.isNaN(date.getTime())) return ''
   return date.toISOString().slice(0, 10)
 }
+
+/** Định dạng ngày giờ kiểu Việt Nam (HH:mm dd/MM/yyyy). */
+export const formatDateTime = (value: string | null | undefined): string => {
+  if (!value) return '—'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return '—'
+  const timeStr = date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false })
+  const dateStr = date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  return `${timeStr} ${dateStr}`
+}
+

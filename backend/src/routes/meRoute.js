@@ -1,5 +1,5 @@
 import express from 'express'
-import { getMyTasks, getUpcomingSprints } from '../controllers/meController.js'
+import { getMyTasks, getUpcomingSprints, getAiQuota } from '../controllers/meController.js'
 import { protectedRoute } from '../middlewares/authMiddleware.js'
 
 // Các endpoint gộp dữ liệu của user hiện tại trên NHIỀU project cùng lúc — khác
@@ -10,5 +10,6 @@ router.use(protectedRoute)
 
 router.get('/tasks', getMyTasks)
 router.get('/upcoming-sprints', getUpcomingSprints)
+router.get('/ai-quota', getAiQuota)
 
 export default router
