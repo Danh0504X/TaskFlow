@@ -162,5 +162,19 @@ export const useRemoveMember = () => {
   })
 }
 
+export const useTransferOwnership = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ projectId, newOwnerId }: { projectId: string; newOwnerId: string }) =>
+      projectApi.transferOwnership(projectId, newOwnerId),
+    onSuccess: (_, { projectId }) => {
+      qc.invalidateQueries({ queryKey: projectKeys.lists() })
+      qc.invalidateQueries({ queryKey: projectKeys.detail(projectId) })
+      toast.success('Chuyển quyền Chủ sở hữu dự án thành công')
+    },
+    onError: (error) => toast.error(getApiErrorMessage(error)),
+  })
+}
+
 
 

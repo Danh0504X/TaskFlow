@@ -14,6 +14,7 @@ import {
   acceptInvitation,
   declineInvitation,
   removeMember,
+  transferOwnership,
 } from '../controllers/projectController.js'
 import { protectedRoute } from '../middlewares/authMiddleware.js'
 import { authorizeProjectRole } from '../middlewares/projectAuthMiddleware.js'
@@ -87,6 +88,13 @@ router.delete(
   '/:projectId/members/:userId',
   authorizeProjectRole('OWNER'),
   removeMember,
+)
+
+// Chuyển quyền sở hữu dự án: chỉ OWNER mới được phép.
+router.post(
+  '/:projectId/transfer-ownership',
+  authorizeProjectRole('OWNER'),
+  transferOwnership,
 )
 
 // Chấp nhận / từ chối lời mời: chỉ cần đăng nhập (status: PENDING nên không check role)

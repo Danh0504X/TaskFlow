@@ -71,6 +71,11 @@ const IssueRow = ({
         )}
       </div>
       <div className="flex items-center gap-3.5">
+        {!issue.assigneeId && (
+          <span className="text-[9px] font-bold bg-pastel-red text-pastel-red-ink px-1.5 py-0.5 rounded" title="Công việc chưa có người phụ trách, cần phân công lại">
+            ⚠️ Cần giao lại
+          </span>
+        )}
         {!!issue.commentsCount && issue.commentsCount > 0 && (
           <span className="flex items-center gap-1 text-[10px] font-semibold text-muted bg-canvas px-1.5 py-0.5 rounded border border-hairline" title={`${issue.commentsCount} bình luận`}>
             <MessageSquare size={11} />

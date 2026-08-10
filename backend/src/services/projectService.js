@@ -606,6 +606,72 @@ const removeMember = async (projectId, ownerUserId, targetUserId) => {
   return toProjectDTO(updatedProject)
 }
 
+const transferOwnership = async (projectId, currentOwnerId, newOwnerId) => {
+  ensureValidObjectId(projectId, 'project id')
+  ensureValidObjectId(currentOwnerId, 'current owner id')
+  ensureValidObjectId(newOwnerId, 'new owner id')
+
+  if (currentOwnerId.toString() === newOwnerId.toString()) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Bạn đã là Chủ sở hữu của dự án này')
+  }
+
+  const project = await Project.findOne({ _id: projectId, isDeleted: false })
+  if (!project) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Project not found')
+  }
+
+  // 1. Kiểm tra người gửi có đúng là OWNER của dự án hay không
+  const currentOwnerMember = project.members.find(
+    (m) => m.userId.toString() === currentOwnerId.toString() && m.status === 'ACTIVE'
+  )
+  if (!currentOwnerMember || currentOwnerMember.role !== 'OWNER') {
+    throw new ApiError(StatusCodes.FORBIDDEN, 'Chỉ Chủ sở hữu dự án mới có quyền chuyển quyền sở hữu')
+  }
+
+  // 2. Kiểm tra thành viên nhận quyền phải tồn tại và đang ở trạng thái ACTIVE
+  const newOwnerMember = project.members.find(
+    (m) => m.userId.toString() === newOwnerId.toString() && m.status === 'ACTIVE'
+  )
+  if (!newOwnerMember) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Người nhận quyền sở hữu phải là thành viên đang hoạt động (ACTIVE) trong dự án')
+  }
+
+  // 3. Thực hiện chuyển quyền sở hữu:
+  //    - Đổi role của chủ sở hữu hiện tại thành MEMBER
+  //    - Đổi role của người nhận quyền thành OWNER
+  //    - Cập nhật project.createdBy = newOwnerId
+  for (const member of project.members) {
+    if (member.userId.toString() === currentOwnerId.toString()) {
+      member.role = 'MEMBER'
+    } else if (member.userId.toString() === newOwnerId.toString()) {
+      member.role = 'OWNER'
+    }
+  }
+
+  project.createdBy = newOwnerId
+  await project.save()
+
+  // 4. Sinh thông báo cho người nhận quyền sở hữu mới
+  const currentOwnerUser = await User.findById(currentOwnerId).select('fullName').lean()
+  const currentOwnerName = currentOwnerUser ? currentOwnerUser.fullName : 'Chủ sở hữu cũ'
+
+  await notificationService.createNotification({
+    userId: newOwnerId,
+    actorId: currentOwnerId,
+    projectId: project._id,
+    type: 'INVITATION',
+    entityType: 'PROJECT',
+    entityId: project._id,
+    title: 'Bạn đã trở thành Chủ sở hữu dự án',
+    message: `${currentOwnerName} đã chuyển quyền Chủ sở hữu dự án "${project.name}" cho bạn.`,
+  })
+
+  const updatedProject = await Project.findById(projectId)
+    .populate({ path: 'members.userId', select: 'fullName avatarUrl' })
+
+  return toProjectDTO(updatedProject)
+}
+
 export const projectService = {
   createProject,
   inviteMembers,
@@ -621,5 +687,6 @@ export const projectService = {
   acceptInvitation,
   declineInvitation,
   removeMember,
+  transferOwnership,
 }
 

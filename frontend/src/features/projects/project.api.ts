@@ -108,6 +108,12 @@ export const projectApi = {
     const res = await api.delete<ApiResponse<Project>>(`/projects/${projectId}/members/${userId}`)
     return res.data.data
   },
+
+  /** POST /projects/:projectId/transfer-ownership — chuyển quyền sở hữu dự án cho thành viên khác. */
+  transferOwnership: async (projectId: string, newOwnerId: string): Promise<Project> => {
+    const res = await api.post<ApiResponse<Project>>(`/projects/${projectId}/transfer-ownership`, { newOwnerId })
+    return res.data.data
+  },
 }
 
 
