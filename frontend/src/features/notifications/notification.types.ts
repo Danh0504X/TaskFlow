@@ -16,6 +16,9 @@ export interface NotificationItem {
     | 'AI_COMPLETED'
     | 'TASK_REJECTED'
     | 'TASK_COMMENTED'
+    | 'TASK_IN_REVIEW'
+    | 'TASK_APPROVED'
+    | 'MEMBER_LEFT'
   entityType: 'PROJECT' | 'SPRINT' | 'ISSUE'
   entityId: string
   title: string
