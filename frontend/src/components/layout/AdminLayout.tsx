@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Navigate, NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, LogOut, MonitorSmartphone, ScrollText, Settings, ShieldAlert, Sparkles, Users } from 'lucide-react'
+import { CreditCard, LayoutDashboard, LogOut, MonitorSmartphone, ScrollText, Settings, ShieldAlert, Sparkles, Users } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { APP_LOGO_URL } from '@/lib/constants'
 import Avatar from '@/components/ui/Avatar'
@@ -10,6 +10,7 @@ import AppBackground from './AppBackground'
 const NAV_ITEMS = [
   { to: '/admin', label: 'Tổng quan', icon: LayoutDashboard, end: true },
   { to: '/admin/users', label: 'Tài khoản', icon: Users, end: false },
+  { to: '/admin/payments', label: 'Thanh toán & Webhook', icon: CreditCard, end: false },
   { to: '/admin/ai', label: 'Giám sát AI', icon: Sparkles, end: false },
   { to: '/admin/audit', label: 'Nhật ký', icon: ScrollText, end: false },
   { to: '/admin/settings', label: 'Cấu hình', icon: Settings, end: false },

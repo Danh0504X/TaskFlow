@@ -23,8 +23,8 @@ export const env = {
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
 
   // SePay Configurations
-  SEPAY_BANK_ACC: process.env.SEPAY_BANK_ACC || '123456789',
+  SEPAY_BANK_ACC: process.env.SEPAY_BANK_ACC || '0906555367',
   SEPAY_BANK_NAME: process.env.SEPAY_BANK_NAME || 'MBBank',
   SEPAY_API_KEY: process.env.SEPAY_API_KEY || '',
-  SEPAY_PRO_PRICE: Number(process.env.SEPAY_PRO_PRICE) || 99000,
+  SEPAY_PRO_PRICE: Number(process.env.SEPAY_PRO_PRICE) || 2000,
 }

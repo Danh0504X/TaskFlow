@@ -31,6 +31,7 @@ import AiLogsTab from '@/features/admin/pages/ai/AiLogsTab'
 import AiQuotaTab from '@/features/admin/pages/ai/AiQuotaTab'
 import AdminAuditPage from '@/features/admin/pages/AdminAuditPage'
 import AdminSettingsPage from '@/features/admin/pages/AdminSettingsPage'
+import { AdminPaymentsPage } from '@/features/admin/pages/AdminPaymentsPage'
 import Spinner from '@/components/ui/Spinner'
 
 // Beta/Demo — AI Lab: lazy-load vì đây là tính năng phụ, không cần nằm trong bundle chính.
@@ -113,6 +114,7 @@ const router = createBrowserRouter([
         ],
       },
       { path: 'audit', element: <AdminAuditPage /> },
+      { path: 'payments', element: <AdminPaymentsPage /> },
       { path: 'settings', element: <AdminSettingsPage /> },
     ],
   },
