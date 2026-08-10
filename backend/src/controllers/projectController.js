@@ -153,5 +153,17 @@ export const removeMember = asyncHandler(async (req, res) => {
   })
 })
 
+// Chuyển quyền sở hữu dự án cho thành viên khác.
+export const transferOwnership = asyncHandler(async (req, res) => {
+  const { projectId } = req.params
+  const { newOwnerId } = req.body
+  const result = await projectService.transferOwnership(projectId, req.user._id, newOwnerId)
+
+  res.status(StatusCodes.OK).json({
+    message: 'Transferred project ownership successfully',
+    data: result,
+  })
+})
+
 
 

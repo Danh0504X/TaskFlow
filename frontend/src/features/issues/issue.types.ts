@@ -70,6 +70,8 @@ export interface Issue {
   orderIndex?: number
   aiGenerated?: boolean
   rejectionHistory?: RejectionRecord[]
+  commentsCount?: number
+  dueDate?: string | null
   createdAt: string
   updatedAt: string
 }

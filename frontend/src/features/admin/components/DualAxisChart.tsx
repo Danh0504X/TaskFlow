@@ -19,15 +19,16 @@ const scalePoints = (values: number[], height: number) => {
 
 const toPath = (pts: { x: number; y: number }[]) => pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ')
 
-/** Biểu đồ 2 trục Y (token trái, chi phí phải) — dùng cho tab AI Tổng quan. Không dùng thư
- * viện biểu đồ, chỉ SVG + path thủ công. */
+/** Biểu đồ 2 trục Y (token trái, số lỗi phải) — dùng cho tab AI Tổng quan. Cả 2 trục đều là dữ
+ * liệu thật (không có $ chi phí — hệ thống không lưu giá tiền, xem admin.types.ts). Không dùng
+ * thư viện biểu đồ, chỉ SVG + path thủ công. */
 const DualAxisChart = ({ data, height = 240 }: DualAxisChartProps) => {
   const [hoverIdx, setHoverIdx] = useState<number | null>(null)
 
-  const { tokenPath, costPath, tokenPoints } = useMemo(() => {
+  const { tokenPath, errorPath, tokenPoints } = useMemo(() => {
     const tokenPts = scalePoints(data.map((d) => d.tokens), height)
-    const costPts = scalePoints(data.map((d) => d.costUsd), height)
-    return { tokenPath: toPath(tokenPts), costPath: toPath(costPts), tokenPoints: tokenPts }
+    const errorPts = scalePoints(data.map((d) => d.errorsCount), height)
+    return { tokenPath: toPath(tokenPts), errorPath: toPath(errorPts), tokenPoints: tokenPts }
   }, [data, height])
 
   if (data.length === 0) return null
@@ -43,8 +44,8 @@ const DualAxisChart = ({ data, height = 240 }: DualAxisChartProps) => {
           Token/ngày
         </span>
         <span className="flex items-center gap-1.5 text-muted">
-          <span className="w-2.5 h-0.5 rounded-full bg-emerald-500" />
-          Chi phí/ngày (USD)
+          <span className="w-2.5 h-0.5 rounded-full bg-red-500" />
+          Lỗi/ngày
         </span>
       </div>
 
@@ -56,7 +57,7 @@ const DualAxisChart = ({ data, height = 240 }: DualAxisChartProps) => {
           })}
 
           <path d={tokenPath} fill="none" stroke="var(--color-brand)" strokeWidth={2} vectorEffect="non-scaling-stroke" />
-          <path d={costPath} fill="none" stroke="#10b981" strokeWidth={2} strokeDasharray="4 3" vectorEffect="non-scaling-stroke" />
+          <path d={errorPath} fill="none" stroke="#ef4444" strokeWidth={2} strokeDasharray="4 3" vectorEffect="non-scaling-stroke" />
 
           {hoveredPoint && (
             <line x1={hoveredPoint.x} x2={hoveredPoint.x} y1={0} y2={height} stroke="var(--color-hairline)" strokeWidth={1} strokeDasharray="3 3" />
@@ -83,8 +84,9 @@ const DualAxisChart = ({ data, height = 240 }: DualAxisChartProps) => {
           >
             <div className="font-mono text-subtle text-[10px]">{formatDate(hovered.date)}</div>
             <div className="font-semibold text-ink">{hovered.tokens.toLocaleString('vi-VN')} token</div>
-            <div className="font-semibold text-emerald-600">${hovered.costUsd.toFixed(2)}</div>
-            {hovered.errorsCount > 0 && <div className="font-semibold text-red-500">{hovered.errorsCount} lỗi</div>}
+            <div className={hovered.errorsCount > 0 ? 'font-semibold text-red-500' : 'font-semibold text-subtle'}>
+              {hovered.errorsCount} lỗi
+            </div>
           </div>
         )}
       </div>

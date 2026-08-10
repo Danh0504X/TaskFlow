@@ -8,6 +8,17 @@ import { EMAIL_REGEX, USER_ROLE } from '../utils/constants.js'
 const VALID_ROLES = Object.values(USER_ROLE)
 const VALID_STATUSES = ['active', 'inactive', 'banned']
 
+// Tên collection thật của model AiGeneration (Mongoose tự suy 'ai_generation' -> 'ai_generations',
+// xem models/aiGenerations.js) — $lookup cần tên collection, không phải tên model.
+const AI_GENERATIONS_COLLECTION = 'ai_generations'
+
+const SORT_OPTIONS = {
+  newest: { createdAt: -1 },
+  oldest: { createdAt: 1 },
+  tokensDesc: { aiTokensUsed: -1, createdAt: -1 },
+  tokensAsc: { aiTokensUsed: 1, createdAt: -1 },
+}
+
 const ensureValidObjectId = (id, label = 'id') => {
   if (!mongoose.Types.ObjectId.isValid(id)) {
     throw new ApiError(StatusCodes.BAD_REQUEST, `Invalid ${label}`)
@@ -34,13 +45,29 @@ const getAllUsers = async (query = {}) => {
     ]
   }
 
+  const sort = SORT_OPTIONS[query.sort] || SORT_OPTIONS.newest
+
+  // Dùng aggregate (không phải find()) vì cần sort/phân trang theo aiTokensUsed — field này
+  // không có sẵn trên User, phải $lookup + cộng dồn TRƯỚC $skip/$limit thì thứ tự trang mới
+  // đúng (tính token sau khi đã phân trang, như bản trước, chỉ đúng khi sort mặc định theo
+  // createdAt). Không lưu counter riêng trên User để tránh lệch dữ liệu gốc.
   const [users, total] = await Promise.all([
-    User.find(filter)
-      .select('-passwordHash')
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .lean(),
+    User.aggregate([
+      { $match: filter },
+      {
+        $lookup: {
+          from: AI_GENERATIONS_COLLECTION,
+          localField: '_id',
+          foreignField: 'requestedBy',
+          as: '_aiGenerations',
+        },
+      },
+      { $addFields: { aiTokensUsed: { $sum: '$_aiGenerations.tokensUsed' } } },
+      { $project: { _aiGenerations: 0, passwordHash: 0 } },
+      { $sort: sort },
+      { $skip: skip },
+      { $limit: limit },
+    ]),
     User.countDocuments(filter),
   ])
 

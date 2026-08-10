@@ -86,6 +86,8 @@ const toIssueDTO = (issue, projectKey) => {
     assignee,
     epicName,
     rejectionHistory,
+    commentsCount: obj.commentsCount ?? 0,
+    dueDate: obj.dueDate ?? null,
   }
 }
 

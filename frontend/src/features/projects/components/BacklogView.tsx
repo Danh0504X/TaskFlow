@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
-import { Calendar, ChevronDown, ChevronRight, Plus } from 'lucide-react'
+import { Calendar, ChevronDown, ChevronRight, Plus, MessageSquare } from 'lucide-react'
 import {
   DndContext,
   DragOverlay,
@@ -71,10 +71,21 @@ const IssueRow = ({
         )}
       </div>
       <div className="flex items-center gap-3.5">
+        {!issue.assigneeId && (
+          <span className="text-[9px] font-bold bg-pastel-red text-pastel-red-ink px-1.5 py-0.5 rounded" title="Công việc chưa có người phụ trách, cần phân công lại">
+            ⚠️ Cần giao lại
+          </span>
+        )}
+        {!!issue.commentsCount && issue.commentsCount > 0 && (
+          <span className="flex items-center gap-1 text-[10px] font-semibold text-muted bg-canvas px-1.5 py-0.5 rounded border border-hairline" title={`${issue.commentsCount} bình luận`}>
+            <MessageSquare size={11} />
+            <span>{issue.commentsCount}</span>
+          </span>
+        )}
         <IssuePriorityBadge priority={issue.priority} showIcon={false} />
         <AssigneePicker
           projectId={projectId}
-          value={typeof issue.assigneeId === 'object' ? (issue.assigneeId as any)?._id ?? null : issue.assigneeId ?? null}
+          value={typeof issue.assigneeId === 'object' && issue.assigneeId !== null ? issue.assigneeId._id : (issue.assigneeId ?? null)}
           onChange={(userId) => updateIssueMutation.mutate({ issueId: issue._id, payload: { assigneeId: userId } })}
           size={24}
           readOnly={!isOwner}

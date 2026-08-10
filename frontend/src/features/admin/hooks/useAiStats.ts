@@ -1,11 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
+import { adminApi } from '../admin.api'
 import { adminKeys } from '../admin.keys'
-import { fetchAiOverview } from '../mock/ai.mock'
 
-/** Dữ liệu tab con "Tổng quan" trong Giám sát AI. */
+/** Dữ liệu tab con "Tổng quan" trong Giám sát AI — dữ liệu thật từ GET /admin/ai/overview. */
 export const useAiStats = () => {
   return useQuery({
     queryKey: adminKeys.aiOverview(),
-    queryFn: fetchAiOverview,
+    queryFn: () => adminApi.getAiOverview(),
   })
 }

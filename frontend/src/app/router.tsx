@@ -27,7 +27,6 @@ import AdminOverviewPage from '@/features/admin/pages/AdminOverviewPage'
 import AdminUsersPage from '@/features/admin/pages/AdminUsersPage'
 import AdminAiPage from '@/features/admin/pages/AdminAiPage'
 import AiOverviewTab from '@/features/admin/pages/ai/AiOverviewTab'
-import AiLogsTab from '@/features/admin/pages/ai/AiLogsTab'
 import AiQuotaTab from '@/features/admin/pages/ai/AiQuotaTab'
 import AdminAuditPage from '@/features/admin/pages/AdminAuditPage'
 import AdminSettingsPage from '@/features/admin/pages/AdminSettingsPage'
@@ -109,7 +108,6 @@ const router = createBrowserRouter([
         element: <AdminAiPage />,
         children: [
           { index: true, element: <AiOverviewTab /> },
-          { path: 'logs', element: <AiLogsTab /> },
           { path: 'quota', element: <AiQuotaTab /> },
         ],
       },

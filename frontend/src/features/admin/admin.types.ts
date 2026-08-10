@@ -21,7 +21,14 @@ export interface AdminUserItem {
   role: UserRole
   createdAt: string
   updatedAt: string
+  /** Tổng token AI đã dùng (cộng dồn mọi lượt sinh AI, mọi project) — tính trực tiếp từ
+   * AiGeneration.tokensUsed ở backend, không phải counter lưu sẵn. */
+  aiTokensUsed: number
 }
+
+/** newest/oldest theo ngày tạo; tokensDesc/tokensAsc xếp hạng theo tổng token AI đã dùng
+ * (aiTokensUsed) — tính ở backend bằng $lookup trước khi phân trang, xem userService.js. */
+export type AdminUserSort = 'newest' | 'oldest' | 'tokensDesc' | 'tokensAsc'
 
 export interface GetUsersQuery {
   page?: number
@@ -29,6 +36,7 @@ export interface GetUsersQuery {
   search?: string
   role?: UserRole | ''
   status?: UserStatus | ''
+  sort?: AdminUserSort
 }
 
 export interface GetUsersResponse {
@@ -64,9 +72,12 @@ export interface AdminOverview {
 }
 
 // ---------- Giám sát AI ----------
+// Chỉ giữ số liệu tính được TRỰC TIẾP từ dữ liệu thật (AiGeneration/AiDraftIssue) — không có $
+// chi phí (hệ thống không lưu giá tiền), không có "Nhật ký sinh" (đã bỏ khỏi phạm vi), không có
+// các thao tác kiểm soát (khoá AI/user, trần quota riêng, tắt AI toàn hệ thống — cần thêm field
+// + logic chặn mới ở backend, để quyết định riêng sau, không phải việc của trang GIÁM SÁT).
 
-export type AiGenerationType = 'REQ_TO_EPIC' | 'EPIC_TO_TASK' | 'TASK_TO_SUBTASK'
-export type AiGenerationStatus = 'PROCESSING' | 'COMPLETED' | 'FAILED'
+export type AiGenerationType = 'REQ_TO_EPIC' | 'EPIC_TO_TASK'
 
 export interface AiFunnelStage {
   label: string
@@ -76,18 +87,18 @@ export interface AiFunnelStage {
 export interface AiDailyStat {
   date: string
   tokens: number
-  costUsd: number
   errorsCount: number
 }
 
 export interface AiTypeBreakdown {
   type: AiGenerationType
+  label: string
   count: number
   avgTokens: number
   acceptanceRate: number
 }
 
-export type AiAlertKind = 'STUCK_PROCESSING' | 'QUOTA_CAPPED' | 'ERROR_SPIKE'
+export type AiAlertKind = 'STUCK_PROCESSING' | 'QUOTA_CAPPED'
 
 export interface AiAlert {
   id: string
@@ -97,74 +108,29 @@ export interface AiAlert {
 }
 
 export interface AiOverviewStats {
-  costThisMonth: TrendValue
   acceptanceRate7d: number
   errorRate7d: number
   generationsToday: number
   funnel: AiFunnelStage[]
-  wastedDrafts: number
-  wastedDraftsRate: number
   daily30d: AiDailyStat[]
   byType: AiTypeBreakdown[]
   alerts: AiAlert[]
-}
-
-export interface AiGenerationLog {
-  _id: string
-  createdAt: string
-  userId: string
-  userName: string
-  type: AiGenerationType
-  status: AiGenerationStatus
-  draftCount: number
-  acceptedCount: number
-  tokenCount: number
-  processingTimeMs: number
-  model: string
-  errorMessage?: string
-  inputPrompt: string
-  rawOutput: string
-}
-
-export interface AiLogsQuery {
-  page?: number
-  limit?: number
-  status?: AiGenerationStatus | ''
-  type?: AiGenerationType | ''
-  userId?: string | ''
-  dateFrom?: string
-  dateTo?: string
-}
-
-export interface AiLogsResponse {
-  logs: AiGenerationLog[]
-  total: number
-  page: number
-  limit: number
-  p95ProcessingTimeMs: number
-  errorGroups: { message: string; count: number }[]
 }
 
 export type QuotaTimeframe = '7d' | '30d' | 'all'
 
 export interface AiLeaderboardRow {
   userId: string
-  userName: string
+  /** null nếu tài khoản đã bị xoá nhưng lượt sinh cũ vẫn còn (userDeleted=true). */
+  userName: string | null
   userDeleted: boolean
+  isPro: boolean
   generations: number
   tokens: number
-  costUsd: number
   acceptanceRate: number
   acceptedCount: number
   quotaUsedToday: number
   quotaLimitToday: number
-  aiDisabled: boolean
-}
-
-export interface AiQuotaResponse {
-  timeframe: QuotaTimeframe
-  rows: AiLeaderboardRow[]
-  aiEnabledGlobally: boolean
 }
 
 // ---------- Nhật ký hệ thống ----------

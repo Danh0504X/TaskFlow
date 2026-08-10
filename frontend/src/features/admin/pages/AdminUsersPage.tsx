@@ -15,14 +15,21 @@ import AdminSelect from '../components/AdminSelect'
 import AdminPageLayout from '../components/AdminPageLayout'
 import Pagination from '../components/Pagination'
 import { SectionCard, TableEmpty, TableError, TableLoading } from '../components/TableStates'
-import type { AdminUserItem, UserRole, UserStatus } from '../admin.types'
+import type { AdminUserItem, AdminUserSort, UserRole, UserStatus } from '../admin.types'
 
 const LIMIT = 10
 
-const exportCsv = async (filters: { search: string; role: UserRole | ''; status: UserStatus | '' }) => {
+const SORT_LABELS: Record<AdminUserSort, string> = {
+  newest: 'Mới tạo nhất',
+  oldest: 'Cũ nhất',
+  tokensDesc: 'Token AI nhiều nhất',
+  tokensAsc: 'Token AI ít nhất',
+}
+
+const exportCsv = async (filters: { search: string; role: UserRole | ''; status: UserStatus | ''; sort: AdminUserSort }) => {
   const { users } = await adminApi.getUsers({ ...filters, page: 1, limit: 9999 })
-  const header = ['Họ tên', 'Email', 'Vai trò', 'Trạng thái', 'Đăng nhập', 'Ngày tạo']
-  const rows = users.map((u) => [u.fullName, u.email, u.role, u.status, u.authProvider, formatDate(u.createdAt)])
+  const header = ['Họ tên', 'Email', 'Vai trò', 'Trạng thái', 'Đăng nhập', 'Token AI đã dùng', 'Ngày tạo']
+  const rows = users.map((u) => [u.fullName, u.email, u.role, u.status, u.authProvider, u.aiTokensUsed, formatDate(u.createdAt)])
   const csv = [header, ...rows].map((r) => r.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n')
   const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
@@ -38,13 +45,14 @@ const AdminUsersPage = () => {
   const [search, setSearch] = useState('')
   const [role, setRole] = useState<UserRole | ''>('')
   const [status, setStatus] = useState<UserStatus | ''>('')
+  const [sort, setSort] = useState<AdminUserSort>('newest')
   const [page, setPage] = useState(1)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [detailUser, setDetailUser] = useState<AdminUserItem | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<AdminUserItem | null>(null)
   const [bulkAction, setBulkAction] = useState<UserStatus | null>(null)
 
-  const { data, isLoading, isError } = useAdminUsers({ page, limit: LIMIT, search, role, status })
+  const { data, isLoading, isError } = useAdminUsers({ page, limit: LIMIT, search, role, status, sort })
   const { data: adminCount } = useAdminCount()
   const updateUserMutation = useUpdateUser()
   const deleteUserMutation = useDeleteUser()
@@ -149,7 +157,21 @@ const AdminUsersPage = () => {
             <option value="inactive">Chưa kích hoạt</option>
           </AdminSelect>
 
-          <Button variant="secondary" size="sm" onClick={() => exportCsv({ search, role, status })}>
+          <AdminSelect
+            value={sort}
+            onChange={(e) => {
+              setSort(e.target.value as AdminUserSort)
+              setPage(1)
+            }}
+          >
+            {Object.entries(SORT_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </AdminSelect>
+
+          <Button variant="secondary" size="sm" onClick={() => exportCsv({ search, role, status, sort })}>
             <Download size={14} />
             Xuất CSV
           </Button>
@@ -198,6 +220,7 @@ const AdminUsersPage = () => {
                   <th className="py-2.5 px-4">Người dùng</th>
                   <th className="py-2.5 px-4">Vai trò</th>
                   <th className="py-2.5 px-4">Trạng thái</th>
+                  <th className="py-2.5 px-4 text-right">Token AI</th>
                   <th className="py-2.5 px-4">Ngày tạo</th>
                   <th className="py-2.5 px-4 text-right">Thao tác</th>
                 </tr>
@@ -234,6 +257,9 @@ const AdminUsersPage = () => {
                         <Badge color={u.status === 'active' ? 'green' : u.status === 'banned' ? 'red' : 'amber'}>
                           {u.status === 'active' ? 'Hoạt động' : u.status === 'banned' ? 'Bị khoá' : 'Chưa kích hoạt'}
                         </Badge>
+                      </td>
+                      <td className="py-2.5 px-4 text-right font-mono text-xs text-subtle">
+                        {u.aiTokensUsed.toLocaleString('vi-VN')}
                       </td>
                       <td className="py-2.5 px-4 font-mono text-xs text-subtle">{formatDate(u.createdAt)}</td>
                       <td className="py-2.5 px-4">

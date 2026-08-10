@@ -1,35 +1,12 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
+import { adminApi } from '../admin.api'
 import { adminKeys } from '../admin.keys'
 import type { QuotaTimeframe } from '../admin.types'
-import { fetchAiQuota, setAiEnabledGlobally, setUserAiDisabled, setUserQuotaLimit } from '../mock/ai.mock'
 
+/** Bảng xếp hạng token/lượt sinh theo user — dữ liệu thật từ GET /admin/ai/quota. */
 export const useAiQuota = (timeframe: QuotaTimeframe) => {
   return useQuery({
     queryKey: adminKeys.aiQuota(timeframe),
-    queryFn: () => fetchAiQuota(timeframe),
-  })
-}
-
-export const useSetAiEnabledGlobally = () => {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (enabled: boolean) => setAiEnabledGlobally(enabled),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.ai() }),
-  })
-}
-
-export const useSetUserQuotaLimit = () => {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: ({ userId, limit }: { userId: string; limit: number }) => setUserQuotaLimit(userId, limit),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.ai() }),
-  })
-}
-
-export const useSetUserAiDisabled = () => {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: ({ userId, disabled }: { userId: string; disabled: boolean }) => setUserAiDisabled(userId, disabled),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.ai() }),
+    queryFn: () => adminApi.getAiQuota(timeframe),
   })
 }

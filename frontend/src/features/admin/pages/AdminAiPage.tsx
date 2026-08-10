@@ -2,16 +2,14 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import Tabs from '@/components/ui/Tabs'
 import AdminPageLayout from '../components/AdminPageLayout'
 
-type AiSubTab = 'overview' | 'logs' | 'quota'
+type AiSubTab = 'overview' | 'quota'
 
 const subTabItems: { value: AiSubTab; label: string }[] = [
   { value: 'overview', label: 'Tổng quan' },
-  { value: 'logs', label: 'Nhật ký sinh' },
   { value: 'quota', label: 'Hạn mức & xếp hạng' },
 ]
 
 const pathToSubTab = (pathname: string): AiSubTab => {
-  if (pathname.endsWith('/logs')) return 'logs'
   if (pathname.endsWith('/quota')) return 'quota'
   return 'overview'
 }

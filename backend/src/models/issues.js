@@ -94,6 +94,21 @@ const issueSchema = new mongoose.Schema(
       index: true,
     },
 
+    dueDate: {
+      type: Date,
+      default: null,
+    },
+
+    commentsCount: {
+      type: Number,
+      default: 0,
+    },
+
+    dueRemindedAt: {
+      type: Date,
+      default: null,
+    },
+
     // Mốc thời gian xóa mềm — khớp với `Project.deletedAt` khi bị cascade-xóa cùng project,
     // giúp phân biệt với issue tự xóa riêng lẻ khi project được khôi phục.
     deletedAt: {
