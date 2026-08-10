@@ -213,6 +213,15 @@ export const paymentService = {
   async handleSePayWebhook(webhookData, authHeader = '') {
     const { content, transferAmount, referenceCode, accountNumber, accountName } = webhookData
 
+    // Chống lặp Webhook (Idempotency Check): Nếu mã giao dịch ngân hàng đã được xử lý trước đó thì bỏ qua
+    if (referenceCode) {
+      const existingLog = await WebhookLog.findOne({ bankReferenceCode: referenceCode })
+      if (existingLog) {
+        console.log(`⚠️ Webhook [${referenceCode}] đã được hệ thống xử lý trước đó. Bỏ qua ghi trùng.`)
+        return { success: true, message: 'Giao dịch đã được xử lý trước đó (Bỏ qua ghi trùng)' }
+      }
+    }
+
     const maskedAcc = maskAccountNumber(accountNumber)
 
     // Regex tìm mã TFxxxxxx trong nội dung chuyển khoản
