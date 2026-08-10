@@ -7,7 +7,7 @@ export interface NotificationItem {
     avatarUrl?: string | null
   } | null
   projectId: string | null
-  type: 'INVITATION' | 'SPRINT_STARTED' | 'SPRINT_COMPLETED' | 'TASK_ASSIGNED' | 'MENTIONED' | 'AI_COMPLETED'
+  type: 'INVITATION' | 'SPRINT_STARTED' | 'SPRINT_COMPLETED' | 'TASK_ASSIGNED' | 'MENTIONED' | 'AI_COMPLETED' | 'TASK_COMMENTED'
   entityType: 'PROJECT' | 'SPRINT' | 'ISSUE'
   entityId: string
   title: string

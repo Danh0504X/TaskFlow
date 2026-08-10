@@ -2,27 +2,20 @@ import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent as Reac
 import { useQueryClient } from '@tanstack/react-query'
 import { motion, useReducedMotion } from 'motion/react'
 import { X, Send, Plus } from 'lucide-react'
-import Avatar from '@/components/ui/Avatar'
 import Spinner from '@/components/ui/Spinner'
 import IssueTypeIcon from '@/components/ui/IssueTypeIcon'
 import { useAuthStore } from '@/features/auth/authStore'
 import { useProject } from '@/features/projects/hooks/useProject'
 import { useUpdateIssue, useUpdateIssueStatus, useCreateIssue } from '../hooks/useIssueMutations'
+import { useIssueComments, useCreateComment, useUpdateComment, useDeleteComment } from '../hooks/useComments'
 import { useProjectIssues } from '../hooks/useIssues'
 import { issueKeys } from '../issue.keys'
 import StatusPicker from './StatusPicker'
 import PriorityPicker from './PriorityPicker'
 import AssigneePicker from './AssigneePicker'
 import EpicPicker from './EpicPicker'
+import { CommentItem } from './CommentItem'
 import { ISSUE_TYPE, type Issue, type IssueStatus, type IssuePriority } from '../issue.types'
-
-interface Comment {
-  id: string
-  authorName: string
-  authorAvatar: string | null
-  time: string
-  text: string
-}
 
 interface IssueDetailPanelProps {
   /** Issue đã được resolve sẵn từ danh sách đang có trong cache (Board/List/Backlog/MyTasks). */
@@ -135,8 +128,13 @@ const IssueDetailPanel = ({ issue, projectId, isLoading, onClose, onSelectIssue 
   const [isEditingTitle, setIsEditingTitle] = useState(false)
   const [titleDraft, setTitleDraft] = useState('')
   const [commentText, setCommentText] = useState('')
-  const [comments, setComments] = useState<Comment[]>([])
   const titleInputRef = useRef<HTMLInputElement>(null)
+
+  const issueId = issue?._id
+  const { data: comments = [], isLoading: isLoadingComments } = useIssueComments(projectId, issueId)
+  const createCommentMutation = useCreateComment(projectId, issueId ?? '')
+  const updateCommentMutation = useUpdateComment(projectId, issueId ?? '')
+  const deleteCommentMutation = useDeleteComment(projectId, issueId ?? '')
 
   if (issue && issue._id !== loadedIssueId) {
     setLoadedIssueId(issue._id)
@@ -239,12 +237,16 @@ const IssueDetailPanel = ({ issue, projectId, isLoading, onClose, onSelectIssue 
 
   const handleAddComment = (e: FormEvent) => {
     e.preventDefault()
-    if (!commentText.trim()) return
-    setComments((prev) => [
-      ...prev,
-      { id: Date.now().toString(), authorName: 'Bạn', authorAvatar: null, time: 'Vừa xong', text: commentText.trim() },
-    ])
-    setCommentText('')
+    const trimmed = commentText.trim()
+    if (!trimmed || !issueId || createCommentMutation.isPending) return
+    createCommentMutation.mutate(
+      { content: trimmed },
+      {
+        onSuccess: () => {
+          setCommentText('')
+        },
+      },
+    )
   }
 
   const canHaveEpic = !!issue && (issue.type === ISSUE_TYPE.TASK || issue.type === ISSUE_TYPE.BUG)
@@ -439,24 +441,34 @@ const IssueDetailPanel = ({ issue, projectId, isLoading, onClose, onSelectIssue 
 
               <div className="space-y-4 pt-4 border-t border-hairline">
                 <label className="text-xs font-semibold text-ink uppercase tracking-wider block">Thảo luận & Bình luận</label>
-                <div className="space-y-3.5 max-h-40 overflow-y-auto pr-1">
-                  {comments.map((c) => (
-                    <div key={c.id} className="flex gap-3 items-start p-2.5 hover:bg-canvas rounded-lg transition-colors">
-                      <Avatar src={c.authorAvatar} name={c.authorName} size={28} />
-                      <div className="flex-grow">
-                        <div className="flex justify-between items-baseline">
-                          <span className="font-bold text-xs text-ink leading-none">{c.authorName}</span>
-                          <span className="text-[10px] text-muted font-medium">{c.time}</span>
-                        </div>
-                        <p className="text-xs text-muted leading-relaxed mt-1 font-semibold">{c.text}</p>
-                      </div>
+                <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1">
+                  {isLoadingComments ? (
+                    <div className="flex justify-center py-4">
+                      <Spinner className="h-5 w-5" />
                     </div>
-                  ))}
-                  {comments.length === 0 && (
+                  ) : comments.length > 0 ? (
+                    comments.map((c) => (
+                      <CommentItem
+                        key={c._id}
+                        comment={c}
+                        currentUserId={currentUser?._id}
+                        isProjectOwner={isOwner}
+                        onUpdate={async (commentId, content) => {
+                          await updateCommentMutation.mutateAsync({ commentId, payload: { content } })
+                        }}
+                        onDelete={async (commentId) => {
+                          await deleteCommentMutation.mutateAsync(commentId)
+                        }}
+                        isUpdating={updateCommentMutation.isPending}
+                        isDeleting={deleteCommentMutation.isPending}
+                      />
+                    ))
+                  ) : (
                     <p className="text-xs text-subtle italic">Chưa có bình luận nào.</p>
                   )}
                 </div>
               </div>
+
             </div>
 
             <form onSubmit={handleAddComment} className="p-4 border-t border-hairline bg-canvas flex gap-2 items-center shrink-0">
@@ -465,13 +477,15 @@ const IssueDetailPanel = ({ issue, projectId, isLoading, onClose, onSelectIssue 
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
                 placeholder="Viết phản hồi công việc..."
-                className="flex-grow bg-surface border border-hairline rounded-lg px-4 py-2 text-xs font-semibold focus:ring-2 focus:ring-brand/15 focus:border-ink/20 outline-none transition-all placeholder:text-subtle"
+                disabled={createCommentMutation.isPending}
+                className="flex-grow bg-surface border border-hairline rounded-lg px-4 py-2 text-xs font-semibold focus:ring-2 focus:ring-brand/15 focus:border-ink/20 outline-none transition-all placeholder:text-subtle disabled:opacity-60"
               />
               <button
                 type="submit"
-                className="p-2 bg-ink text-canvas hover:bg-[#e4e4e5] rounded-lg transition-colors shrink-0 active:scale-[0.98]"
+                disabled={!commentText.trim() || createCommentMutation.isPending}
+                className="p-2 bg-ink text-canvas hover:bg-[#e4e4e5] rounded-lg transition-colors shrink-0 active:scale-[0.98] disabled:opacity-40"
               >
-                <Send size={14} />
+                {createCommentMutation.isPending ? <Spinner className="h-3.5 w-3.5" /> : <Send size={14} />}
               </button>
             </form>
           </>
