@@ -4,6 +4,7 @@ import axios, {
   type InternalAxiosRequestConfig,
 } from 'axios'
 import { useAuthStore } from '@/features/auth/authStore'
+import { useAiLimitStore } from '@/features/payment/aiLimitStore'
 
 // Cho phép truyền cờ tuỳ chỉnh trên config request.
 // skipAuthRedirect: bỏ qua việc tự đá về /login khi gặp 401 (dùng cho /auth/me).
@@ -81,6 +82,12 @@ api.interceptors.response.use(
       } finally {
         isRefreshing = false
       }
+    }
+
+    // Hết lượt AI (HTTP 429 TOO_MANY_REQUESTS) -> Mở AiLimitModal thông báo
+    if (status === 429) {
+      const resData = error.response?.data as { dailyUsedCount?: number; dailyLimit?: number } | undefined
+      useAiLimitStore.getState().openModal(resData?.dailyUsedCount ?? 5, resData?.dailyLimit ?? 5)
     }
 
     // Không có/không hợp lệ phiên đăng nhập.

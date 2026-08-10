@@ -15,6 +15,7 @@ export const EMAIL_PURPOSE = {
   RESET_PASSWORD: 'RESET_PASSWORD',
   WELCOME: 'WELCOME',
   PROJECT_INVITE: 'PROJECT_INVITE',
+  PAYMENT_SUCCESS: 'PAYMENT_SUCCESS',
 }
 
 // Token/mã xác thực chỉ có hiệu lực trong 10 phút

@@ -74,7 +74,7 @@ const IssueRow = ({
         <IssuePriorityBadge priority={issue.priority} showIcon={false} />
         <AssigneePicker
           projectId={projectId}
-          value={issue.assigneeId ?? null}
+          value={typeof issue.assigneeId === 'object' ? (issue.assigneeId as any)?._id ?? null : issue.assigneeId ?? null}
           onChange={(userId) => updateIssueMutation.mutate({ issueId: issue._id, payload: { assigneeId: userId } })}
           size={24}
           readOnly={!isOwner}

@@ -186,7 +186,6 @@ const AiQuickGenerateModal = () => {
 
         <AiGenerationHistoryPanel
           projectId={projectId}
-          context={context}
           activeGenerationId={activeGenerationId}
           onSelect={setActiveGenerationId}
         />

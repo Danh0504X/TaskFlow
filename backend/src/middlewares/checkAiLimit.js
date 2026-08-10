@@ -34,6 +34,8 @@ export const checkAiLimit = async (req, res, next) => {
       return res.status(StatusCodes.TOO_MANY_REQUESTS).json({
         message: `Tài khoản FREE đã đạt giới hạn ${aiEnv.AI_DAILY_LIMIT} lượt sinh AI/ngày. Vui lòng nâng cấp gói PRO để tiếp tục!`,
         isLimitReached: true,
+        dailyUsedCount: count,
+        dailyLimit: aiEnv.AI_DAILY_LIMIT,
       })
     }
 

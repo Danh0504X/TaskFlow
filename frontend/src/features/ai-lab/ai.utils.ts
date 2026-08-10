@@ -21,5 +21,8 @@ export const getGenerationContextLabel = (gen: Pick<AiGeneration, 'generationTyp
     const prompt = gen.inputPrompt?.trim()
     return prompt ? `Từ yêu cầu: "${truncateText(prompt, max)}"` : 'Từ yêu cầu'
   }
-  return gen.sourceEntityId ? `Từ epic: "${truncateText(gen.sourceEntityId.title, max)}"` : 'Từ epic (đã xoá)'
+  if (gen.sourceEntityId && typeof gen.sourceEntityId === 'object' && gen.sourceEntityId.title) {
+    return `Từ epic: "${truncateText(gen.sourceEntityId.title, max)}"`
+  }
+  return gen.sourceEntityId ? 'Từ epic' : 'Từ epic (đã xoá)'
 }

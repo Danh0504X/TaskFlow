@@ -80,7 +80,7 @@ export interface AiGeneration {
   _id: string
   projectId: string
   generationType: AiGenerationType
-  sourceEntityId: string | null
+  sourceEntityId: string | { _id: string; title: string } | null
   status: AiGenerationStatus
   /** Yêu cầu gốc PM nhập (rỗng với EPIC_TO_TASK — cha lúc đó là sourceEntityId, không phải văn bản). */
   inputPrompt: string

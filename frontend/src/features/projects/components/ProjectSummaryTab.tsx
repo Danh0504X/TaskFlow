@@ -142,9 +142,15 @@ const ProjectSummaryTab = ({ projectId }: ProjectSummaryTabProps) => {
   const activeIssues = issues.filter((i) => i.status !== 'DONE')
   const totalActiveCount = activeIssues.length
 
+  const getAssigneeIdKey = (assigneeId: any): string => {
+    if (!assigneeId) return 'unassigned'
+    if (typeof assigneeId === 'object' && assigneeId._id) return assigneeId._id
+    return String(assigneeId)
+  }
+
   const workloadCounts: Record<string, number> = {}
   activeIssues.forEach((issue) => {
-    const key = issue.assigneeId || 'unassigned'
+    const key = getAssigneeIdKey(issue.assigneeId)
     workloadCounts[key] = (workloadCounts[key] || 0) + 1
   })
 
@@ -186,13 +192,14 @@ const ProjectSummaryTab = ({ projectId }: ProjectSummaryTabProps) => {
   })
 
   issues.forEach((issue) => {
-    if (issue.assigneeId) {
-      if (!contributionCounts[issue.assigneeId]) {
-        contributionCounts[issue.assigneeId] = { done: 0, total: 0 }
+    const assigneeKey = getAssigneeIdKey(issue.assigneeId)
+    if (assigneeKey !== 'unassigned') {
+      if (!contributionCounts[assigneeKey]) {
+        contributionCounts[assigneeKey] = { done: 0, total: 0 }
       }
-      contributionCounts[issue.assigneeId].total += 1
+      contributionCounts[assigneeKey].total += 1
       if (issue.status === 'DONE') {
-        contributionCounts[issue.assigneeId].done += 1
+        contributionCounts[assigneeKey].done += 1
       }
     }
   })

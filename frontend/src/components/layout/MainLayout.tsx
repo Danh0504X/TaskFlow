@@ -8,6 +8,7 @@ import Badge from '@/components/ui/Badge'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import AppBackground from './AppBackground'
 import { NotificationBell } from '@/features/notifications/components/NotificationBell'
+import { AiLimitModalContainer } from '@/features/payment/components/AiLimitModalContainer'
 
 const baseNavItems = [
   { to: '/', label: 'Tổng quan', icon: LayoutGrid, end: true },
@@ -105,6 +106,7 @@ const MainLayout = () => {
           <Outlet />
         </div>
       </div>
+      <AiLimitModalContainer />
     </AppBackground>
   )
 }

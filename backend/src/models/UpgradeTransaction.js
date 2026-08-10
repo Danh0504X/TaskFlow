@@ -61,6 +61,30 @@ const upgradeTransactionSchema = new mongoose.Schema(
       type: Object,
       default: {},
     },
+
+    // Thời điểm hết hạn đơn thanh toán PENDING (30 phút kể từ khi tạo - BR-19)
+    expiresAt: {
+      type: Date,
+      default: null,
+    },
+
+    // Mã tham chiếu giao dịch ngân hàng / chứng từ (dùng cho Admin xử lý thủ công)
+    referenceCode: {
+      type: String,
+      default: '',
+    },
+
+    // Đánh dấu giao dịch được tạo/duyệt thủ công bởi Admin (PAY-09)
+    isManual: {
+      type: Boolean,
+      default: false,
+    },
+
+    // Đánh dấu đã gửi email xác nhận thanh toán chưa (PAY-07)
+    emailSent: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
