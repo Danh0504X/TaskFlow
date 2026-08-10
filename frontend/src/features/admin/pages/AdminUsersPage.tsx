@@ -196,6 +196,7 @@ const AdminUsersPage = () => {
                     />
                   </th>
                   <th className="py-2.5 px-4">Người dùng</th>
+                  <th className="py-2.5 px-4">Gói Dịch Vụ</th>
                   <th className="py-2.5 px-4">Vai trò</th>
                   <th className="py-2.5 px-4">Trạng thái</th>
                   <th className="py-2.5 px-4">Ngày tạo</th>
@@ -206,6 +207,7 @@ const AdminUsersPage = () => {
                 {data.users.map((u, idx) => {
                   const self = isSelf(u)
                   const lastAdmin = isLastAdmin(u)
+                  const isPro = u.plan === 'PRO' && u.currentPlanExpiresAt && new Date(u.currentPlanExpiresAt) > new Date()
                   return (
                     <tr
                       key={u._id}
@@ -226,6 +228,15 @@ const AdminUsersPage = () => {
                             <div className="text-[11px] text-subtle font-mono truncate">{u.email}</div>
                           </div>
                         </div>
+                      </td>
+                      <td className="py-2.5 px-4">
+                        {isPro ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-md">
+                            👑 PRO (VIP)
+                          </span>
+                        ) : (
+                          <Badge color="slate">FREE</Badge>
+                        )}
                       </td>
                       <td className="py-2.5 px-4">
                         <Badge color={u.role === 'admin' ? 'blue' : 'slate'}>{u.role}</Badge>

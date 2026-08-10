@@ -167,7 +167,7 @@ export const PaymentHistoryTab: React.FC<PaymentHistoryTabProps> = ({ onOpenPric
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-hairline">
-                  {history.map((tx) => (
+                  {history.filter((tx) => tx.status !== 'PENDING').map((tx) => (
                     <tr key={tx.id} className="hover:bg-canvas/50 transition-colors">
                       <td className="p-3 font-mono font-bold text-amber-600 dark:text-amber-400">
                         {tx.paymentCode}

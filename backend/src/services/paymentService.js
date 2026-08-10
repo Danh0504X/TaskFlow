@@ -1,5 +1,6 @@
 import UpgradeTransaction from '../models/UpgradeTransaction.js'
 import WebhookLog from '../models/WebhookLog.js'
+import AuditLog from '../models/AuditLog.js'
 import User from '../models/users.js'
 import { env } from '../config/environment.js'
 import { emailService } from './email/emailService.js'
@@ -180,7 +181,11 @@ export const paymentService = {
    * Lấy Lịch sử giao dịch của chính người dùng (PAY-05)
    */
   async getUserTransactionHistory(userId) {
-    const transactions = await UpgradeTransaction.find({ userId })
+    // Chỉ lấy các giao dịch đã hoàn tất/xử lý (PAID, PARTIAL_PAID, CANCELLED, UNMATCHED...) - Bỏ qua các đơn PENDING chưa chuyển khoản
+    const transactions = await UpgradeTransaction.find({
+      userId,
+      status: { $ne: 'PENDING' },
+    })
       .sort({ createdAt: -1 })
       .lean()
 
@@ -438,6 +443,28 @@ export const paymentService = {
     }
 
     await targetUser.save()
+
+    // Ghi nhận nhật ký hệ thống (Audit Log) trực tiếp vào MongoDB
+    try {
+      let adminInfo = { name: 'System Admin', email: 'admin@gmail.com' }
+      if (adminId) {
+        const adminUser = await User.findById(adminId)
+        if (adminUser) {
+          adminInfo = { name: adminUser.fullName, email: adminUser.email }
+        }
+      }
+      await AuditLog.create({
+        adminName: adminInfo.name,
+        adminEmail: adminInfo.email,
+        action: newDays >= 0 ? 'USER_PRO_GRANT' : 'USER_PRO_REVOKE',
+        targetLabel: targetUser.email,
+        detail: newDays >= 0
+          ? `Cấp +${newDays} ngày PRO (Lý do: ${adminNote.trim()})`
+          : `Gỡ gói PRO (${newDays} ngày) (Lý do: ${adminNote.trim()})`,
+      })
+    } catch (auditErr) {
+      console.error('⚠️ [AUDIT_LOG] Lỗi ghi nhật ký hệ thống:', auditErr.message)
+    }
 
     // Gửi email thông báo cho khách nếu cấp PRO (PAY-09 item 5)
     if (newDays > 0) {

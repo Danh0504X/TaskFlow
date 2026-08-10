@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Mail, Calendar, Lock, Unlock } from 'lucide-react'
+import { Mail, Calendar, Lock, Unlock, Crown, ShieldCheck } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 import Avatar from '@/components/ui/Avatar'
 import Badge from '@/components/ui/Badge'
@@ -8,6 +8,8 @@ import { formatDate } from '@/lib/format'
 import { cn } from '@/lib/cn'
 import { toast } from '@/components/ui/toast/toastStore'
 import { useAdminUserDetail, useUpdateUser } from '../hooks/useAdminUsers'
+import { useAppendAuditEntry } from '../hooks/useAuditLog'
+import { paymentApi } from '@/features/payment/payment.api'
 import { TableLoading } from './TableStates'
 import AdminSelect from './AdminSelect'
 import type { UpdateUserPayload, UserRole, UserStatus } from '../admin.types'
@@ -34,25 +36,55 @@ const InfoField = ({ icon: Icon, label, value }: { icon: typeof Mail; label: str
   </div>
 )
 
-/** Xem chi tiết + chỉnh sửa 1 tài khoản, gộp trong cùng 1 modal. Chỉ cho phép sửa vai trò và
- * trạng thái khoá/mở khoá — không cho đổi tên (giữ nguyên dữ liệu người dùng tự khai). */
+/** Xem chi tiết + chỉnh sửa 1 tài khoản, gộp trong cùng 1 modal. */
 export const UserDetailModal = ({ userId, onClose, roleLocked, roleLockedReason, lockToggleLocked, lockToggleLockedReason }: UserDetailModalProps) => {
-  const { data: user, isLoading } = useAdminUserDetail(userId)
+  const { data: user, isLoading, refetch } = useAdminUserDetail(userId)
   const mutation = useUpdateUser()
+  const appendAudit = useAppendAuditEntry()
 
-  // Chỉ lưu phần admin *muốn đổi* (không mirror toàn bộ user vào state) — nhờ cha remount
-  // component qua `key` mỗi lần đổi userId nên không cần effect đồng bộ lại khi data tải xong.
   const [roleOverride, setRoleOverride] = useState<UserRole | null>(null)
   const [statusOverride, setStatusOverride] = useState<UserStatus | null>(null)
+  const [grantingPro, setGrantingPro] = useState<boolean>(false)
 
   const role = roleOverride ?? user?.role ?? 'user'
   const status = statusOverride ?? user?.status ?? 'active'
 
   const roleChanged = !!user && roleOverride !== null && roleOverride !== user.role
-  // status có thể là 'inactive' (chưa kích hoạt) — chỉ tính là "đã đổi" khi admin bấm chọn tường minh,
-  // tránh trường hợp mở modal lên là tự động coi như muốn chuyển inactive -> active.
   const statusChanged = !!user && statusOverride !== null && statusOverride !== user.status
   const canSubmit = roleChanged || statusChanged
+
+  const isPro = user?.plan === 'PRO' && user?.currentPlanExpiresAt && new Date(user.currentPlanExpiresAt) > new Date()
+  const expiresAtFormatted = user?.currentPlanExpiresAt ? formatDate(user.currentPlanExpiresAt) : 'Vĩnh viễn'
+
+  const handleGrantProManually = async (days: number) => {
+    if (!user) return
+    const reason = prompt(
+      days > 0
+        ? `Cấp +${days} ngày PRO cho ${user.fullName}.\nNhập lý do cấp (bắt buộc để lưu nhật ký giao dịch):`
+        : `Gỡ quyền PRO của ${user.fullName}.\nNhập lý do gỡ quyền (bắt buộc để lưu nhật ký giao dịch):`,
+      days > 0 ? 'Admin cấp quyền PRO ưu đãi / đối soát thủ công' : 'Admin gỡ quyền PRO'
+    )
+    if (!reason || !reason.trim()) {
+      if (reason !== null) toast.error('Bắt buộc phải nhập lý do khi xử lý thủ công!')
+      return
+    }
+
+    try {
+      setGrantingPro(true)
+      await paymentApi.resolveTransactionManually({
+        userId: user._id,
+        daysToAdd: days,
+        adminNote: reason.trim(),
+      })
+
+      toast.success(days > 0 ? `Đã cấp +${days} ngày PRO và lưu lịch sử giao dịch!` : `Đã gỡ quyền PRO thành công!`)
+      refetch()
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Không thể cập nhật gói PRO.')
+    } finally {
+      setGrantingPro(false)
+    }
+  }
 
   const handleSubmit = async () => {
     if (!user) return
@@ -102,6 +134,53 @@ export const UserDetailModal = ({ userId, onClose, roleLocked, roleLockedReason,
           <div className="grid grid-cols-2 gap-2.5">
             <InfoField icon={Mail} label="Xác thực email" value={user.isEmailVerified ? 'Đã xác thực' : 'Chưa xác thực'} />
             <InfoField icon={Calendar} label="Ngày tham gia" value={formatDate(user.createdAt)} />
+          </div>
+
+          {/* Quản lý Gói Dịch Vụ PRO (Lưu Nhật ký Giao dịch) */}
+          <div className="p-3.5 border border-amber-500/30 rounded-xl bg-amber-500/5 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <Crown size={16} className="text-amber-500" />
+                <span className="text-xs font-bold text-ink">Gói Dịch Vụ Hiện Tại:</span>
+              </div>
+              {isPro ? (
+                <span className="text-[11px] font-bold bg-amber-500 text-white px-2 py-0.5 rounded-md shadow-sm">
+                  Gói PRO (VIP)
+                </span>
+              ) : (
+                <span className="text-[11px] font-bold bg-subtle/20 text-subtle px-2 py-0.5 rounded-md">
+                  Gói FREE
+                </span>
+              )}
+            </div>
+
+            <p className="text-[11px] text-subtle">
+              {isPro
+                ? `Hạn sử dụng gói PRO: ${expiresAtFormatted}. (AI Không giới hạn)`
+                : 'Tài khoản đang dùng gói miễn phí (giới hạn lượt dùng AI/ngày).'}
+            </p>
+
+            <div className="flex items-center gap-2 pt-1 border-t border-hairline">
+              <button
+                type="button"
+                onClick={() => handleGrantProManually(30)}
+                disabled={grantingPro}
+                className="flex-1 py-1.5 bg-gradient-to-r from-amber-500 to-indigo-600 hover:from-amber-600 hover:to-indigo-700 text-white font-bold text-[11px] rounded-lg shadow-sm transition-all flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50"
+              >
+                <ShieldCheck size={13} />
+                +30 Ngày PRO (Lưu Nhật Ký)
+              </button>
+              {isPro && (
+                <button
+                  type="button"
+                  onClick={() => handleGrantProManually(-999)}
+                  disabled={grantingPro}
+                  className="py-1.5 px-3 bg-red-500/10 hover:bg-red-500/20 text-red-500 font-semibold text-[11px] rounded-lg border border-red-500/20 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  Gỡ PRO
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="space-y-1.5">

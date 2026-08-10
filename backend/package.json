@@ -6,7 +6,10 @@
   "type": "module",
   "scripts": {
     "dev": "nodemon src/server.js",
-    "start": "node src/server.js"
+    "start": "node src/server.js",
+    "seed:admin": "node src/seedAdmin.js",
+    "seed:payment": "node src/scripts/seedPaymentData.js",
+    "seed:users": "node src/scripts/seedUsers.js"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

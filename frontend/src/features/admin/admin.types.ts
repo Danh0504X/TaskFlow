@@ -19,6 +19,8 @@ export interface AdminUserItem {
   hasPassword: boolean
   status: UserStatus
   role: UserRole
+  plan?: 'FREE' | 'PRO'
+  currentPlanExpiresAt?: string | null
   createdAt: string
   updatedAt: string
 }
@@ -174,6 +176,8 @@ export type AuditAction =
   | 'USER_UNLOCK'
   | 'USER_ROLE_CHANGE'
   | 'USER_DELETE'
+  | 'USER_PRO_GRANT'
+  | 'USER_PRO_REVOKE'
   | 'PROJECT_OWNER_TRANSFER'
   | 'AI_PROMPT_VIEW'
   | 'SETTINGS_CHANGE'

@@ -12,8 +12,10 @@ import {
 } from 'lucide-react'
 import PageHeader from '@/components/layout/PageHeader'
 import { paymentApi, type WebhookLogItem } from '@/features/payment/payment.api'
+import { useAppendAuditEntry } from '../hooks/useAuditLog'
 
 export function AdminPaymentsPage() {
+  const appendAudit = useAppendAuditEntry()
   const [activeTab, setActiveTab] = useState<'pending' | 'webhook_logs'>('pending')
 
   // Data
@@ -100,6 +102,7 @@ export function AdminPaymentsPage() {
         adminNote: adminNote.trim(),
         referenceCode: referenceCode.trim(),
       })
+
       alert('Đã xử lý thủ công thành công!')
       setIsManualModalOpen(false)
       fetchData()

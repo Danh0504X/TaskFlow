@@ -38,4 +38,16 @@ export const adminApi = {
     const res = await api.delete<ApiResponse<{ _id: string }>>(`/admin/users/${userId}`)
     return res.data.data
   },
+
+  /** GET /admin/audit — Lấy danh sách Nhật ký hệ thống từ MongoDB */
+  getAuditLogs: async (query: any = {}): Promise<any> => {
+    const res = await api.get('/admin/audit', { params: query })
+    return res.data.data
+  },
+
+  /** POST /admin/audit — Ghi 1 dòng Nhật ký hệ thống vào MongoDB */
+  createAuditLog: async (payload: any): Promise<any> => {
+    const res = await api.post('/admin/audit', payload)
+    return res.data.data
+  },
 }

@@ -15,6 +15,8 @@ const ADMINS = [
 const TEMPLATES: { action: AuditAction; targetLabel: string; detail: string }[] = [
   { action: 'USER_LOCK', targetLabel: 'nguyen.van.an12@gmail.com', detail: 'Khoá tài khoản do báo cáo spam từ 3 người dùng khác.' },
   { action: 'USER_UNLOCK', targetLabel: 'tran.thi.binh8@gmail.com', detail: 'Mở khoá sau khi xác minh lại danh tính qua email.' },
+  { action: 'USER_PRO_GRANT', targetLabel: 'an.nguyen.demo@gmail.com', detail: 'Cấp +30 ngày PRO (Lý do: Admin đối soát thủ công chuyển khoản khớp ngân hàng).' },
+  { action: 'USER_PRO_REVOKE', targetLabel: 'cuong.le.demo@gmail.com', detail: 'Gỡ gói PRO (Lý do: Yêu cầu hoàn tiền dịch vụ theo chính sách 7 ngày).' },
   { action: 'USER_ROLE_CHANGE', targetLabel: 'quantri.phu2@gmail.com', detail: 'Nâng quyền user -> admin.' },
   { action: 'USER_DELETE', targetLabel: 'le.hoang.chi21@gmail.com', detail: 'Xoá tài khoản theo yêu cầu người dùng (GDPR).' },
   { action: 'PROJECT_OWNER_TRANSFER', targetLabel: 'Dự án "Website bán hàng"', detail: 'Bàn giao quyền owner từ le.hoang.chi21@gmail.com sang pham.minh.dung5@gmail.com trước khi xoá tài khoản cũ.' },
