@@ -98,6 +98,15 @@ export interface AiGenerationDetail extends AiGeneration {
   drafts: AiDraftIssue[]
 }
 
+/** GET /me/ai-quota — hạn mức sinh AI của user hiện tại, tính theo NGÀY (UTC), không theo
+ * project (xem backend/src/middlewares/checkAiLimit.js). PRO còn hạn -> isPro=true, used luôn
+ * là 0 (không giới hạn thật, chỉ để hiển thị "Vô hạn" ở FE thay vì 1 con số cụ thể). */
+export interface AiQuota {
+  used: number
+  limit: number
+  isPro: boolean
+}
+
 // ----- Payload gửi lên -----
 
 export interface CreateGenerationPayload {

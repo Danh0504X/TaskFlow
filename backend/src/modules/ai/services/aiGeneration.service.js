@@ -6,6 +6,7 @@ import Issue from '../../../models/issues.js'
 import Project from '../../../models/projects.js'
 import ApiError from '../../../utils/ApiError.js'
 import { runAiGeneration, runAiClarify } from '../aiRunner.js'
+import { aiEnv } from '../config/aiEnv.js'
 
 // Beta/Demo — AI Lab. Layered giống issueService.js: Routes -> Controllers -> Services -> Models,
 // validate thủ công + ApiError (module này không dùng zod/validateMiddleware, theo đúng cách
@@ -138,6 +139,35 @@ const runWorker = async (generationId) => {
     if (error.model) generation.model = error.model
     await generation.save()
   }
+}
+
+const startOfTodayUtc = () => {
+  const d = new Date()
+  d.setUTCHours(0, 0, 0, 0)
+  return d
+}
+
+/**
+ * Nguồn dùng chung duy nhất cho "đã dùng bao nhiêu lượt AI hôm nay" — dùng bởi CẢ
+ * middlewares/checkAiLimit.js (chặn khi vượt hạn mức) LẪN GET /me/ai-quota (hiển thị cho user
+ * xem, xem meController.js) để tránh 2 nơi tự tính rồi lệch nhau. Không lưu counter riêng, đếm
+ * trực tiếp trên AiGeneration mỗi lần gọi (giống lý do đã ghi ở checkAiLimit.js cũ).
+ * PRO còn hạn -> coi như không giới hạn (used luôn trả 0, không cần đếm tốn công).
+ */
+const getAiUsageToday = async (user) => {
+  const isPro = user?.plan === 'PRO' && user?.currentPlanExpiresAt && new Date(user.currentPlanExpiresAt) > new Date()
+  const limit = aiEnv.AI_DAILY_LIMIT
+
+  if (isPro) {
+    return { used: 0, limit, isPro: true }
+  }
+
+  const used = await AiGeneration.countDocuments({
+    requestedBy: user._id,
+    createdAt: { $gte: startOfTodayUtc() },
+  })
+
+  return { used, limit, isPro: false }
 }
 
 const createGeneration = async (projectId, requestedBy, body = {}) => {
@@ -570,6 +600,7 @@ const acceptDrafts = async (generationId, tempIds, requestedBy) => {
 }
 
 export const aiGenerationService = {
+  getAiUsageToday,
   createGeneration,
   clarifyRequirement,
   listGenerations,

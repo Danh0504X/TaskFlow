@@ -3,16 +3,20 @@ import { Zap, Crown, Sparkles } from 'lucide-react'
 import { motion } from 'motion/react'
 import { fadeUpItem } from '@/lib/motion'
 import { useAuthStore } from '@/features/auth/authStore'
+import { useAiQuota } from '@/features/ai-lab/hooks/useAiQuota'
 import { UpgradeModal } from '@/features/payment/components/UpgradeModal'
-
-const USED = 5
-const LIMIT = 15
 
 export function AiQuotaCard() {
   const { user } = useAuthStore()
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false)
+  // Dữ liệu thật từ GET /me/ai-quota — cùng logic đếm/kiểm PRO với checkAiLimit.js (middleware
+  // chặn tạo lượt sinh), nên số hiển thị ở đây luôn khớp số thật đang bị chặn/còn lại.
+  const { data: quota, isLoading } = useAiQuota()
 
-  const isPro = user?.plan === 'PRO' && user?.currentPlanExpiresAt && new Date(user.currentPlanExpiresAt) > new Date()
+  const isPro = quota?.isPro ?? false
+  const used = quota?.used ?? 0
+  const limit = quota?.limit ?? 15
+  const usedRatio = limit > 0 ? Math.min((used / limit) * 100, 100) : 0
 
   return (
     <>
@@ -31,7 +35,12 @@ export function AiQuotaCard() {
           </div>
         </div>
 
-        {isPro ? (
+        {isLoading ? (
+          <div className="space-y-3 animate-pulse">
+            <div className="h-7 w-28 rounded bg-canvas" />
+            <div className="h-2 w-full rounded-full bg-canvas" />
+          </div>
+        ) : isPro ? (
           <div className="space-y-3">
             <div className="flex justify-between items-end">
               <span className="text-2xl font-bold text-amber-500 flex items-center gap-1">
@@ -50,7 +59,7 @@ export function AiQuotaCard() {
           <div className="space-y-3">
             <div className="flex justify-between items-end">
               <span className="text-2xl font-semibold text-ink leading-none">
-                {USED} <span className="text-sm font-normal text-subtle">/ {LIMIT} lượt</span>
+                {used} <span className="text-sm font-normal text-subtle">/ {limit} lượt</span>
               </span>
               <span className="text-xs font-bold text-amber-500">Tài khoản FREE</span>
             </div>
@@ -58,7 +67,7 @@ export function AiQuotaCard() {
             <div className="w-full h-2 bg-canvas rounded-full overflow-hidden">
               <div
                 className="h-full bg-brand rounded-full transition-all duration-1000 ease-out"
-                style={{ width: `${(USED / LIMIT) * 100}%` }}
+                style={{ width: `${usedRatio}%` }}
               />
             </div>
 
@@ -79,4 +88,3 @@ export function AiQuotaCard() {
     </>
   )
 }
-
