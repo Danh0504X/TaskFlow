@@ -21,7 +21,7 @@ export const resolveTransactionManually = asyncHandler(async (req, res) => {
   const result = await paymentService.manualGrantOrRevokePro({
     transactionId: transactionId === 'manual' ? null : transactionId,
     userId,
-    daysToAdd: Number(daysToAdd) || 30,
+    daysToAdd: daysToAdd !== undefined && daysToAdd !== null && daysToAdd !== '' ? Number(daysToAdd) : 30,
     adminNote,
     referenceCode,
     adminId,

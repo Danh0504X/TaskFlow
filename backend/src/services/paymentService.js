@@ -427,17 +427,24 @@ export const paymentService = {
 
     // Cập nhật PRO cho User theo số ngày
     const newDays = Number(daysToAdd)
-    let newExpiresAt = calculateProExpirationDate(targetUser.currentPlanExpiresAt, newDays)
 
-    if (newDays < 0) {
-      // Luồng gỡ PRO: Nếu ngày mới <= hiện tại -> Đưa về FREE
+    if (newDays <= -999) {
+      // Gỡ PRO hoàn toàn ngay lập tức
+      targetUser.plan = 'FREE'
+      targetUser.currentPlanExpiresAt = null
+    } else if (newDays < 0) {
+      // Luồng trừ ngày PRO
+      let newExpiresAt = calculateProExpirationDate(targetUser.currentPlanExpiresAt, newDays)
       if (newExpiresAt <= new Date()) {
         targetUser.plan = 'FREE'
         targetUser.currentPlanExpiresAt = null
       } else {
+        targetUser.plan = 'PRO'
         targetUser.currentPlanExpiresAt = newExpiresAt
       }
     } else {
+      // Luồng cộng thêm ngày PRO
+      let newExpiresAt = calculateProExpirationDate(targetUser.currentPlanExpiresAt, newDays)
       targetUser.plan = 'PRO'
       targetUser.currentPlanExpiresAt = newExpiresAt
     }
