@@ -156,6 +156,7 @@ export const useRemoveMember = () => {
       qc.invalidateQueries({ queryKey: projectKeys.lists() })
       qc.invalidateQueries({ queryKey: projectKeys.detail(projectId) })
       qc.invalidateQueries({ queryKey: ['issues', projectId] })
+      qc.invalidateQueries({ queryKey: ['notifications'] })
       toast.success('Đã xóa thành viên ra khỏi dự án thành công')
     },
     onError: (error) => toast.error(getApiErrorMessage(error)),
@@ -170,6 +171,7 @@ export const useTransferOwnership = () => {
     onSuccess: (_, { projectId }) => {
       qc.invalidateQueries({ queryKey: projectKeys.lists() })
       qc.invalidateQueries({ queryKey: projectKeys.detail(projectId) })
+      qc.invalidateQueries({ queryKey: ['notifications'] })
       toast.success('Chuyển quyền Chủ sở hữu dự án thành công')
     },
     onError: (error) => toast.error(getApiErrorMessage(error)),

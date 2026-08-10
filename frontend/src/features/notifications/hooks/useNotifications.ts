@@ -6,12 +6,13 @@ const NOTIF_KEYS = {
   list: (page: number) => [...NOTIF_KEYS.all, 'list', page] as const,
 }
 
-// Hook lấy danh sách thông báo (Tự động Short Polling)
+// Hook lấy danh sách thông báo (Tự động Short Polling thời gian thực)
 export const useNotifications = (page = 1, limit = 20) => {
   return useQuery({
     queryKey: NOTIF_KEYS.list(page),
     queryFn: () => notificationApi.getNotifications(page, limit),
-    refetchInterval: 30000, // Tự động refetch sau mỗi 30 giây để cập nhật realtime
+    refetchInterval: 3000, // Tự động refetch sau mỗi 3 giây để nhận thông báo mới tức thì
+    refetchIntervalInBackground: false,
   })
 }
 

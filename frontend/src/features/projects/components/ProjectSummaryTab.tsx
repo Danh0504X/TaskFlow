@@ -1,12 +1,12 @@
 import { useState, type ReactNode } from 'react'
 import { motion } from 'motion/react'
-import { Calendar, Clock, Layers, CheckCircle2, Trash2, Pencil } from 'lucide-react'
+import { Calendar, Clock, Layers, CheckCircle2, Trash2, Pencil, Crown } from 'lucide-react'
 import Avatar from '@/components/ui/Avatar'
 import Spinner from '@/components/ui/Spinner'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { useProjectIssues } from '@/features/issues/hooks/useIssues'
 import { useProject } from '../hooks/useProject'
-import { useLeaveProject, useRemoveMember } from '../hooks/useProjectMutations'
+import { useLeaveProject, useRemoveMember, useTransferOwnership } from '../hooks/useProjectMutations'
 import { formatDate } from '@/lib/format'
 import { useAuthStore } from '@/features/auth/authStore'
 import { staggerContainer, fadeUpItem } from '@/lib/motion'
@@ -45,8 +45,10 @@ const ProjectSummaryTab = ({ projectId }: ProjectSummaryTabProps) => {
   }
 
   const [deletingMember, setDeletingMember] = useState<ProjectMember | null>(null)
+  const [transferringMember, setTransferringMember] = useState<ProjectMember | null>(null)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const removeMemberMutation = useRemoveMember()
+  const transferMutation = useTransferOwnership()
 
   const handleConfirmRemoveMember = () => {
     if (!deletingMember) return
@@ -55,6 +57,18 @@ const ProjectSummaryTab = ({ projectId }: ProjectSummaryTabProps) => {
       {
         onSuccess: () => {
           setDeletingMember(null)
+        },
+      }
+    )
+  }
+
+  const handleConfirmTransfer = () => {
+    if (!transferringMember) return
+    transferMutation.mutate(
+      { projectId, newOwnerId: transferringMember.userId },
+      {
+        onSuccess: () => {
+          setTransferringMember(null)
         },
       }
     )
@@ -376,6 +390,7 @@ const ProjectSummaryTab = ({ projectId }: ProjectSummaryTabProps) => {
               const avatarUrl = member.user?.avatarUrl
               const isOwnerRole = member.role === 'OWNER'
               const isPending = member.status === 'PENDING'
+              const isActive = member.status === 'ACTIVE'
 
               return (
                 <motion.div
@@ -406,14 +421,27 @@ const ProjectSummaryTab = ({ projectId }: ProjectSummaryTabProps) => {
                   </div>
 
                   {isOwner && !isOwnerRole && (
-                    <button
-                      type="button"
-                      onClick={() => setDeletingMember(member)}
-                      className="p-1.5 text-muted hover:text-pastel-red-ink rounded-md hover:bg-pastel-red transition-colors shrink-0"
-                      title="Xóa thành viên"
-                    >
-                      <Trash2 size={15} />
-                    </button>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {isActive && (
+                        <button
+                          type="button"
+                          onClick={() => setTransferringMember(member)}
+                          className="flex items-center gap-1 px-2 py-1 bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 rounded text-[11px] font-bold transition-colors"
+                          title="Chuyển quyền Chủ sở hữu dự án cho thành viên này"
+                        >
+                          <Crown size={12} />
+                          <span>Chuyển Owner</span>
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setDeletingMember(member)}
+                        className="p-1.5 text-muted hover:text-pastel-red-ink rounded-md hover:bg-pastel-red transition-colors shrink-0"
+                        title="Gỡ thành viên khỏi dự án"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
                   )}
                 </motion.div>
               )
@@ -506,13 +534,24 @@ const ProjectSummaryTab = ({ projectId }: ProjectSummaryTabProps) => {
       {/* Modal xác nhận xóa thành viên */}
       <ConfirmDialog
         open={deletingMember !== null}
-        title="Xóa thành viên"
-        message={`Bạn có chắc chắn muốn xóa thành viên "${deletingMember?.user?.fullName || 'Thành viên này'}" ra khỏi dự án? Tất cả các công việc đang gán cho họ sẽ trở thành "Chưa phân công".`}
-        confirmText="Xóa thành viên"
+        title="Gỡ thành viên khỏi dự án"
+        message={`Bạn có chắc chắn muốn gỡ thành viên "${deletingMember?.user?.fullName || 'Thành viên này'}" ra khỏi dự án? Thành viên sẽ mất toàn bộ quyền truy cập và các công việc họ đang phụ trách sẽ tự động trở thành "Cần giao lại".`}
+        confirmText="Gỡ khỏi dự án"
         danger
         loading={removeMemberMutation.isPending}
         onConfirm={handleConfirmRemoveMember}
         onClose={() => setDeletingMember(null)}
+      />
+
+      {/* Modal xác nhận chuyển quyền Chủ sở hữu dự án */}
+      <ConfirmDialog
+        open={transferringMember !== null}
+        title="Chuyển quyền Chủ sở hữu dự án"
+        message={`Bạn có chắc chắn muốn chuyển quyền Chủ sở hữu dự án (OWNER) cho "${transferringMember?.user?.fullName || 'thành viên này'}"? Sau khi chuyển, bạn sẽ trở thành Thành viên (MEMBER) và nhường lại quyền quản trị dự án.`}
+        confirmText="Xác nhận chuyển OWNER"
+        loading={transferMutation.isPending}
+        onConfirm={handleConfirmTransfer}
+        onClose={() => setTransferringMember(null)}
       />
 
       {/* Modal chỉnh sửa thông tin dự án */}
