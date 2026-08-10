@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Báo Cáo Phân Tích Chuyên Sâu Tương Tác CSDL MongoDB & 9 Chức Năng Thanh Toán TaskFlow</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-main: #0b1329;
+      --bg-card: #172036;
+      --bg-card-hover: #1e2942;
+      --border-color: #2a3654;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent-gold: #f59e0b;
+      --accent-indigo: #6366f1;
+      --accent-emerald: #10b981;
+      --accent-rose: #f43f5e;
+      --accent-cyan: #06b6d4;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      line-height: 1.6;
+      padding: 2rem 1rem;
+    }
+
+    .container { max-width: 1200px; margin: 0 auto; }
+
+    .header-card {
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(245, 158, 11, 0.25));
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      border-radius: 1.5rem;
+      padding: 2.5rem 2rem;
+      margin-bottom: 2.5rem;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 0.85rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 1rem;
+    }
+
+    .badge-gold { background-color: rgba(245, 158, 11, 0.15); color: var(--accent-gold); border: 1px solid rgba(245, 158, 11, 0.3); }
+    .badge-emerald { background-color: rgba(16, 185, 129, 0.15); color: var(--accent-emerald); border: 1px solid rgba(16, 185, 129, 0.3); }
+    .badge-indigo { background-color: rgba(99, 102, 241, 0.15); color: var(--accent-indigo); border: 1px solid rgba(99, 102, 241, 0.3); }
+    .badge-cyan { background-color: rgba(6, 182, 212, 0.15); color: var(--accent-cyan); border: 1px solid rgba(6, 182, 212, 0.3); }
+    .badge-rose { background-color: rgba(244, 63, 94, 0.15); color: var(--accent-rose); border: 1px solid rgba(244, 63, 94, 0.3); }
+
+    h1 {
+      font-size: 2.3rem;
+      font-weight: 800;
+      margin-bottom: 0.75rem;
+      background: linear-gradient(to right, #ffffff, #cbd5e1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .meta-info {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .meta-item strong { color: var(--text-main); }
+
+    .toc-box {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 1rem;
+      padding: 1.5rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .toc-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+
+    .toc-link {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 1rem;
+      background-color: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-color);
+      border-radius: 0.75rem;
+      color: var(--text-main);
+      text-decoration: none;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+
+    .toc-link:hover {
+      background-color: var(--bg-card-hover);
+      border-color: var(--accent-gold);
+      transform: translateY(-2px);
+    }
+
+    .pay-container {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 1.25rem;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+    }
+
+    .pay-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+      padding-bottom: 1.25rem;
+      margin-bottom: 1.5rem;
+      border-b: 1px solid var(--border-color);
+    }
+
+    .pay-title {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .sub-heading {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--accent-gold);
+      margin: 1.5rem 0 0.75rem 0;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .sub-heading-cyan { color: var(--accent-cyan); }
+    .sub-heading-emerald { color: var(--accent-emerald); }
+
+    .text-body {
+      font-size: 0.925rem;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+    }
+
+    .text-body strong { color: var(--text-main); }
+    .text-body ul { margin-left: 1.5rem; margin-top: 0.5rem; }
+    .text-body li { margin-bottom: 0.35rem; }
+
+    pre {
+      background-color: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 0.75rem;
+      padding: 1.25rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.825rem;
+      color: #e6edf3;
+      overflow-x: auto;
+      margin: 1rem 0;
+      line-height: 1.5;
+    }
+
+    .faq-card {
+      background-color: rgba(99, 102, 241, 0.08);
+      border: 1px solid rgba(99, 102, 241, 0.25);
+      border-radius: 0.75rem;
+      padding: 1.25rem;
+      margin-top: 1rem;
+    }
+
+    .faq-q {
+      font-weight: 700;
+      color: var(--accent-indigo);
+      font-size: 0.95rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .faq-a {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+      font-size: 0.875rem;
+    }
+
+    .data-table th, .data-table td {
+      padding: 0.75rem 1rem;
+      border: 1px solid var(--border-color);
+      text-align: left;
+    }
+
+    .data-table th {
+      background-color: rgba(255, 255, 255, 0.05);
+      color: var(--accent-gold);
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+    }
+
+    .data-table td { color: var(--text-muted); }
+    .data-table tr:nth-child(even) { background-color: rgba(255, 255, 255, 0.02); }
+
+    .diagram-box {
+      background-color: #0d1117;
+      border: 1px solid var(--accent-cyan);
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.825rem;
+      color: #38bdf8;
+      line-height: 1.6;
+      white-space: pre;
+      overflow-x: auto;
+    }
+
+    .footer {
+      text-align: center;
+      padding: 2rem 0;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      border-top: 1px solid var(--border-color);
+      margin-top: 3rem;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- HEADER CARD -->
+  <div class="header-card">
+    <span class="badge badge-gold">Full-Stack Architecture & Database Integration Report</span>
+    <h1>Báo Cáo Phân Tích Chuyên Sâu Tương Tác Cơ Sở Dữ Liệu MongoDB & 9 Chức Năng Thanh Toán TaskFlow</h1>
+    <p style="color: var(--text-muted); font-size: 1rem;">
+      Tài liệu hướng dẫn toàn diện dành cho Developer & Hội đồng phản biện. Giải thích chi tiết cách các API tương tác với 4 Collection MongoDB, Luồng di chuyển dữ liệu (Data Flow), Cơ chế Chống lặp Webhook (Idempotency) và Lưu vết Nhật ký Hệ thống (Audit Log) vĩnh viễn.
+    </p>
+    <div class="meta-info">
+      <div class="meta-item">Dự án: <strong>TaskFlow App (Nhóm 2)</strong></div>
+      <div class="meta-item">Tác giả: <strong>Đoàn Công Khoa</strong></div>
+      <div class="meta-item">Database: <strong>MongoDB Atlas (Cluster taskflow-cluster / DB: test)</strong></div>
+      <div class="meta-item">Tech Stack: <strong>Node.js, Express.js, React JS, SePay Webhook</strong></div>
+    </div>
+  </div>
+
+  <!-- TABLE OF CONTENTS -->
+  <div class="toc-box">
+    <h3 style="font-size: 1.1rem; color: var(--text-main);">📌 Mục Lục Báo Cáo Phân Tích</h3>
+    <div class="toc-grid">
+      <a href="#db-schema" class="toc-link"><span>🗄️ 1. Bản Đồ 4 Collection MongoDB Atlas</span> <span>➔</span></a>
+      <a href="#data-flows" class="toc-link"><span>🔄 2. Sơ Đồ Luồng Di Chuyển Dữ Liệu (Data Flow)</span> <span>➔</span></a>
+      <a href="#idempotency" class="toc-link"><span>🛡️ 3. Cơ Chế Chống Trùng Webhook (Idempotency)</span> <span>➔</span></a>
+      <a href="#audit-log" class="toc-link"><span>📜 4. Nhật Ký Hệ Thống Audit Log Vĩnh Viễn</span> <span>➔</span></a>
+      <a href="#pay-01" class="toc-link"><span>PAY-01: Xem Bảng Giá & So Sánh Quyền Lợi</span> <span>➔</span></a>
+      <a href="#pay-02" class="toc-link"><span>PAY-02: Tạo Đơn Hàng & Sinh Mã Chuyển Khoản</span> <span>➔</span></a>
+      <a href="#pay-03" class="toc-link"><span>PAY-03: Hiển Thị Modal Thanh Toán VietQR</span> <span>➔</span></a>
+      <a href="#pay-04" class="toc-link"><span>PAY-04: Xử Lý Webhook Tự Động Từ SePay</span> <span>➔</span></a>
+      <a href="#pay-05" class="toc-link"><span>PAY-05: Lịch Sử Giao Dịch Cá Nhân & Hạn PRO</span> <span>➔</span></a>
+      <a href="#pay-06" class="toc-link"><span>PAY-06: Thuật Toán Cộng Dồn Hạn PRO (BR-24)</span> <span>➔</span></a>
+      <a href="#pay-07" class="toc-link"><span>PAY-07: Tự Động Gửi Email Xác Nhận Thanh Toán</span> <span>➔</span></a>
+      <a href="#pay-08" class="toc-link"><span>PAY-08: Admin Quản Lý Đơn Lỗi & SePay Logs</span> <span>➔</span></a>
+      <a href="#pay-09" class="toc-link"><span>PAY-09: Admin Cấp/Gỡ PRO Thủ Công (Quy Tắc Âm)</span> <span>➔</span></a>
+    </div>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- BẢN ĐỒ 4 COLLECTION MONGODB ATLAS -->
+  <!-- =================================================================== -->
+  <div class="pay-container" id="db-schema">
+    <div class="pay-header">
+      <div class="pay-title">🗄️ CHƯƠNG I: BẢN ĐỒ TƯƠNG TÁC 4 COLLECTION MONGODB ATLAS</div>
+      <span class="badge badge-cyan">Database Core</span>
+    </div>
+
+    <div class="sub-heading sub-heading-cyan">I. CẤU TRÚC 4 COLLECTION TRONG DATABASE `test`</div>
+    <p class="text-body">
+      Mọi tính năng thanh toán, cấp/gỡ PRO và lưu vết lịch sử trong hệ thống TaskFlow được vận hành dựa trên <strong>4 Collection MongoDB Atlas</strong> được liên kết chặt chẽ với nhau:
+    </p>
+
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Tên Collection</th>
+          <th>Model Mongoose</th>
+          <th>Mục Đích Sử Dụng & Vai Trò Trong Hệ Thống</th>
+          <th>Hành Vi CRUD Chính</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>`users`</strong></td>
+          <td>`User.js`</td>
+          <td>Chứa thông tin tài khoản người dùng, vai trò (`role`: admin/user), trạng thái gói (`plan`: FREE/PRO) và Ngày hết hạn gói (`currentPlanExpiresAt`).</td>
+          <td>
+            • <strong>Read:</strong> Đăng nhập, kiểm tra hạn PRO.<br>
+            • <strong>Update:</strong> Cập nhật `plan = PRO` & `currentPlanExpiresAt` khi khớp đơn hoặc Admin cấp thủ công. Đưa về `FREE` & `null` khi gỡ PRO.
+          </td>
+        </tr>
+        <tr>
+          <td><strong>`upgradetransactions`</strong></td>
+          <td>`UpgradeTransaction.js`</td>
+          <td>Quản lý tất cả các đơn hàng nạp PRO (bao gồm đơn tự động `TFxxxxxx` và đơn xử lý thủ công `MANUAL_xxxxxx`).</td>
+          <td>
+            • <strong>Create:</strong> Tạo đơn PENDING khi bấm Nâng cấp PRO, hoặc tạo đơn UNMATCHED khi khách gõ sai mã.<br>
+            • <strong>Update:</strong> Chuyển `status = PAID` & `resolutionStatus = AUTO` khi nhận Webhook khớp.
+          </td>
+        </tr>
+        <tr>
+          <td><strong>`webhooklogs`</strong></td>
+          <td>`WebhookLog.js`</td>
+          <td>Nhật ký nhận dữ liệu thô (raw payload) từ ngân hàng gửi qua SePay Webhook. Đóng vai trò làm bằng chứng đối soát tài chính nguyên văn và chống trùng Webhook.</td>
+          <td>
+            • <strong>Create:</strong> Lưu ngay 1 bản ghi khi SePay đẩy tín hiệu Webhook tới server.<br>
+            • <strong>Read:</strong> Admin hiển thị bảng Nhật ký Webhook SePay (`/admin/payments`).
+          </td>
+        </tr>
+        <tr>
+          <td><strong>`auditlogs`</strong></td>
+          <td>`AuditLog.js`</td>
+          <td>Nhật ký Hệ thống (Audit Log) lưu trữ vĩnh viễn các thao tác quan trọng của Admin (Cấp PRO, Gỡ PRO, Khoá/Mở khoá tài khoản).</td>
+          <td>
+            • <strong>Create:</strong> Backend tự động ghi log khi Admin thực hiện Cấp/Gỡ PRO hoặc sửa user.<br>
+            • <strong>Read:</strong> Hiển thị trang Nhật ký Hệ thống (`/admin/audit`), không bị mất khi F5.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="sub-heading sub-heading-cyan">II. SƠ ĐỒ MỐI QUAN HỆ GIỮA CÁC COLLECTION (RELATIONSHIPS)</div>
+    <div class="diagram-box">
+┌─────────────────────────┐               ┌─────────────────────────────────┐
+│     Collection: users   │               │ Collection: upgradetransactions │
+├─────────────────────────┤               ├─────────────────────────────────┤
+│ _id (ObjectId)          │◄────┐         │ _id (ObjectId)                  │
+│ email (String)          │     │         │ userId (Ref: User)              │──────┐
+│ plan ('FREE'|'PRO')     │     └─────────┤ paymentCode ('TF123456')        │      │
+│ currentPlanExpiresAt    │               │ amount (Number)                 │      │
+│ status ('active'|...)   │               │ status ('PENDING'|'PAID'|...)   │      │
+└─────────────────────────┘               │ resolutionStatus ('AUTO'|...)   │      │
+                                          └─────────────────────────────────┘      │
+                                                          ▲                        │
+                                                          │ (matchedTransactionId) │
+┌─────────────────────────┐               ┌──────────────┴──────────────────┐      │
+│ Collection: auditlogs   │               │ Collection: webhooklogs         │      │
+├─────────────────────────┤               ├─────────────────────────────────┤      │
+│ _id (ObjectId)          │               │ _id (ObjectId)                  │      │
+│ adminEmail (String)     │               │ bankReferenceCode (Unique Key)  │      │
+│ action ('USER_PRO_...') │               │ maskedAccountNumber ('090****') │      │
+│ targetLabel (User Email)│               │ matchedTransactionId (Ref: Tx)  │◄─────┘
+│ detail (String)         │               │ payload (Object JSON SePay)     │
+└─────────────────────────┘               └─────────────────────────────────┘
+    </div>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- SƠ ĐỒ LUỒNG DI CHUYỂN DỮ LIỆU -->
+  <!-- =================================================================== -->
+  <div class="pay-container" id="data-flows">
+    <div class="pay-header">
+      <div class="pay-title">🔄 CHƯƠNG II: SƠ ĐỒ LUỒNG DI CHUYỂN DỮ LIỆU (DATA FLOW SEQUENCES)</div>
+      <span class="badge badge-emerald">Data Flow</span>
+    </div>
+
+    <div class="sub-heading sub-heading-emerald">LUỒNG 1: QUY TRÌNH THANH TOÁN SEPAY TỰ ĐỘNG (AUTOMATIC PAYMENT FLOW)</div>
+    <p class="text-body">
+      Luồng dữ liệu di chuyển khi Người dùng quét mã VietQR và ngân hàng gửi tín hiệu Webhook về Backend Express.js:
+    </p>
+
+    <div class="diagram-box">
+[1. User] --(Click Nâng cấp PRO)--> [React Frontend]
+                                           │
+                                  (POST /api/payments/create-order)
+                                           ▼
+                                   [Express Backend]
+                                           │
+                        (Tạo đơn PENDING trong MongoDB)
+                                           ▼
+                           [Collection: upgradetransactions] (status: 'PENDING')
+                                           │
+[2. Khách chuyển tiền MBBank] ─────────────┴─────────────┐
+             │                                           │
+    (SePay bắn Webhook)                                  │
+             ▼                                           │
+   [POST /api/payments/webhook/sepay]                    │
+             │                                           │
+     (Idempotency Check: bankReferenceCode)             │
+             ├─► [Đã tồn tại] ──► (Bỏ qua ghi trùng log) │
+             │                                           │
+             └─► [Mới 100%] ──► (Khớp mã TFxxxxxx) ──────┘
+                                        │
+                                        ▼
+             ┌──────────────────────────────────────────────────┐
+             │ 1. Update `upgradetransactions`: status='PAID'  │
+             │ 2. Update `users`: plan='PRO', expiresAt=+30d   │
+             │ 3. Insert `webhooklogs`: resultStatus='MATCHED'  │
+             │ 4. Send Confirmation Email to User               │
+             └──────────────────────────────────────────────────┘
+    </div>
+
+    <div class="sub-heading sub-heading-emerald">LUỒNG 2: ADMIN DUYỆT ĐƠN LỖI & CẤP / GỠ PRO THỦ CÔNG (ADMIN RESOLUTION FLOW)</div>
+    <p class="text-body">
+      Luồng dữ liệu khi Admin thực hiện đối soát thủ công trên trang <code>/admin/payments</code> hoặc Modal Chi tiết User:
+    </p>
+
+    <div class="diagram-box">
+[Admin] --(Nhập Lý do & số ngày, Click Duyệt)--> [React Frontend]
+                                                       │
+                                   (POST /api/admin/payments/:id/resolve)
+                                                       ▼
+                                             [Express Backend API]
+                                                       │
+                           ┌───────────────────────────┴───────────────────────────┐
+                           ▼                                                       ▼
+           [Nếu Cấp PRO / Trừ ngày]                                 [Nếu Bấm "Gỡ PRO" (daysToAdd <= -999)]
+                   │                                                               │
+     (Tính newExpiresAt theo BR-24)                                    (Xoá hẳn PRO tức thì)
+                   │                                                               │
+   • Nếu newExpiresAt <= Today ➔ FREE                                • targetUser.plan = 'FREE'
+   • Nếu newExpiresAt > Today  ➔ PRO                                 • targetUser.currentPlanExpiresAt = null
+                   │                                                               │
+                   └───────────────────────────┬───────────────────────────────────┘
+                                               ▼
+                                ┌───────────────────────────────┐
+                                │ 1. Save User record           │
+                                │ 2. Save UpgradeTransaction    │
+                                │ 3. Insert `auditlogs` (MongoDB)│
+                                └───────────────────────────────┘
+    </div>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- CƠ CHẾ CHỐNG TRÙNG WEBHOOK -->
+  <!-- =================================================================== -->
+  <div class="pay-container" id="idempotency">
+    <div class="pay-header">
+      <div class="pay-title">🛡️ CHƯƠNG III: CƠ CHẾ CHỐNG TRÙNG WEBHOOK (IDEMPOTENCY CONTROL)</div>
+      <span class="badge badge-rose">Security & Integrity</span>
+    </div>
+
+    <div class="sub-heading">I. VẤN ĐỀ NGUY HẠI KHI KHÔNG CÓ IDEMPOTENCY</div>
+    <div class="text-body">
+      Các cổng thanh toán như SePay sử dụng cơ chế <strong>Retry Policy (Thử lại khi có sự cố mạng)</strong>. Nếu đường truyền từ SePay sang server bị trễ vài giây, SePay sẽ tự động bắn lại request Webhook thứ 2 hoặc thứ 3 cho cùng 1 giao dịch ngân hàng:
+      <ul>
+        <li>❌ <strong>Tài khoản bị cộng dồn hạn lặp lại:</strong> Khách trả 2.000đ cho 30 ngày PRO, nhưng bị cộng thành 60 ngày hoặc 90 ngày.</li>
+        <li>❌ <strong>Bảng Log bị ghi lặp rác:</strong> Trang Admin hiển thị 2 đến 3 dòng log giống hệt nhau cho cùng 1 mã giao dịch `FT26223105620067`.</li>
+      </ul>
+    </div>
+
+    <div class="sub-heading">II. GIẢI PHÁP CHỐNG LẶP TRIỆT ĐỂ BẰNG `bankReferenceCode`</div>
+    <p class="text-body">
+      Backend sử dụng trường <code>bankReferenceCode</code> (Mã tham chiếu giao dịch ngân hàng) trong Collection <code>webhooklogs</code> làm khóa kiểm tra duy nhất (Unique Idempotency Key):
+    </p>
+
+    <pre>
+// Mã nguồn trong paymentService.js (handleSePayWebhook):
+async handleSePayWebhook(webhookData, authHeader = '') {
+  const { referenceCode } = webhookData
+
+  // 1. Kiểm tra Chống lặp Webhook (Idempotency Check)
+  if (referenceCode) {
+    const existingLog = await WebhookLog.findOne({ bankReferenceCode: referenceCode })
+    if (existingLog) {
+      console.log(`⚠️ Webhook [${referenceCode}] đã được xử lý trước đó. Bỏ qua ghi lặp.`)
+      return { success: true, message: 'Giao dịch đã được xử lý trước đó (Bỏ qua ghi trùng)' }
+    }
+  }
+
+  // 2. Tiếp tục luồng xử lý khớp đơn và nâng PRO...
+}</pre>
+
+    <div class="faq-card">
+      <div class="faq-q">❓ HĐPB: Tại sao dùng `bankReferenceCode` làm Idempotency Key lại an toàn tuyệt đối?</div>
+      <div class="faq-a">👉 <strong>Trả lời:</strong> Mỗi giao dịch qua Internet Banking của ngân hàng Việt Nam (MBBank, Vietcombank, Techcombank...) luôn sinh ra duy nhất 1 Mã tham chiếu (Mã FT/Reference Code) không bao giờ trùng lặp. Việc dùng mã này làm khóa chặn ở ngay dòng đầu tiên của Webhook Service đảm bảo 100% request trùng lặp từ SePay sẽ bị từ chối an toàn.</div>
+    </div>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- NHẬT KÝ HỆ THỐNG AUDIT LOG VĨNH VIỄN -->
+  <!-- =================================================================== -->
+  <div class="pay-container" id="audit-log">
+    <div class="pay-header">
+      <div class="pay-title">📜 CHƯƠNG IV: HỆ THỐNG NHẬT KÝ HỆ THỐNG (AUDIT LOG) LƯU MONGODB ATLAS</div>
+      <span class="badge badge-gold">Persistence Architecture</span>
+    </div>
+
+    <div class="sub-heading">I. GIẢI QUYẾT TRIỆT ĐỂ VẤN ĐỀ MẤT DỮ LIỆU KHI F5</div>
+    <div class="text-body">
+      Trước đây, danh sách Audit Log được lưu tạm trong bộ nhớ RAM (React Query State) của trình duyệt. Do đó, khi Admin bấm <strong>F5 (Reload)</strong>, toàn bộ nhật ký cấp/gỡ PRO sẽ bị xóa sạch.
+      <br><br>
+      <strong>Giải pháp nâng cấp Full-Stack:</strong>
+      <ul>
+        <li>Tạo Mongoose Model <code>AuditLog.js</code> đại diện cho collection <code>auditlogs</code> trên MongoDB Atlas.</li>
+        <li>Tạo Router <code>/api/admin/audit</code> và Controller <code>adminAuditController.js</code> hỗ trợ phân trang, lọc theo loại hành động, email admin và khoảng thời gian.</li>
+        <li><strong>Đơn nguồn sự thật (Single Source of Truth):</strong> Loại bỏ toàn bộ các lệnh `appendAudit.mutate()` ở Client. Mọi bản ghi Audit Log đều được tạo tự động từ Backend Service khi thao tác hoàn tất thành công, chặn đứng lỗi ghi lặp 2 dòng log cho 1 cập nhật.</li>
+      </ul>
+    </div>
+
+    <div class="sub-heading">II. CHI TIẾT MÔ HÌNH MONGOOSE AUDITLOG MODEL</div>
+    <pre>
+import mongoose from 'mongoose'
+
+const auditLogSchema = new mongoose.Schema(
+  {
+    adminName: { type: String, required: true },
+    adminEmail: { type: String, required: true },
+    action: {
+      type: String,
+      required: true,
+      enum: ['USER_ROLE_CHANGE', 'USER_STATUS_CHANGE', 'USER_PRO_GRANT', 'USER_PRO_REVOKE', 'USER_LOCK', 'USER_UNLOCK', 'USER_DELETE'],
+    },
+    targetLabel: { type: String, required: true }, // Email người dùng bị tác động 
+    detail: { type: String, default: '' },        // Lý do chi tiết
+  },
+  { timestamps: true }
+)
+
+export default mongoose.model('AuditLog', auditLogSchema)</pre>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- PAY-01 -->
+  <!-- =================================================================== -->
+  <div class="pay-container" id="pay-01">
+    <div class="pay-header">
+      <div class="pay-title">PAY-01: Màn Hình Xem Bảng Giá & So Sánh Quyền Lợi</div>
+      <span class="badge badge-indigo">User Feature</span>
+    </div>
+    <div class="sub-heading">I. ĐẶC TẢ NGHIỆP VỤ</div>
+    <div class="text-body">
+      Hiển thị bảng so sánh 2 gói dịch vụ <strong>FREE</strong> và <strong>PRO</strong> với giá niêm yết 2.000đ/30 ngày.
+    </div>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- PAY-02 -->
+  <!-- =================================================================== -->
+  <div class="pay-container" id="pay-02">
+    <div class="pay-header">
+      <div class="pay-title">PAY-02: Khởi Tạo Đơn Hàng & Sinh Mã Chuyển Khoản `TFxxxxxx`</div>
+      <span class="badge badge-indigo">User Feature</span>
+    </div>
+    <div class="sub-heading">I. ĐẶC TẢ NGHIỆP VỤ</div>
+    <div class="text-body">
+      Khi bấm "Nâng cấp PRO", Backend tạo bản ghi trong `upgradetransactions` với trạng thái `PENDING` và mã duy nhất `TFxxxxxx`.
+    </div>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- PAY-03 -->
+  <!-- =================================================================== -->
+  <div class="pay-container" id="pay-03">
+    <div class="pay-header">
+      <div class="pay-title">PAY-03: Modal Thanh Toán VietQR & Polling Kiểm Tra Trạng Thái</div>
+      <span class="badge badge-indigo">User Feature</span>
+    </div>
+    <div class="sub-heading">I. ĐẶC TẢ NGHIỆP VỤ</div>
+    <div class="text-body">
+      Hiển thị mã VietQR động từ SePay API. Frontend tự động Polling 3s/lần đến <code>/api/payments/status/:paymentCode</code> để lắng nghe kết quả.
+    </div>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- PAY-04 -->
+  <!-- =================================================================== -->
+  <div class="pay-container" id="pay-04">
+    <div class="pay-header">
+      <div class="pay-title">PAY-04: Xử Lý Webhook Tự Động Từ SePay</div>
+      <span class="badge badge-indigo">User Feature</span>
+    </div>
+    <div class="sub-heading">I. ĐẶC TẢ NGHIỆP VỤ</div>
+    <div class="text-body">
+      Nhận payload JSON từ SePay, trích xuất mã `TFxxxxxx`, cập nhật `upgradetransactions` thành `PAID`, tính toán hạn PRO mới cho User và gửi email xác nhận.
+    </div>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- PAY-05 -->
+  <!-- =================================================================== -->
+  <div class="pay-container" id="pay-05">
+    <div class="pay-header">
+      <div class="pay-title">PAY-05: Lịch Sử Giao Dịch Cá Nhân & Loại Bỏ Đơn `PENDING` Rác</div>
+      <span class="badge badge-indigo">User Feature</span>
+    </div>
+    <div class="sub-heading">I. ĐẶC TẢ NGHIỆP VỤ & LỌC ĐƠN PENDING</div>
+    <div class="text-body">
+      Trang lịch sử giao dịch cá nhân loại bỏ hoàn toàn các đơn nháp `PENDING` (đơn mở QR dở dang chưa thanh toán) bằng câu lệnh <code>status: { $ne: 'PENDING' }</code>, chỉ hiển thị các đơn giao dịch đã hoàn tất hoặc cần đối soát.
+    </div>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- PAY-06 -->
+  <!-- =================================================================== -->
+  <div class="pay-container" id="pay-06">
+    <div class="pay-header">
+      <div class="pay-title">PAY-06: Gia Hạn Gói PRO Còn Hạn (Thuật Toán Cộng Dồn BR-24)</div>
+      <span class="badge badge-indigo">User Feature</span>
+    </div>
+    <div class="sub-heading">I. ĐẶC TẢ THUẬT TOÁN BR-24</div>
+    <div class="text-body">
+      Nếu User đang là PRO và chưa hết hạn, mốc tính +30 ngày được cộng tiếp nối từ <code>currentPlanExpiresAt</code> cũ, đảm bảo không mất ngày PRO còn lại.
+    </div>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- PAY-07 -->
+  <!-- =================================================================== -->
+  <div class="pay-container" id="pay-07">
+    <div class="pay-header">
+      <div class="pay-title">PAY-07: Tự Động Gửi Email Xác Nhận Thanh Toán</div>
+      <span class="badge badge-indigo">User Feature</span>
+    </div>
+    <div class="sub-heading">I. ĐẶC TẢ NGHIỆP VỤ</div>
+    <div class="text-body">
+      Tự động gửi mail thông báo cho khách hàng ngay khi nâng cấp PRO thành công qua Nodemailer.
+    </div>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- PAY-08 -->
+  <!-- =================================================================== -->
+  <div class="pay-container" id="pay-08">
+    <div class="pay-header">
+      <div class="pay-title">PAY-08: Admin Quản Lý Đơn Lỗi & Xem Webhook Logs SePay</div>
+      <span class="badge badge-gold">Admin Feature</span>
+    </div>
+    <div class="sub-heading">I. ĐẶC TẢ NGHIỆP VỤ</div>
+    <div class="text-body">
+      Màn hình `/admin/payments` giúp Admin xem danh sách đơn lỗi chờ xử lý (`MANUAL_PENDING`) và nhật ký SePay Webhook logs với số tài khoản che mờ bảo mật `BR-21`.
+    </div>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- PAY-09 -->
+  <!-- =================================================================== -->
+  <div class="pay-container" id="pay-09">
+    <div class="pay-header">
+      <div class="pay-title">PAY-09: Admin Cấp Hoặc Gỡ Gói PRO Thủ Công (Logic Số Âm & Gỡ Tức Thì)</div>
+      <span class="badge badge-gold">Admin Feature</span>
+    </div>
+    <div class="sub-heading">I. ĐẶC TẢ NGHIỆP VỤ NÂNG CAO</div>
+    <div class="text-body">
+      <ul>
+        <li><strong>Trừ ngày PRO (nhập số âm vd: `-10`):</strong> Trừ bớt 10 ngày từ thời hạn hiện tại. Nếu sau khi trừ mà hết hạn ➔ Tự động đưa về `FREE`.</li>
+        <li><strong>Gỡ PRO tức thì (Bấm nút "Gỡ PRO" màu đỏ):</strong> Truyền mã `-999`, lập tức đưa tài khoản về `FREE` và `currentPlanExpiresAt = null` ngay lập tức bất kể thời hạn cũ dồn bao nhiêu ngày.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    Báo Cáo Phân Tích Chuyên Sâu Tương Tác CSDL MongoDB & 9 Chức Năng Thanh Toán TaskFlow © 2026 — Đoàn Công Khoa. Built with Antigravity AI Mentor.
+  </div>
+
+</div>
+
+</body>
+</html>
