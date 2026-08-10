@@ -457,6 +457,27 @@ const leaveProject = async (projectId, userId) => {
       { $set: { assigneeId: null } }
     )
 
+    // Gửi thông báo cho chủ sở hữu dự án khi thành viên rời dự án
+    const owners = project.members.filter(
+      (m) => m.role === 'OWNER' && m.status === 'ACTIVE'
+    )
+    if (owners.length > 0) {
+      const leavingUser = await User.findById(userId).select('fullName').lean()
+      const leavingUserName = leavingUser ? leavingUser.fullName : 'Thành viên'
+      for (const owner of owners) {
+        await notificationService.createNotification({
+          userId: owner.userId,
+          actorId: userId,
+          projectId: project._id,
+          type: 'MEMBER_LEFT',
+          entityType: 'PROJECT',
+          entityId: project._id,
+          title: 'Thành viên rời dự án',
+          message: `${leavingUserName} đã rời khỏi dự án "${project.name}".`,
+        })
+      }
+    }
+
     return {
       message: 'Left project successfully. Your assigned tasks are now unassigned.',
       role: 'MEMBER',

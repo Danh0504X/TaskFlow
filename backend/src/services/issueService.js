@@ -421,6 +421,7 @@ const updateIssue = async (projectId, issueId, body = {}, projectKey, project, u
     throw new ApiError(StatusCodes.BAD_REQUEST, 'No valid fields to update')
   }
 
+  const oldStatus = issue.status
   const oldAssigneeId = issue.assigneeId ? issue.assigneeId.toString() : null
   const newAssigneeId = payload.assigneeId !== undefined
     ? (payload.assigneeId ? payload.assigneeId.toString() : null)
@@ -444,6 +445,11 @@ const updateIssue = async (projectId, issueId, body = {}, projectKey, project, u
       title: 'Công việc mới được gán',
       message: `${actorName} đã gán công việc "${issue.title}" cho bạn.`,
     })
+  }
+
+  // Gửi thông báo chuyển đổi trạng thái
+  if (oldStatus !== issue.status) {
+    await handleStatusChangeNotifications(project, issue, oldStatus, issue.status, userId, projectKey)
   }
 
   return toIssueDTO(issue, projectKey)
@@ -477,6 +483,7 @@ const updateIssueStatus = async (projectId, issueId, body = {}, projectKey, proj
   // [NEW] R1.2: Kiểm tra chiều chuyển status hợp lệ.
   ensureStatusTransitionAllowed(projectRole, issue.status, status)
 
+  const oldStatus = issue.status
   const update = { status }
   if (orderIndex !== undefined) {
     update.orderIndex = orderIndex
@@ -485,6 +492,11 @@ const updateIssueStatus = async (projectId, issueId, body = {}, projectKey, proj
   issue.set(update)
   await issue.save()
   await issue.populate([ASSIGNEE_POPULATE, PARENT_ISSUE_POPULATE, REJECTION_POPULATE])
+
+  // Gửi thông báo chuyển đổi trạng thái
+  if (oldStatus !== status) {
+    await handleStatusChangeNotifications(project, issue, oldStatus, status, userId, projectKey)
+  }
 
   return toIssueDTO(issue, projectKey)
 }
@@ -594,6 +606,60 @@ const rejectIssue = async (projectId, issueId, userId, projectRole, reason) => {
 
   return toIssueDTO(issue, project.key)
 }
+
+// Gửi thông báo khi chuyển đổi trạng thái của issue (IN_REVIEW hoặc DONE)
+const handleStatusChangeNotifications = async (project, issue, oldStatus, newStatus, actorId, projectKey) => {
+  if (oldStatus === newStatus) return
+
+  // 1. Chủ sở hữu dự án nhận thông báo có việc cần duyệt
+  if (newStatus === 'IN_REVIEW') {
+    const owners = project.members.filter(
+      (m) => m.role === 'OWNER' && m.status === 'ACTIVE' && m.userId.toString() !== actorId.toString()
+    )
+    if (owners.length > 0) {
+      const actor = await User.findById(actorId).select('fullName').lean()
+      const actorName = actor ? actor.fullName : 'Thành viên'
+      const issueKey = `${projectKey}-${issue.issueNumber}`
+      for (const owner of owners) {
+        await notificationService.createNotification({
+          userId: owner.userId,
+          actorId,
+          projectId: project._id,
+          type: 'TASK_IN_REVIEW',
+          entityType: 'ISSUE',
+          entityId: issue._id,
+          title: 'Công việc cần duyệt',
+          message: `${actorName} đã gửi yêu cầu duyệt công việc "${issue.title}" (${issueKey}).`,
+        })
+      }
+    }
+  }
+
+  // 2. Người thực hiện nhận thông báo Task đã được duyệt
+  if (newStatus === 'DONE') {
+    if (issue.assigneeId) {
+      const assigneeIdStr = issue.assigneeId._id
+        ? issue.assigneeId._id.toString()
+        : issue.assigneeId.toString()
+      if (assigneeIdStr !== actorId.toString()) {
+        const actor = await User.findById(actorId).select('fullName').lean()
+        const actorName = actor ? actor.fullName : 'Chủ sở hữu'
+        const issueKey = `${projectKey}-${issue.issueNumber}`
+        await notificationService.createNotification({
+          userId: assigneeIdStr,
+          actorId,
+          projectId: project._id,
+          type: 'TASK_APPROVED',
+          entityType: 'ISSUE',
+          entityId: issue._id,
+          title: 'Công việc đã được duyệt',
+          message: `${actorName} đã duyệt công việc "${issue.title}" (${issueKey}) của bạn.`,
+        })
+      }
+    }
+  }
+}
+
 
 export const issueService = {
   createIssue,
