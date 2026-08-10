@@ -143,6 +143,15 @@ const ProjectSummaryTab = ({ projectId }: ProjectSummaryTabProps) => {
     }
   }
 
+  // Helper chuyển đổi assigneeId (string hoặc IssueMember object) về string ID duy nhất
+  const getAssigneeIdStr = (assigneeId: any): string | null => {
+    if (!assigneeId) return null
+    if (typeof assigneeId === 'object' && assigneeId !== null && '_id' in assigneeId) {
+      return assigneeId._id
+    }
+    return typeof assigneeId === 'string' ? assigneeId : null
+  }
+
   // --- 3. Trích xuất danh sách thành viên thực tế từ danh sách issues ---
   const assigneesMap = new Map<string, { _id: string; fullName: string; avatarUrl: string | null }>()
   issues.forEach((issue) => {
@@ -158,7 +167,8 @@ const ProjectSummaryTab = ({ projectId }: ProjectSummaryTabProps) => {
 
   const workloadCounts: Record<string, number> = {}
   activeIssues.forEach((issue) => {
-    const key = issue.assigneeId || 'unassigned'
+    const assigneeIdStr = getAssigneeIdStr(issue.assigneeId)
+    const key = assigneeIdStr || 'unassigned'
     workloadCounts[key] = (workloadCounts[key] || 0) + 1
   })
 
@@ -200,13 +210,14 @@ const ProjectSummaryTab = ({ projectId }: ProjectSummaryTabProps) => {
   })
 
   issues.forEach((issue) => {
-    if (issue.assigneeId) {
-      if (!contributionCounts[issue.assigneeId]) {
-        contributionCounts[issue.assigneeId] = { done: 0, total: 0 }
+    const assigneeIdStr = getAssigneeIdStr(issue.assigneeId)
+    if (assigneeIdStr) {
+      if (!contributionCounts[assigneeIdStr]) {
+        contributionCounts[assigneeIdStr] = { done: 0, total: 0 }
       }
-      contributionCounts[issue.assigneeId].total += 1
+      contributionCounts[assigneeIdStr].total += 1
       if (issue.status === 'DONE') {
-        contributionCounts[issue.assigneeId].done += 1
+        contributionCounts[assigneeIdStr].done += 1
       }
     }
   })

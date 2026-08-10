@@ -197,7 +197,7 @@ const IssueRow = ({ issue, projectId, isOwner, depth, onSelectIssue, onDeleteIss
       <div className={COL_ASSIGNEE}>
         <AssigneePicker
           projectId={projectId}
-          value={issue.assigneeId ?? null}
+          value={typeof issue.assigneeId === 'object' && issue.assigneeId !== null ? issue.assigneeId._id : (issue.assigneeId ?? null)}
           onChange={(userId) => updateMutation.mutate({ issueId: issue._id, payload: { assigneeId: userId } })}
           size={26}
           readOnly={!isOwner}
