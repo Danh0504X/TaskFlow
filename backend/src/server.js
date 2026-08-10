@@ -8,6 +8,8 @@ import { connectDB } from './lib/db.js'
 import { errorHandlingMiddleware } from './middlewares/errorHandlingMiddleware.js'
 import apiRoutes from './routes/api.js'
 
+import { initDueReminderJob } from './services/dueReminderJob.js'
+
 const START_SERVER = () => {
   const app = express()
 
@@ -30,6 +32,8 @@ const START_SERVER = () => {
 
   app.listen(env.PORT, () => {
     console.log(`🚀 Server is running on port ${env.PORT} [${env.BUILD_MODE}]`)
+    // Khởi động job quét nhắc deadline định kỳ
+    initDueReminderJob()
   })
 }
 

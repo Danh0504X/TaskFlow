@@ -4,6 +4,11 @@ export interface CommentAuthor {
   avatarUrl?: string | null
 }
 
+export interface CommentEditRecord {
+  content: string
+  editedAt: string
+}
+
 export interface CommentItem {
   _id: string
   projectId: string
@@ -13,6 +18,7 @@ export interface CommentItem {
   content: string
   isEdited?: boolean
   editedAt?: string | null
+  editHistory?: CommentEditRecord[]
   createdAt: string
   updatedAt: string
 }

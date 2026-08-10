@@ -18,6 +18,7 @@ import AssigneePicker from './AssigneePicker'
 import EpicPicker from './EpicPicker'
 import RejectIssueModal from './RejectIssueModal'
 import { CommentItem } from './CommentItem'
+import { MentionInput } from './MentionInput'
 import { ISSUE_TYPE, type Issue, type IssueStatus, type IssuePriority } from '../issue.types'
 
 interface IssueDetailPanelProps {
@@ -548,6 +549,7 @@ const IssueDetailPanel = ({ issue, projectId, isLoading, onClose, onSelectIssue 
                       <CommentItem
                         key={c._id}
                         comment={c}
+                        projectId={projectId}
                         currentUserId={currentUser?._id}
                         isProjectOwner={isOwner}
                         onUpdate={async (commentId, content) => {
@@ -568,12 +570,13 @@ const IssueDetailPanel = ({ issue, projectId, isLoading, onClose, onSelectIssue 
 
             </div>
 
-            <form onSubmit={handleAddComment} className="p-4 border-t border-hairline bg-canvas flex gap-2 items-center shrink-0">
-              <input
-                type="text"
+            <form onSubmit={handleAddComment} className="p-4 border-t border-hairline bg-canvas flex gap-2 items-center shrink-0 w-full">
+              <MentionInput
                 value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
-                placeholder="Viết phản hồi công việc..."
+                onChange={setCommentText}
+                projectId={projectId}
+                isSingleLine
+                placeholder="Viết phản hồi công việc... (gõ @ để nhắc tên)"
                 disabled={createCommentMutation.isPending}
                 className="flex-grow bg-surface border border-hairline rounded-lg px-4 py-2 text-xs font-semibold focus:ring-2 focus:ring-brand/15 focus:border-ink/20 outline-none transition-all placeholder:text-subtle disabled:opacity-60"
               />

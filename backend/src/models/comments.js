@@ -34,6 +34,18 @@ const commentSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    editHistory: [
+      {
+        content: {
+          type: String,
+          required: true,
+        },
+        editedAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
     isDeleted: {
       type: Boolean,
       default: false,

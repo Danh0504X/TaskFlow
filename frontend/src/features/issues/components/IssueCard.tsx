@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CheckCircle2, XCircle } from 'lucide-react'
+import { CheckCircle2, XCircle, MessageSquare } from 'lucide-react'
 import IssueTypeIcon from '@/components/ui/IssueTypeIcon'
 import IssuePriorityBadge from '@/components/ui/IssuePriorityBadge'
 import { useUpdateIssue, useRejectIssue } from '../hooks/useIssueMutations'
@@ -106,7 +106,15 @@ const IssueCard = ({ issue, projectId, onClick, isOwner, isDraggable = true, sub
         )}
 
         <div className="flex items-center justify-between pt-3 border-t border-hairline">
-          <IssuePriorityBadge priority={issue.priority} showIcon />
+          <div className="flex items-center gap-2">
+            <IssuePriorityBadge priority={issue.priority} showIcon />
+            {!!issue.commentsCount && issue.commentsCount > 0 && (
+              <span className="flex items-center gap-1 text-[10px] font-semibold text-muted bg-canvas px-1.5 py-0.5 rounded border border-hairline" title={`${issue.commentsCount} bình luận`}>
+                <MessageSquare size={11} />
+                <span>{issue.commentsCount}</span>
+              </span>
+            )}
+          </div>
 
           <AssigneePicker
             projectId={projectId}
