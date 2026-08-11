@@ -3,14 +3,45 @@ import { Bell } from 'lucide-react'
 import { useNotifications } from '../hooks/useNotifications'
 import { NotificationDropdown } from './NotificationDropdown'
 
-export const NotificationBell = () => {
+interface NotificationBellProps {
+  placement?: 'auto' | 'top' | 'bottom'
+}
+
+export const NotificationBell = ({ placement = 'auto' }: NotificationBellProps) => {
   const [isOpen, setIsOpen] = useState(false)
+  const [computedPlacement, setComputedPlacement] = useState<'top' | 'bottom'>('top')
+  const [isRightAligned, setIsRightAligned] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
 
   // Lấy trang đầu tiên, 20 thông báo
   const { data } = useNotifications(1, 20)
   const notifications = data?.notifications ?? []
   const unreadCount = notifications.filter((n) => !n.isRead).length
+
+  const handleToggle = () => {
+    if (!isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect()
+      // Tự động xác định hướng nẩy lên hay xuống dựa trên vị trí nút so với màn hình
+      if (placement === 'auto') {
+        if (rect.top > window.innerHeight / 2) {
+          setComputedPlacement('top')
+        } else {
+          setComputedPlacement('bottom')
+        }
+      } else {
+        setComputedPlacement(placement)
+      }
+
+      // Kiểm tra xem nút có nằm ở nửa bên phải màn hình không
+      if (rect.left > window.innerWidth / 2) {
+        setIsRightAligned(true)
+      } else {
+        setIsRightAligned(false)
+      }
+    }
+    setIsOpen(!isOpen)
+  }
 
   // Xử lý click outside để đóng dropdown
   useEffect(() => {
@@ -32,7 +63,8 @@ export const NotificationBell = () => {
   return (
     <div className="relative shrink-0" ref={dropdownRef}>
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        ref={buttonRef}
+        onClick={handleToggle}
         className={`p-2 rounded-lg border transition-all relative ${
           isOpen
             ? 'bg-canvas border-ink/10 text-ink'
@@ -52,6 +84,8 @@ export const NotificationBell = () => {
         <NotificationDropdown
           notifications={notifications}
           onClose={() => setIsOpen(false)}
+          placement={computedPlacement}
+          isRightAligned={isRightAligned}
         />
       )}
     </div>
