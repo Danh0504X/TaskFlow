@@ -140,7 +140,7 @@ const AiGenerateEpicModal = ({ open, onClose, projectId }: AiGenerateEpicModalPr
   }
 
   return (
-    <Modal open={open} onClose={handleClose} title="Sinh Epic bằng AI" icon={<Sparkles size={18} />} layout="wide" footer={
+    <Modal open={open} onClose={handleClose} title="Sinh Epic bằng AI" icon={<Sparkles size={18} />} layout="xl" footer={
       step === 'INPUT' ? (
         <>
           <Button variant="secondary" onClick={handleClose}>
@@ -169,10 +169,12 @@ const AiGenerateEpicModal = ({ open, onClose, projectId }: AiGenerateEpicModalPr
         </Button>
       )
     }>
-      {/* Khung cố định (h-[65vh]) — không co giãn theo lượng nội dung mỗi cột, để modal luôn
+      {/* Khung cố định (h-[72vh]) — không co giãn theo lượng nội dung mỗi cột, để modal luôn
           cùng 1 kích thước dù đang ở bước nào / có bao nhiêu lịch sử hay draft. Mỗi cột tự cuộn
-          riêng bên trong (`overflow-y-auto` + `h-full`), không đụng tới cột còn lại. */}
-      <div className="grid h-[65vh] grid-cols-[220px_1fr] gap-5">
+          riêng bên trong (`overflow-y-auto` + `h-full`), không đụng tới cột còn lại. Modal 'xl'
+          (rộng hơn 'wide' trước đây) + DraftRow rút gọn còn 1 dòng -> nhiều draft hiện cùng lúc
+          hơn hẳn mà không phải cuộn, còn dư chỗ ngang cho các cột/hành động thêm sau này. */}
+      <div className="grid h-[72vh] grid-cols-[240px_1fr] gap-5">
         <div className="flex h-full flex-col gap-3">
           <Button variant="secondary" size="sm" className="w-full shrink-0" onClick={handleStartNew}>
             + Sinh yêu cầu mới

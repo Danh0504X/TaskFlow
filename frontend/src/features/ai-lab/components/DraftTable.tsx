@@ -170,11 +170,11 @@ const DraftTable = ({ projectId, generationId, drafts }: DraftTableProps) => {
         )}
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         <AddEpicQuickAdd onSubmit={handleQuickAddEpic} pending={addMutation.isPending} />
 
         {tree.map(({ root, children }) => (
-          <div key={root._id} className="space-y-1.5">
+          <div key={root._id} className="space-y-1">
             <DraftRow
               draft={root}
               checked={selected.has(root.tempId)}
@@ -183,7 +183,7 @@ const DraftTable = ({ projectId, generationId, drafts }: DraftTableProps) => {
               onDelete={() => setConfirmDeleteId(root._id)}
             />
             {children.length > 0 && (
-              <div className="ml-5 space-y-1.5 border-l-2 border-hairline pl-3">
+              <div className="ml-4 space-y-1 border-l-2 border-hairline pl-2.5">
                 {children.map((child) => (
                   <DraftRow
                     key={child._id}

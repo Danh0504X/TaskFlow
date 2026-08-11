@@ -4,7 +4,7 @@ import { AlertTriangle, CheckCircle2, Crown, Info, Sparkles, X } from 'lucide-re
 import { cn } from '@/lib/cn'
 
 export type ModalTone = 'brand' | 'success' | 'danger' | 'info' | 'premium'
-export type ModalLayout = 'center' | 'compact' | 'sheet' | 'wide'
+export type ModalLayout = 'center' | 'compact' | 'sheet' | 'wide' | 'xl'
 
 interface ModalProps {
   open: boolean
@@ -37,8 +37,11 @@ const layoutMaxWidth: Record<ModalLayout, string> = {
   center: 'max-w-lg',
   compact: 'max-w-sm',
   sheet: 'max-w-lg',
-  // Cho nội dung cần bố cục nhiều cột (vd modal AI Lab: sidebar lịch sử + khu vực sinh).
+  // Cho nội dung cần bố cục nhiều cột (vd Bảng giá, Nâng cấp gói).
   wide: 'max-w-4xl',
+  // Rộng hơn 'wide' — cho nội dung nhiều cột VÀ dày đặc (vd modal AI Lab: sidebar lịch sử +
+  // danh sách draft dạng bảng), cần thêm không gian ngang để mỗi dòng gọn theo chiều cao.
+  xl: 'max-w-6xl',
 }
 
 /**
@@ -49,7 +52,8 @@ const layoutMaxWidth: Record<ModalLayout, string> = {
  * dùng đúng pastel đã dùng cho badge/trạng thái trong app). `layout` đổi kích thước + cách
  * vào màn hình: 'compact' cho xác nhận ngắn, 'sheet' trượt lên từ đáy màn hình (hợp cho nội
  * dung dài trên mobile), 'wide' cho nội dung cần bố cục nhiều cột. Đều thuần visual — không
- * đổi hành vi đóng/mở.
+ * đổi hành vi đóng/mở. 'xl' rộng hơn 'wide' — dành cho nội dung dạng bảng/danh sách dày đặc
+ * cần nhiều không gian ngang để mỗi dòng thấp lại (vd modal AI Lab).
 */
 const Modal = ({
   open,

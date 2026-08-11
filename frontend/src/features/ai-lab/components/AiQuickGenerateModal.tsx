@@ -131,13 +131,15 @@ const AiQuickGenerateModal = () => {
   if (!projectId || !context) return null
 
   return (
-    <Modal open={isOpen} onClose={close} layout="wide" title="Sinh bằng AI" icon={<Sparkles size={18} />}>
+    <Modal open={isOpen} onClose={close} layout="xl" title="Sinh bằng AI" icon={<Sparkles size={18} />}>
       {/* min-w-0 trên cột trái là bắt buộc: mặc định track "1fr" của CSS Grid không tự co
           nhỏ hơn kích thước nội dung bên trong (vd bảng draft nhiều cột) — thiếu dòng này,
           DraftTable ép cả lưới rộng ra, đẩy cột lịch sử tràn ra ngoài rìa modal.
-          h-[560px] cố định chiều cao modal: ít draft -> để trống phần dưới, nhiều draft -> tự
-          cuộn dọc bên trong bảng (xem max-h + overflow-y-auto ở DraftTable), không kéo dài modal. */}
-      <div className="grid h-[560px] grid-cols-1 gap-5 overflow-x-hidden sm:grid-cols-[1fr_220px]">
+          h-[640px] cố định chiều cao modal: ít draft -> để trống phần dưới, nhiều draft -> tự
+          cuộn dọc bên trong bảng (xem max-h + overflow-y-auto ở DraftTable), không kéo dài modal.
+          Modal 'xl' (rộng hơn 'wide' trước đây) + DraftRow rút gọn còn 1 dòng -> nhiều draft hiện
+          cùng lúc hơn hẳn mà không phải cuộn. */}
+      <div className="grid h-[640px] grid-cols-1 gap-5 overflow-x-hidden sm:grid-cols-[1fr_240px]">
         <div className="h-full min-w-0 overflow-y-auto">
           {!activeGenerationId ? (
             context.generationType === 'REQ_TO_EPIC' ? (
