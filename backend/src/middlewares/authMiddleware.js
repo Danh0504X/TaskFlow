@@ -50,6 +50,14 @@ export const protectedRoute = async (req, res, next) => {
         })
       }
 
+      // Chặn cả access token đã lỡ cấp cho tài khoản chưa xác thực email (vd trước khi vá lỗi ở
+      // authService.signIn) — không để request nào tiếp tục dùng được cho tới khi token tự hết hạn.
+      if (!user.isEmailVerified) {
+        return res.status(StatusCodes.FORBIDDEN).json({
+          message: 'Vui lòng xác thực email trước khi đăng nhập.',
+        })
+      }
+
       req.user = user
       touchLastActive(user)
 

@@ -91,6 +91,7 @@ const aiDraftIssueSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'issue',
       default: null,
+      index: true,
     },
 
     // Dọn draft chưa duyệt sau 7 ngày (TTL index bên dưới).

@@ -1,16 +1,22 @@
 import { createPortal } from 'react-dom'
 import { Eye } from 'lucide-react'
+import { cn } from '@/lib/cn'
 import { useDropdownPosition } from '@/lib/useDropdownPosition'
 
 interface ScopePreviewPopoverProps {
   lines: string[]
+  /** Chữ trên nút kích hoạt — mặc định "Xem (N)" (dùng ở DraftTable), truyền riêng cho ngữ cảnh
+   * khác (vd "Phạm vi AI yêu cầu" ở IssueDetailPanel). */
+  label?: string
+  /** Ghi đè style nút kích hoạt — dùng khi cần đặt nhỏ/mờ hơn mặc định (vd 1 dòng nhỏ dưới tiêu đề). */
+  triggerClassName?: string
 }
 
 const WIDTH = 280
 
 /** Nút "xem" mở popover liệt kê scopePreview (3–8 dòng phạm vi do AI đề xuất) — chỉ hiển thị,
  * không phải task thật. Dùng chung cơ chế portal + định vị với các dropdown khác trong app. */
-const ScopePreviewPopover = ({ lines }: ScopePreviewPopoverProps) => {
+const ScopePreviewPopover = ({ lines, label, triggerClassName }: ScopePreviewPopoverProps) => {
   const { open, coords, triggerRef, dropdownRef, toggle } = useDropdownPosition({
     width: WIDTH,
     estimatedHeight: 40 + lines.length * 24,
@@ -25,10 +31,13 @@ const ScopePreviewPopover = ({ lines }: ScopePreviewPopoverProps) => {
           e.stopPropagation()
           toggle()
         }}
-        className="inline-flex items-center gap-1 text-xs font-semibold text-muted hover:text-brand transition-colors"
+        className={cn(
+          'inline-flex items-center gap-1 text-xs font-semibold text-muted hover:text-brand transition-colors',
+          triggerClassName,
+        )}
       >
         <Eye size={13} />
-        Xem ({lines.length})
+        {label ?? `Xem (${lines.length})`}
       </button>
 
       {open &&

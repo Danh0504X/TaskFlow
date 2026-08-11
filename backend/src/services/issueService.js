@@ -5,6 +5,7 @@ import Sprint from '../models/sprints.js'
 import Project from '../models/projects.js'
 import ApiError from '../utils/ApiError.js'
 import User from '../models/users.js'
+import AiDraftIssue from '../models/aiDraftIssues.js'
 import { notificationService } from './notificationService.js'
 
 // Các enum hợp lệ (khớp với models/issues.js).
@@ -337,7 +338,17 @@ const getIssueById = async (projectId, issueId, projectKey) => {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Issue not found')
   }
 
-  return toIssueDTO(issue, projectKey)
+  const dto = toIssueDTO(issue, projectKey)
+
+  // Chỉ tra thêm "phạm vi AI đề xuất" cho issue do AI sinh — draft gốc (ai_draft_issue) vẫn giữ
+  // lại sau khi duyệt (không xoá, xem models/aiDraftIssues.js), chỉ không được copy sang Issue
+  // thật lúc tạo. Tra ngược bằng createdIssueId để PM xem lại phạm vi ban đầu AI đã đề xuất.
+  if (issue.aiGenerated) {
+    const draft = await AiDraftIssue.findOne({ createdIssueId: issue._id }).select('scopePreview').lean()
+    dto.scopePreview = draft?.scopePreview ?? []
+  }
+
+  return dto
 }
 
 // Cập nhật toàn bộ issue.

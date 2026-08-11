@@ -1,4 +1,4 @@
-import { Suspense, lazy, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import {
   createBrowserRouter,
   Navigate,
@@ -30,10 +30,7 @@ import AiOverviewTab from '@/features/admin/pages/ai/AiOverviewTab'
 import AiQuotaTab from '@/features/admin/pages/ai/AiQuotaTab'
 import AdminAuditPage from '@/features/admin/pages/AdminAuditPage'
 import { AdminPaymentsPage } from '@/features/admin/pages/AdminPaymentsPage'
-import Spinner from '@/components/ui/Spinner'
 
-// Beta/Demo — AI Lab: lazy-load vì đây là tính năng phụ, không cần nằm trong bundle chính.
-const AiLabPage = lazy(() => import('@/features/ai-lab/pages/AiLabPage'))
 // Route "/" hiển thị khác nhau tuỳ trạng thái đăng nhập: khách (chưa đăng nhập) xem trang
 // giới thiệu (LandingPage) ngay tại "/"; các đường dẫn con khác dưới "/" (vd /projects) vẫn
 // đá về /login như route được bảo vệ bình thường. Người đã đăng nhập vào thẳng MainLayout
@@ -76,20 +73,6 @@ const router = createBrowserRouter([
       { path: 'projects/:projectId/invitation', element: <InvitationPage /> },
       { path: 'projects/archived', element: <ArchivedProjectsPage /> },
       { path: 'tasks', element: <MyTasksPage /> },
-      {
-        path: 'ai-lab',
-        element: (
-          <Suspense
-            fallback={
-              <div className="flex min-h-[50vh] items-center justify-center">
-                <Spinner className="h-6 w-6 text-subtle" />
-              </div>
-            }
-          >
-            <AiLabPage />
-          </Suspense>
-        ),
-      },
       { path: 'profile', element: <ProfilePage /> },
       { path: 'profile/change-password', element: <ChangePasswordPage /> },
     ],

@@ -203,13 +203,22 @@ const signIn = async (body) => {
   const login = email.toLowerCase().trim()
   const user = await User.findOne({ email: login })
 
-  // BỎ KIỂM TRA authProvider !== 'local'. 
+  // BỎ KIỂM TRA authProvider !== 'local'.
   // Bất kỳ tài khoản nào (Local hay Google) chỉ cần ĐÃ CÓ passwordHash đều được phép đăng nhập bằng mật khẩu.
   if (!user || !user.passwordHash) {
     throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid email or password')
   }
 
   ensureAccountCanSignIn(user)
+
+  // Tài khoản local mới đăng ký đã có passwordHash ngay từ signUp (trước khi xác thực email) ->
+  // nếu không chặn ở đây, user có thể đăng nhập bằng mật khẩu mà chưa từng nhập mã xác thực.
+  if (!user.isEmailVerified) {
+    throw new ApiError(
+      StatusCodes.FORBIDDEN,
+      'Vui lòng xác thực email trước khi đăng nhập.',
+    )
+  }
 
   const isPasswordValid = await bcrypt.compare(password, user.passwordHash)
   if (!isPasswordValid) {
@@ -269,6 +278,16 @@ const refreshToken = async (refreshToken) => {
   }
 
   ensureAccountCanSignIn(user)
+
+  // Đóng luôn phiên nếu tài khoản chưa xác thực email lỡ có refresh token hợp lệ (vd cấp trước
+  // khi vá lỗi ở signIn) — tránh việc cứ refresh là tiếp tục dùng được tài khoản chưa xác thực.
+  if (!user.isEmailVerified) {
+    await sessionService.deleteById(session._id)
+    throw new ApiError(
+      StatusCodes.FORBIDDEN,
+      'Vui lòng xác thực email trước khi đăng nhập.',
+    )
+  }
 
   const accessToken = await JwtProvider.generateToken(
     { userInfo: buildUserInfo(user) },

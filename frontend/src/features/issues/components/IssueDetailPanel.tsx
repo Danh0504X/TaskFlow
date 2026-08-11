@@ -7,10 +7,11 @@ import Spinner from '@/components/ui/Spinner'
 import IssueTypeIcon from '@/components/ui/IssueTypeIcon'
 import { useAuthStore } from '@/features/auth/authStore'
 import { useAiModalStore } from '@/features/ai-lab/aiModalStore'
+import ScopePreviewPopover from '@/features/ai-lab/components/ScopePreviewPopover'
 import { useProject } from '@/features/projects/hooks/useProject'
 import { useUpdateIssue, useUpdateIssueStatus, useCreateIssue, useRejectIssue } from '../hooks/useIssueMutations'
 import { useIssueComments, useCreateComment, useUpdateComment, useDeleteComment } from '../hooks/useComments'
-import { useProjectIssues } from '../hooks/useIssues'
+import { useProjectIssues, useIssue } from '../hooks/useIssues'
 import { issueKeys } from '../issue.keys'
 import StatusPicker from './StatusPicker'
 import PriorityPicker from './PriorityPicker'
@@ -108,6 +109,11 @@ const IssueDetailPanel = ({ issue, projectId, isLoading, onClose, onSelectIssue 
   const isOwner = userMemberRecord?.role === 'OWNER'
   const openAiForEpic = useAiModalStore((state) => state.openForEpic)
   const [showRejectModal, setShowRejectModal] = useState(false)
+
+  // scopePreview không có ở GET danh sách (issue prop) -> chỉ fetch riêng chi tiết khi issue
+  // này thật sự do AI sinh, tránh gọi API thừa cho phần lớn issue tạo tay.
+  const { data: aiScopeIssue } = useIssue(projectId, issue?.aiGenerated ? issue._id : undefined)
+  const aiScopePreview = aiScopeIssue?.scopePreview ?? []
 
   // `useCreateIssue`/`useUpdateIssue`/`useUpdateIssueStatus` (dùng chung toàn app) chỉ
   // `invalidateQueries` sau khi lưu -> UI phải đợi thêm 1 lượt GET nền mới thấy thay đổi,
@@ -340,6 +346,17 @@ const IssueDetailPanel = ({ issue, projectId, isLoading, onClose, onSelectIssue 
                   >
                     {issue.title}
                   </h2>
+                )}
+
+                {/* Phạm vi AI đã đề xuất lúc sinh draft — chỉ issue do AI sinh mới có, xem lại
+                    qua GET chi tiết issue (useIssue), không nằm sẵn trong issue prop. Chỉ 1 dòng
+                    chữ nhỏ ngay dưới tên, không tách khối riêng. */}
+                {issue.aiGenerated && aiScopePreview.length > 0 && (
+                  <ScopePreviewPopover
+                    lines={aiScopePreview}
+                    label="Phạm vi AI yêu cầu"
+                    triggerClassName="px-3 mt-0.5 text-[11px] font-medium text-subtle"
+                  />
                 )}
               </div>
 

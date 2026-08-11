@@ -69,6 +69,9 @@ export interface Issue {
   assignee?: IssueMember
   orderIndex?: number
   aiGenerated?: boolean
+  /** Phạm vi AI đã đề xuất lúc sinh draft — CHỈ có khi lấy qua GET chi tiết 1 issue (useIssue),
+   * không có ở GET danh sách (tránh join thêm cho mọi issue chỉ để phục vụ 1 ô ít khi xem). */
+  scopePreview?: string[]
   rejectionHistory?: RejectionRecord[]
   commentsCount?: number
   dueDate?: string | null
