@@ -63,14 +63,21 @@ export const protectedRoute = async (req, res, next) => {
 
       next()
     } catch (err) {
-      console.error('>> [protectedRoute] JWT Error:', err.message)
+      const isExpired = err.name === 'TokenExpiredError' || err.message.includes('expired')
 
-      if (err.name === 'TokenExpiredError' || err.message.includes('expired')) {
+      if (isExpired) {
+        console.error(
+          `>> [protectedRoute] ACCESS token EXPIRED — ${req.method} ${req.originalUrl}` +
+            (err.expiredAt ? ` (expiredAt: ${err.expiredAt.toISOString()})` : ''),
+        )
         return res.status(410).json({
           message: 'Need to refresh Access Token',
         })
       }
 
+      console.error(
+        `>> [protectedRoute] ACCESS token INVALID (${err.name}: ${err.message}) — ${req.method} ${req.originalUrl}`,
+      )
       return res.status(StatusCodes.FORBIDDEN).json({
         message: 'Invalid access token',
       })

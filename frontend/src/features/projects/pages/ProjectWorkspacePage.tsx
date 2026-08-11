@@ -6,6 +6,7 @@ import { useAuthStore } from '@/features/auth/authStore'
 import ProjectInviteModal from '../components/ProjectInviteModal'
 import ProjectMembersModal from '../components/ProjectMembersModal'
 import AiGenerateEpicModal from '@/features/ai-lab/components/AiGenerateEpicModal'
+import AiQuickGenerateModal from '@/features/ai-lab/components/AiQuickGenerateModal'
 import Spinner from '@/components/ui/Spinner'
 import Avatar from '@/components/ui/Avatar'
 import { cn } from '@/lib/cn'
@@ -320,6 +321,12 @@ const ProjectWorkspacePage = () => {
         onClose={() => setIsAiModalOpen(false)}
         projectId={project._id}
       />
+
+      {/* Modal "Sinh AI nhanh" — đọc toàn bộ state từ aiModalStore (không cần props), kích hoạt
+          bởi nút "Sinh Task bằng AI" trên epic thật trong IssueDetailPanel (useAiModalStore.
+          openForEpic). Trước đây CHƯA từng mount ở đâu trong app -> bấm nút chỉ đổi state trong
+          store, không có gì hiển thị ra màn hình. */}
+      <AiQuickGenerateModal />
     </div>
   )
 }

@@ -55,6 +55,10 @@ const generateTokens = async (userInfo) => {
     REFRESH_TOKEN_TTL,
   )
 
+  console.log(
+    `>> [auth] Issued new ACCESS+REFRESH token pair for user ${userInfo._id} (access ttl=${ACCESS_TOKEN_TTL}, refresh ttl=${REFRESH_TOKEN_TTL})`,
+  )
+
   return { accessToken, refreshToken }
 }
 
@@ -251,15 +255,20 @@ const signOut = async (refreshToken) => {
 
 const refreshToken = async (refreshToken) => {
   if (!refreshToken) {
+    console.error('>> [refreshToken] REFRESH token MISSING — no refreshToken cookie in request')
     throw new ApiError(StatusCodes.UNAUTHORIZED, 'Refresh token is required')
   }
 
   const session = await sessionService.findByRefreshToken(refreshToken)
   if (!session) {
+    console.error('>> [refreshToken] Session NOT FOUND for provided refresh token (already used/revoked, or logged out elsewhere)')
     throw new ApiError(StatusCodes.UNAUTHORIZED, 'Session not found')
   }
 
   if (session.expiresAt < new Date()) {
+    console.error(
+      `>> [refreshToken] REFRESH token EXPIRED (session record) — user ${session.userId}, expiresAt ${session.expiresAt.toISOString()}`,
+    )
     await sessionService.deleteById(session._id)
     throw new ApiError(StatusCodes.UNAUTHORIZED, 'Refresh token expired')
   }
@@ -268,12 +277,16 @@ const refreshToken = async (refreshToken) => {
   try {
     decoded = await JwtProvider.verifyToken(refreshToken, env.REFRESH_TOKEN_SECRET)
   } catch (err) {
+    console.error(
+      `>> [refreshToken] REFRESH token JWT verify FAILED (${err.name}: ${err.message}) — user ${session.userId}`,
+    )
     await sessionService.deleteById(session._id)
     throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid or expired refresh token')
   }
 
   const user = await User.findById(decoded.userInfo?._id)
   if (!user) {
+    console.error(`>> [refreshToken] User NOT FOUND for refresh token — userId ${decoded.userInfo?._id}`)
     throw new ApiError(StatusCodes.UNAUTHORIZED, 'User not found')
   }
 
@@ -282,6 +295,7 @@ const refreshToken = async (refreshToken) => {
   // Đóng luôn phiên nếu tài khoản chưa xác thực email lỡ có refresh token hợp lệ (vd cấp trước
   // khi vá lỗi ở signIn) — tránh việc cứ refresh là tiếp tục dùng được tài khoản chưa xác thực.
   if (!user.isEmailVerified) {
+    console.error(`>> [refreshToken] User ${user._id} NOT email-verified — closing session`)
     await sessionService.deleteById(session._id)
     throw new ApiError(
       StatusCodes.FORBIDDEN,
@@ -293,6 +307,10 @@ const refreshToken = async (refreshToken) => {
     { userInfo: buildUserInfo(user) },
     env.ACCESS_TOKEN_SECRET,
     ACCESS_TOKEN_TTL,
+  )
+
+  console.log(
+    `>> [refreshToken] Re-issued new ACCESS token for user ${user._id} (ttl=${ACCESS_TOKEN_TTL}), refresh session valid until ${session.expiresAt.toISOString()}`,
   )
 
   return { accessToken }
