@@ -34,7 +34,7 @@ export const createUser = asyncHandler(async (req, res) => {
 
 // [Admin] Cập nhật tài khoản.
 export const updateUser = asyncHandler(async (req, res) => {
-  const result = await userService.updateUser(req.params.userId, req.body)
+  const result = await userService.updateUser(req.params.userId, req.body, req.user)
 
   res.status(StatusCodes.OK).json({
     message: 'User updated successfully',
@@ -44,7 +44,7 @@ export const updateUser = asyncHandler(async (req, res) => {
 
 // [Admin] Xóa tài khoản.
 export const deleteUser = asyncHandler(async (req, res) => {
-  const result = await userService.deleteUser(req.params.userId, req.user._id)
+  const result = await userService.deleteUser(req.params.userId, req.user)
 
   res.status(StatusCodes.OK).json({
     message: 'User deleted successfully',

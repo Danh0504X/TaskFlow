@@ -2,8 +2,9 @@ import bcrypt from 'bcrypt'
 import mongoose from 'mongoose'
 import { StatusCodes } from 'http-status-codes'
 import User from '../models/users.js'
+import AuditLog from '../models/AuditLog.js'
 import ApiError from '../utils/ApiError.js'
-import { EMAIL_REGEX, USER_ROLE } from '../utils/constants.js'
+import { AUDIT_ACTION, EMAIL_REGEX, USER_ROLE } from '../utils/constants.js'
 
 const VALID_ROLES = Object.values(USER_ROLE)
 const VALID_STATUSES = ['active', 'inactive', 'banned']
@@ -131,8 +132,40 @@ const createUser = async (body = {}) => {
   return user.toJSON()
 }
 
+// Ghi nhật ký hệ thống cho các thay đổi nhạy cảm (khoá/mở khoá, đổi vai trò) — so sánh giá
+// trị trước/sau để không ghi log khi field đó thực ra không đổi.
+const logUserChanges = async ({ before, payload, user, admin }) => {
+  if (!admin) return
+
+  const entries = []
+  if (payload.status !== undefined && payload.status !== before.status) {
+    entries.push({
+      action: payload.status === 'active' ? AUDIT_ACTION.USER_UNLOCK : AUDIT_ACTION.USER_LOCK,
+      detail: `Đổi trạng thái: ${before.status} → ${payload.status}`,
+    })
+  }
+  if (payload.role !== undefined && payload.role !== before.role) {
+    entries.push({
+      action: AUDIT_ACTION.USER_ROLE_CHANGE,
+      detail: `Đổi vai trò: ${before.role} → ${payload.role}`,
+    })
+  }
+  if (entries.length === 0) return
+
+  await AuditLog.insertMany(
+    entries.map((entry) => ({
+      adminName: admin.fullName,
+      adminEmail: admin.email,
+      targetId: user._id,
+      targetLabel: user.email,
+      ...entry,
+    })),
+  )
+}
+
 // Admin cập nhật tài khoản. Chỉ cho phép sửa các field whitelist.
-const updateUser = async (userId, body = {}) => {
+// `admin` là req.user (tài khoản admin đang thao tác) — dùng để ghi Nhật ký hệ thống.
+const updateUser = async (userId, body = {}, admin) => {
   ensureValidObjectId(userId, 'user id')
 
   const payload = {}
@@ -188,23 +221,27 @@ const updateUser = async (userId, body = {}) => {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'No valid fields to update')
   }
 
+  const before = await User.findById(userId).select('role status')
+  if (!before) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'User not found')
+  }
+
   const user = await User.findByIdAndUpdate(userId, payload, {
     new: true,
     runValidators: true,
   }).select('-passwordHash')
 
-  if (!user) {
-    throw new ApiError(StatusCodes.NOT_FOUND, 'User not found')
-  }
+  await logUserChanges({ before, payload, user, admin })
 
   return user
 }
 
 // Admin xóa tài khoản. Không cho tự xóa chính mình.
-const deleteUser = async (userId, currentAdminId) => {
+// `admin` là req.user (tài khoản admin đang thao tác) — dùng để ghi Nhật ký hệ thống.
+const deleteUser = async (userId, admin) => {
   ensureValidObjectId(userId, 'user id')
 
-  if (String(userId) === String(currentAdminId)) {
+  if (String(userId) === String(admin._id)) {
     throw new ApiError(
       StatusCodes.BAD_REQUEST,
       'You cannot delete your own account',
@@ -215,6 +252,14 @@ const deleteUser = async (userId, currentAdminId) => {
   if (!user) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found')
   }
+
+  await AuditLog.create({
+    adminName: admin.fullName,
+    adminEmail: admin.email,
+    action: AUDIT_ACTION.USER_DELETE,
+    targetId: user._id,
+    targetLabel: user.email,
+  })
 
   return { _id: userId }
 }

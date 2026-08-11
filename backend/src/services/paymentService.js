@@ -1,5 +1,6 @@
 import UpgradeTransaction from '../models/UpgradeTransaction.js'
 import WebhookLog from '../models/WebhookLog.js'
+import AuditLog from '../models/AuditLog.js'
 import User from '../models/users.js'
 import { env } from '../config/environment.js'
 import { emailService } from './email/emailService.js'
@@ -180,7 +181,11 @@ export const paymentService = {
    * Lấy Lịch sử giao dịch của chính người dùng (PAY-05)
    */
   async getUserTransactionHistory(userId) {
-    const transactions = await UpgradeTransaction.find({ userId })
+    // Chỉ lấy các giao dịch đã hoàn tất/xử lý (PAID, PARTIAL_PAID, CANCELLED, UNMATCHED...) - Bỏ qua các đơn PENDING chưa chuyển khoản
+    const transactions = await UpgradeTransaction.find({
+      userId,
+      status: { $ne: 'PENDING' },
+    })
       .sort({ createdAt: -1 })
       .lean()
 
@@ -207,6 +212,15 @@ export const paymentService = {
    */
   async handleSePayWebhook(webhookData, authHeader = '') {
     const { content, transferAmount, referenceCode, accountNumber, accountName } = webhookData
+
+    // Chống lặp Webhook (Idempotency Check): Nếu mã giao dịch ngân hàng đã được xử lý trước đó thì bỏ qua
+    if (referenceCode) {
+      const existingLog = await WebhookLog.findOne({ bankReferenceCode: referenceCode })
+      if (existingLog) {
+        console.log(`⚠️ Webhook [${referenceCode}] đã được hệ thống xử lý trước đó. Bỏ qua ghi trùng.`)
+        return { success: true, message: 'Giao dịch đã được xử lý trước đó (Bỏ qua ghi trùng)' }
+      }
+    }
 
     const maskedAcc = maskAccountNumber(accountNumber)
 
@@ -422,22 +436,52 @@ export const paymentService = {
 
     // Cập nhật PRO cho User theo số ngày
     const newDays = Number(daysToAdd)
-    let newExpiresAt = calculateProExpirationDate(targetUser.currentPlanExpiresAt, newDays)
 
-    if (newDays < 0) {
-      // Luồng gỡ PRO: Nếu ngày mới <= hiện tại -> Đưa về FREE
+    if (newDays <= -999) {
+      // Gỡ PRO hoàn toàn ngay lập tức
+      targetUser.plan = 'FREE'
+      targetUser.currentPlanExpiresAt = null
+    } else if (newDays < 0) {
+      // Luồng trừ ngày PRO
+      let newExpiresAt = calculateProExpirationDate(targetUser.currentPlanExpiresAt, newDays)
       if (newExpiresAt <= new Date()) {
         targetUser.plan = 'FREE'
         targetUser.currentPlanExpiresAt = null
       } else {
+        targetUser.plan = 'PRO'
         targetUser.currentPlanExpiresAt = newExpiresAt
       }
     } else {
+      // Luồng cộng thêm ngày PRO
+      let newExpiresAt = calculateProExpirationDate(targetUser.currentPlanExpiresAt, newDays)
       targetUser.plan = 'PRO'
       targetUser.currentPlanExpiresAt = newExpiresAt
     }
 
     await targetUser.save()
+
+    // Ghi nhận nhật ký hệ thống (Audit Log) trực tiếp vào MongoDB
+    try {
+      let adminInfo = { name: 'System Admin', email: 'admin@gmail.com' }
+      if (adminId) {
+        const adminUser = await User.findById(adminId)
+        if (adminUser) {
+          adminInfo = { name: adminUser.fullName, email: adminUser.email }
+        }
+      }
+      await AuditLog.create({
+        adminName: adminInfo.name,
+        adminEmail: adminInfo.email,
+        action: newDays >= 0 ? 'USER_PRO_GRANT' : 'USER_PRO_REVOKE',
+        targetId: targetUser._id,
+        targetLabel: targetUser.email,
+        detail: newDays >= 0
+          ? `Cấp +${newDays} ngày PRO (Lý do: ${adminNote.trim()})`
+          : `Gỡ gói PRO (${newDays} ngày) (Lý do: ${adminNote.trim()})`,
+      })
+    } catch (auditErr) {
+      console.error('⚠️ [AUDIT_LOG] Lỗi ghi nhật ký hệ thống:', auditErr.message)
+    }
 
     // Gửi email thông báo cho khách nếu cấp PRO (PAY-09 item 5)
     if (newDays > 0) {

@@ -18,6 +18,8 @@ export interface AdminUserItem {
   hasPassword: boolean
   status: UserStatus
   role: UserRole
+  plan?: 'FREE' | 'PRO'
+  currentPlanExpiresAt?: string | null
   createdAt: string
   updatedAt: string
   /** Tổng token AI đã dùng (cộng dồn mọi lượt sinh AI, mọi project) — tính trực tiếp từ
@@ -140,4 +142,46 @@ export interface AiLeaderboardRow {
   acceptedCount: number
   quotaUsedToday: number
   quotaLimitToday: number
+}
+
+// ---------- Nhật ký hệ thống ----------
+// Ghi lại các thao tác nhạy cảm của admin trên tài khoản người dùng — dữ liệu THẬT, lưu vào
+// MongoDB (AuditLog model). Backend tự ghi log khi xử lý (userService.js ghi USER_LOCK/
+// USER_UNLOCK/USER_ROLE_CHANGE/USER_DELETE, paymentService.js ghi USER_PRO_GRANT/
+// USER_PRO_REVOKE) — frontend chỉ đọc, không tự gọi API ghi log để tránh trùng.
+
+export type AuditAction =
+  | 'USER_LOCK'
+  | 'USER_UNLOCK'
+  | 'USER_ROLE_CHANGE'
+  | 'USER_DELETE'
+  | 'USER_PRO_GRANT'
+  | 'USER_PRO_REVOKE'
+
+export interface AuditLogItem {
+  _id: string
+  createdAt: string
+  adminName: string
+  adminEmail: string
+  action: AuditAction
+  /** Id của đối tượng bị tác động (vd userId) — null với log cũ ghi trước khi có field này. */
+  targetId: string | null
+  targetLabel: string
+  detail: string
+}
+
+export interface AuditLogQuery {
+  page?: number
+  limit?: number
+  action?: AuditAction | ''
+  adminEmail?: string
+  dateFrom?: string
+  dateTo?: string
+}
+
+export interface AuditLogResponse {
+  items: AuditLogItem[]
+  total: number
+  page: number
+  limit: number
 }

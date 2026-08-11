@@ -33,6 +33,8 @@ export function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
   const [timeLeft, setTimeLeft] = useState<number>(1800)
   // Thời gian đã trôi qua kể từ khi mở màn hình thanh toán (để hiện cảnh báo 2 phút - PAY-04)
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0)
+  // Thông báo phản hồi sau khi bấm "Tôi đã chuyển khoản thành công" (PENDING/PARTIAL_PAID/CANCELLED)
+  const [checkingNotice, setCheckingNotice] = useState<string | null>(null)
 
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -78,8 +80,10 @@ export function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
 
       try {
         const res = await paymentApi.checkPaymentStatus(order.paymentCode)
-        if (res.status === 'PAID' || res.plan === 'PRO') {
+        // CHỈ công nhận khi đúng đơn này có status === 'PAID' (tránh bug account đã là PRO từ trước khi gia hạn)
+        if (res.status === 'PAID') {
           setPaymentStatus('PAID')
+          setCheckingNotice(null)
           if (user) {
             setUser({
               ...user,
@@ -117,6 +121,7 @@ export function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
       const data = await paymentApi.createPaymentOrder()
       setOrder(data)
       setPaymentStatus('PENDING')
+      setCheckingNotice(null)
 
       // Đặt số giây đếm ngược theo expiresAt thực tế từ backend
       if (data.expiresAt) {
@@ -141,6 +146,7 @@ export function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
     setPaymentStatus('PENDING')
     setTimeLeft(1800)
     setElapsedSeconds(0)
+    setCheckingNotice(null)
     if (pollingRef.current) clearInterval(pollingRef.current)
     if (timerRef.current) clearInterval(timerRef.current)
   }
@@ -154,9 +160,10 @@ export function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
   const handleManualCheck = async () => {
     if (!order) return
     setLoading(true)
+    setCheckingNotice(null)
     try {
       const res = await paymentApi.checkPaymentStatus(order.paymentCode)
-      if (res.status === 'PAID' || res.plan === 'PRO') {
+      if (res.status === 'PAID') {
         setPaymentStatus('PAID')
         if (user) {
           setUser({
@@ -165,9 +172,22 @@ export function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
             currentPlanExpiresAt: res.currentPlanExpiresAt,
           })
         }
+      } else if (res.status === 'PENDING') {
+        setCheckingNotice(
+          'Hệ thống chưa nhận được tiền từ SePay/ngân hàng. Vui lòng chờ 5 - 10 giây để hệ thống tự xử lý hoặc kiểm tra lại nội dung chuyển khoản!'
+        )
+      } else if (res.status === 'PARTIAL_PAID') {
+        setCheckingNotice(
+          'Hệ thống ghi nhận bạn đã chuyển thiếu tiền. Đơn hàng đã được ghi nhận vào danh sách hỗ trợ đối soát thủ công!'
+        )
+      } else if (res.status === 'CANCELLED') {
+        setCheckingNotice(
+          'Đơn hàng đã hết hạn giữ đơn (30 phút). Vui lòng tắt popup và bấm gia hạn lại đơn mới!'
+        )
       }
     } catch (err) {
       console.error(err)
+      setCheckingNotice('Không thể kiểm tra trạng thái giao dịch. Vui lòng thử lại sau.')
     } finally {
       setLoading(false)
     }
@@ -364,6 +384,13 @@ export function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
                   <ShieldCheck size={14} />
                   Tôi đã chuyển khoản thành công
                 </Button>
+
+                {/* Phản hồi sau khi bấm kiểm tra thủ công — PENDING/PARTIAL_PAID/CANCELLED/lỗi mạng. */}
+                {checkingNotice && (
+                  <div className="p-2.5 rounded-lg bg-pastel-yellow text-pastel-yellow-ink text-[11px] font-medium">
+                    {checkingNotice}
+                  </div>
+                )}
               </div>
             </div>
           </div>

@@ -5,6 +5,9 @@ import type {
   AdminUserItem,
   AiLeaderboardRow,
   AiOverviewStats,
+  AuditLogItem,
+  AuditLogQuery,
+  AuditLogResponse,
   GetUsersQuery,
   GetUsersResponse,
   QuotaTimeframe,
@@ -59,6 +62,21 @@ export const adminApi = {
   /** GET /admin/ai/quota — Bảng xếp hạng token/lượt sinh theo user (dữ liệu thật). */
   getAiQuota: async (timeframe: QuotaTimeframe = '30d'): Promise<AiLeaderboardRow[]> => {
     const res = await api.get<ApiResponse<AiLeaderboardRow[]>>(`/admin/ai/quota?timeframe=${timeframe}`)
+    return res.data.data
+  },
+
+  /** GET /admin/audit — Lấy danh sách Nhật ký hệ thống (dữ liệu thật, đọc từ AuditLog). */
+  getAuditLogs: async (query: AuditLogQuery = {}): Promise<AuditLogResponse> => {
+    const res = await api.get<ApiResponse<AuditLogResponse>>('/admin/audit', { params: query })
+    return res.data.data
+  },
+
+  /** POST /admin/audit — Ghi 1 dòng Nhật ký hệ thống. Backend đã tự ghi log ở mọi thao tác nhạy
+   * cảm hiện có (khoá/mở khoá, đổi vai trò, xoá tài khoản, cấp/gỡ PRO) — hàm này chỉ dùng khi
+   * cần ghi log thủ công cho 1 action mới chưa có ở backend. adminName/adminEmail luôn lấy từ
+   * admin đang đăng nhập (req.user) ở server, không nhận từ client. */
+  createAuditLog: async (payload: { action: string; targetId?: string; targetLabel: string; detail?: string }): Promise<AuditLogItem> => {
+    const res = await api.post<ApiResponse<AuditLogItem>>('/admin/audit', payload)
     return res.data.data
   },
 }

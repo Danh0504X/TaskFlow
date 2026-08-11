@@ -28,6 +28,7 @@ import AdminUsersPage from '@/features/admin/pages/AdminUsersPage'
 import AdminAiPage from '@/features/admin/pages/AdminAiPage'
 import AiOverviewTab from '@/features/admin/pages/ai/AiOverviewTab'
 import AiQuotaTab from '@/features/admin/pages/ai/AiQuotaTab'
+import AdminAuditPage from '@/features/admin/pages/AdminAuditPage'
 import { AdminPaymentsPage } from '@/features/admin/pages/AdminPaymentsPage'
 import Spinner from '@/components/ui/Spinner'
 
@@ -110,6 +111,7 @@ const router = createBrowserRouter([
         ],
       },
       { path: 'payments', element: <AdminPaymentsPage /> },
+      { path: 'audit', element: <AdminAuditPage /> },
     ],
   },
   {

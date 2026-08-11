@@ -18,6 +18,17 @@ export const EMAIL_PURPOSE = {
   PAYMENT_SUCCESS: 'PAYMENT_SUCCESS',
 }
 
+// Hành động của Admin được ghi vào Nhật ký hệ thống (AuditLog) — khớp type AuditAction ở
+// frontend (admin.types.ts). Backend tự ghi log khi xử lý, không nhận action tuỳ ý từ client.
+export const AUDIT_ACTION = {
+  USER_LOCK: 'USER_LOCK',
+  USER_UNLOCK: 'USER_UNLOCK',
+  USER_ROLE_CHANGE: 'USER_ROLE_CHANGE',
+  USER_DELETE: 'USER_DELETE',
+  USER_PRO_GRANT: 'USER_PRO_GRANT',
+  USER_PRO_REVOKE: 'USER_PRO_REVOKE',
+}
+
 // Token/mã xác thực chỉ có hiệu lực trong 10 phút
 export const EMAIL_TOKEN_EXPIRES_MINUTES = 10
 

@@ -6,8 +6,8 @@ interface AdminPageLayoutProps {
   title: string
   subtitle?: ReactNode
   actions?: ReactNode
-  /** Chèn ngay dưới PageHeader, trước vùng nội dung chính — dùng cho thanh tab con (vd 3 tab
-   * của "Giám sát AI"). Chỉ AdminAiPage cần tới prop này. */
+  /** Chèn ngay dưới PageHeader, trước vùng nội dung chính — dùng cho thanh tab con (vd tab của
+   * "Giám sát AI" hoặc "Thanh toán & Webhook"). */
   headerExtra?: ReactNode
   children: ReactNode
 }
@@ -15,8 +15,8 @@ interface AdminPageLayoutProps {
 /** Khung trang dùng chung cho MỌI trang trong khu Admin: cùng độ rộng tối đa, cùng lề ngang,
  * cùng khoảng cách trên/dưới — để đổi trang không bị "nhảy" bố cục do mỗi trang tự chọn
  * max-w/padding riêng. Mọi trang admin (AdminOverviewPage, AdminUsersPage, AdminAiPage,
- * AdminPaymentsPage) đều phải bọc nội dung bằng component này thay vì tự viết lại wrapper +
- * PageHeader. */
+ * AdminPaymentsPage, AdminAuditPage) đều phải bọc nội dung bằng component này thay vì tự viết
+ * lại wrapper + PageHeader. */
 const AdminPageLayout = ({ title, subtitle, actions, headerExtra, children }: AdminPageLayoutProps) => (
   <div className="max-w-7xl mx-auto flex flex-col">
     <PageHeader title={title} subtitle={subtitle} actions={actions} />
