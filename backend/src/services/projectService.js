@@ -47,17 +47,28 @@ const toProjectDTO = (project) => {
   }
 }
 
-// Không có key -> tự sinh từ tên project (chữ đầu mỗi từ, tối đa 5 ký tự).
-const deriveKeyFromName = (name) => {
-  const initials = name
-    .trim()
-    .split(/\s+/)
-    .map((word) => word[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 5)
+const removeVietnameseTones = (str) => {
+  return str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/Đ/g, 'D')
+    .replace(/đ/g, 'd')
+}
 
-  return initials.length >= 2 ? initials : name.slice(0, 5).toUpperCase()
+// Không có key -> tự sinh từ tên project (lấy 2 chữ cái đầu tiên của 2 chữ đầu trên tên dự án).
+const deriveKeyFromName = (name) => {
+  const cleanName = removeVietnameseTones((name || '').trim()).replace(/[^a-zA-Z0-9\s]/g, '')
+  if (!cleanName) return 'PR'
+
+  const words = cleanName.split(/\s+/).filter(Boolean)
+  if (words.length === 0) return 'PR'
+
+  if (words.length >= 2) {
+    return (words[0][0] + words[1][0]).toUpperCase()
+  }
+
+  const singleWord = words[0].slice(0, 2).toUpperCase()
+  return singleWord.length >= 2 ? singleWord : (singleWord + 'X').toUpperCase()
 }
 
 const resolveProjectKey = (key, name) => {

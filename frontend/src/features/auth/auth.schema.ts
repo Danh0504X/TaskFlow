@@ -9,12 +9,17 @@ const fullNameSchema = z
   .max(100, 'Tên tối đa 100 ký tự.')
   .regex(/^[\p{L}\s]+$/u, 'Tên chỉ được chứa chữ cái và khoảng trắng, không chứa số hoặc ký tự đặc biệt.')
 
+// Policy mật khẩu mạnh thống nhất cho toàn bộ hệ thống (đăng ký, đặt lại mật khẩu, đổi/thiết lập mật khẩu).
+export const strongPasswordSchema = z
+  .string()
+  .min(8, 'Mật khẩu phải có ít nhất 8 ký tự.')
+
 // Schema validate form đăng ký. Quy tắc khớp ràng buộc backend (/auth/sign-up).
 export const registerSchema = z
   .object({
     fullName: fullNameSchema,
     email: z.string().trim().email('Email không đúng định dạng.'),
-    password: z.string().min(8, 'Mật khẩu phải có ít nhất 8 ký tự.'),
+    password: strongPasswordSchema,
     confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {
@@ -41,11 +46,10 @@ export const forgotPasswordSchema = z.object({
 
 export type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>
 
-// Schema validate form đặt lại mật khẩu. Độ dài tối thiểu 6 ký tự khớp
-// ràng buộc backend (emailAccountService.resetPassword).
+// Schema validate form đặt lại mật khẩu (Reset password).
 export const resetPasswordSchema = z
   .object({
-    newPassword: z.string().min(6, 'Mật khẩu phải có ít nhất 6 ký tự.'),
+    newPassword: strongPasswordSchema,
     confirmPassword: z.string(),
   })
   .refine((data) => data.newPassword === data.confirmPassword, {
@@ -55,12 +59,12 @@ export const resetPasswordSchema = z
 
 export type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>
 
-// Schema validate form đổi mật khẩu khi đã đăng nhập (trang Profile).
+// Schema validate form đổi / thiết lập mật khẩu khi đã đăng nhập (trang Profile & tài khoản Google).
 export const changePasswordSchema = z
   .object({
     // Sử dụng .optional() thay vì .min(1) để form có thể submit khi ô này bị ẩn
     currentPassword: z.string().optional(),
-    newPassword: z.string().min(6, 'Mật khẩu phải có ít nhất 6 ký tự.'),
+    newPassword: strongPasswordSchema,
     confirmPassword: z.string(),
   })
   .refine((data) => data.newPassword === data.confirmPassword, {

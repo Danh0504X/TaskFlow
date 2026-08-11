@@ -208,10 +208,10 @@ const updateUser = async (userId, body = {}, admin) => {
   }
 
   if (body.password !== undefined) {
-    if (!body.password || body.password.length < 6) {
+    if (!body.password || body.password.length < 8) {
       throw new ApiError(
         StatusCodes.BAD_REQUEST,
-        'Password must be at least 6 characters',
+        'Password must be at least 8 characters',
       )
     }
     payload.passwordHash = await bcrypt.hash(body.password, 10)
