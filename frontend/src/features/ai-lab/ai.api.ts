@@ -12,6 +12,7 @@ import type {
   CreateGenerationPayload,
   CreateGenerationResponse,
   EditDraftPayload,
+  EpicTaskDrafts,
 } from './ai.types'
 
 // Lớp gọi API cho AI Lab. Đa số endpoint nested dưới project: /projects/:projectId/ai/...,
@@ -123,6 +124,25 @@ export const aiApi = {
     const res = await api.post<ApiResponse<{ rejected: string[] }>>(
       `/projects/${projectId}/ai/generations/${generationId}/reject`,
       { ids },
+    )
+    return res.data.data
+  },
+
+  /** DELETE .../ai/epics/:epicId/task-drafts — "Xoá tất cả & sinh lại từ đầu": xoá HẲN mọi task
+   * nháp chưa duyệt của 1 epic THẬT (không phải từ chối) — task đã duyệt (đã là issue thật)
+   * không bị ảnh hưởng. */
+  clearEpicTaskDrafts: async (projectId: string, epicId: string): Promise<{ deletedCount: number }> => {
+    const res = await api.delete<ApiResponse<{ deletedCount: number }>>(
+      `/projects/${projectId}/ai/epics/${epicId}/task-drafts`,
+    )
+    return res.data.data
+  },
+
+  /** GET .../ai/epics/:epicId/task-drafts — task nháp hiện có của 1 epic thật, gọi ngay khi mở
+   * modal "Sinh Task bằng AI" để hiện thẳng bố cục quản lý draft, không cần màn hình chờ riêng. */
+  getEpicTaskDrafts: async (projectId: string, epicId: string): Promise<EpicTaskDrafts> => {
+    const res = await api.get<ApiResponse<EpicTaskDrafts>>(
+      `/projects/${projectId}/ai/epics/${epicId}/task-drafts`,
     )
     return res.data.data
   },

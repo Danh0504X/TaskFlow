@@ -10,7 +10,9 @@ export const useRejectDrafts = (projectId: string, generationId: string) => {
   return useMutation({
     mutationFn: (ids: string[]) => aiApi.rejectDrafts(projectId, generationId, ids),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: aiKeys.generation(projectId, generationId) })
+      // Invalidate cả namespace ai-lab — DraftTable dùng chung cho cả AiGenerateEpicModal (đọc
+      // qua aiKeys.generation) lẫn AiQuickGenerateModal (đọc qua aiKeys.epicTaskDrafts, khác hẳn).
+      qc.invalidateQueries({ queryKey: aiKeys.all })
       toast.success('Đã từ chối draft đã chọn')
     },
     onError: (error) => toast.error(getApiErrorMessage(error)),

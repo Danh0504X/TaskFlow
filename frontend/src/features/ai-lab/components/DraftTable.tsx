@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Check, CheckSquare, Square, Trash2 } from 'lucide-react'
 import Spinner from '@/components/ui/Spinner'
@@ -12,15 +12,21 @@ import { useRejectDrafts } from '../hooks/useRejectDrafts'
 import { useDeleteDraft } from '../hooks/useDeleteDraft'
 import { useAddDraft } from '../hooks/useAddDraft'
 import { useCreateGeneration } from '../hooks/useCreateGeneration'
-import { useGenerationPolling } from '../hooks/useGenerationPolling'
 import DraftRow from './DraftRow'
 import DraftEditModal from './DraftEditModal'
-import AddEpicQuickAdd from './AddEpicQuickAdd'
+import AddDraftQuickAdd from './AddDraftQuickAdd'
+import GenerationTurnWatcher from './GenerationTurnWatcher'
 
 interface DraftTableProps {
   projectId: string
   generationId: string
   drafts: AiDraftIssue[]
+  /** Loại draft được phép "thêm tay" ở khung "+" đầu bảng:
+   * - EPIC: bảng đang là cây Epic-Task (AiGenerateEpicModal) — thêm 1 epic gốc mới vào phiên.
+   * - TASK: bảng đang là danh sách PHẲNG task của 1 epic THẬT cụ thể (AiQuickGenerateModal) —
+   *   thêm 1 task, kèm `parentIssueId` để task thêm tay cũng có đúng cha khi duyệt (xem
+   *   addManualDraft ở backend — trước đây thiếu field này, task thêm tay ở đây sẽ mồ côi cha). */
+  manualAdd: { type: 'EPIC' } | { type: 'TASK'; parentIssueId: string }
 }
 
 const iconButtonClass =
@@ -33,29 +39,6 @@ const iconButtonClass =
 const statusSortWeight = (status: AiDraftIssue['status']) => (status === 'SUGGESTED' ? 0 : 1)
 const byStatusThenCreated = (a: AiDraftIssue, b: AiDraftIssue) =>
   statusSortWeight(a.status) - statusSortWeight(b.status)
-
-interface TaskTurnWatcherProps {
-  projectId: string
-  turnId: string
-  onSettled: (status: AiGenerationStatus, errorMessage: string | null) => void
-}
-
-/** Poll ngầm 1 turn "Sinh Task cho epic nháp" tới khi xong (COMPLETED/FAILED) rồi báo cho
- * DraftTable gỡ trạng thái loading + biết rõ thành công hay thất bại (để báo toast) — không
- * render gì, thuần logic. Tách riêng khỏi component chính vì mỗi epic đang sinh task cần 1 vòng
- * poll độc lập (không thể gọi hook trong loop). */
-const TaskTurnWatcher = ({ projectId, turnId, onSettled }: TaskTurnWatcherProps) => {
-  const { data } = useGenerationPolling(projectId, turnId)
-
-  useEffect(() => {
-    if (data?.status === 'COMPLETED' || data?.status === 'FAILED') {
-      onSettled(data.status, data.errorMessage)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data?.status])
-
-  return null
-}
 
 /**
  * Bảng duyệt draft — cây Req->Epic (task con thụt vào dưới epic cha theo parentTempId),
@@ -75,7 +58,7 @@ const TaskTurnWatcher = ({ projectId, turnId, onSettled }: TaskTurnWatcherProps)
  * sinh chỉ theo dõi CỤC BỘ cho đúng epic đó (`generatingEpics` map theo tempId) — epic khác không
  * bị ảnh hưởng, không có spinner load lại toàn bảng.
  */
-const DraftTable = ({ projectId, generationId, drafts }: DraftTableProps) => {
+const DraftTable = ({ projectId, generationId, drafts, manualAdd }: DraftTableProps) => {
   const queryClient = useQueryClient()
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [editingDraft, setEditingDraft] = useState<AiDraftIssue | null>(null)
@@ -96,13 +79,19 @@ const DraftTable = ({ projectId, generationId, drafts }: DraftTableProps) => {
 
   const acceptMutation = useAcceptDrafts(projectId, generationId)
   const rejectMutation = useRejectDrafts(projectId, generationId)
-  const deleteMutation = useDeleteDraft(projectId, generationId)
+  const deleteMutation = useDeleteDraft(projectId)
   const addMutation = useAddDraft(projectId, generationId)
   const generateTasksMutation = useCreateGeneration(projectId)
 
-  const handleQuickAddEpic = (title: string) => {
-    addMutation.mutate({ title, type: 'EPIC', priority: 'MEDIUM' })
+  const handleQuickAdd = (title: string) => {
+    if (manualAdd.type === 'EPIC') {
+      addMutation.mutate({ title, type: 'EPIC', priority: 'MEDIUM' })
+    } else {
+      addMutation.mutate({ title, type: 'TASK', priority: 'MEDIUM', parentIssueId: manualAdd.parentIssueId })
+    }
   }
+
+  const manualAddLabel = manualAdd.type === 'EPIC' ? 'Epic' : 'Task'
 
   const handleGenerateTasks = (epic: AiDraftIssue) => {
     if (generatingEpics[epic.tempId]) return
@@ -202,11 +191,12 @@ const DraftTable = ({ projectId, generationId, drafts }: DraftTableProps) => {
         <div>
           <p className="text-sm font-semibold text-ink">Chưa có draft nào</p>
           <p className="mt-1 text-xs text-subtle">
-            AI chưa đề xuất được issue nào — thử thêm Epic bên dưới hoặc sinh lại với requirement chi tiết hơn.
+            AI chưa đề xuất được issue nào — thử thêm {manualAddLabel} bên dưới hoặc sinh lại với requirement chi
+            tiết hơn.
           </p>
         </div>
         <div className="mx-auto max-w-xs text-left">
-          <AddEpicQuickAdd onSubmit={handleQuickAddEpic} pending={addMutation.isPending} />
+          <AddDraftQuickAdd label={manualAddLabel} onSubmit={handleQuickAdd} pending={addMutation.isPending} />
         </div>
       </div>
     )
@@ -268,7 +258,7 @@ const DraftTable = ({ projectId, generationId, drafts }: DraftTableProps) => {
       </div>
 
       <div className="space-y-1.5">
-        <AddEpicQuickAdd onSubmit={handleQuickAddEpic} pending={addMutation.isPending} />
+        <AddDraftQuickAdd label={manualAddLabel} onSubmit={handleQuickAdd} pending={addMutation.isPending} />
 
         {tree.map(({ root, children }) => {
           const activeTurnId = generatingEpics[root.tempId]
@@ -307,7 +297,7 @@ const DraftTable = ({ projectId, generationId, drafts }: DraftTableProps) => {
                     <div className="flex items-center gap-2 rounded-md border border-dashed border-hairline bg-canvas/40 px-2.5 py-2 text-xs font-medium text-subtle">
                       <Spinner className="h-3.5 w-3.5" />
                       Đang sinh task cho epic này...
-                      <TaskTurnWatcher
+                      <GenerationTurnWatcher
                         projectId={projectId}
                         turnId={activeTurnId}
                         onSettled={(status, errorMessage) =>
@@ -328,7 +318,6 @@ const DraftTable = ({ projectId, generationId, drafts }: DraftTableProps) => {
         draft={editingDraft}
         onClose={() => setEditingDraft(null)}
         projectId={projectId}
-        generationId={generationId}
       />
 
       <ConfirmDialog

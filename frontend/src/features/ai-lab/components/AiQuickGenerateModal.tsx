@@ -1,200 +1,154 @@
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { Layers, Sparkles } from 'lucide-react'
+import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { Layers, Sparkles, Trash2 } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import Spinner from '@/components/ui/Spinner'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
+import { toast } from '@/components/ui/toast/toastStore'
 import { useAiModalStore } from '../aiModalStore'
-import { useGenerationPolling } from '../hooks/useGenerationPolling'
+import { useEpicTaskDrafts } from '../hooks/useEpicTaskDrafts'
 import { useCreateGeneration } from '../hooks/useCreateGeneration'
-import { generateFromRequirementSchema, type GenerateFromRequirementValues } from '../ai.schema'
-import { AI_GENERATION_TYPE, type AiGenerationDetail } from '../ai.types'
-import { getGenerationContextLabel, GENERATION_STATUS_LABEL } from '../ai.utils'
-import GenerationStatus from './GenerationStatus'
+import { useClearEpicTaskDrafts } from '../hooks/useClearEpicTaskDrafts'
+import { AI_GENERATION_TYPE, type AiGenerationStatus } from '../ai.types'
+import { reportAiFailure } from '../ai.utils'
+import { aiKeys } from '../ai.keys'
 import DraftTable from './DraftTable'
-import AiGenerationHistoryPanel from './AiGenerationHistoryPanel'
+import GenerationTurnWatcher from './GenerationTurnWatcher'
 
-const fieldErrorClass = 'text-[10px] text-pastel-red-ink font-medium'
+/**
+ * Modal "Sinh Task bằng AI" cho 1 epic THẬT — gắn trong trang chi tiết project, đọc toàn bộ state
+ * từ aiModalStore (không cần props), mount 1 lần ở ProjectWorkspacePage là đủ.
+ *
+ * Luôn mở THẲNG vào bố cục quản lý task nháp (xem/thêm/sửa/xoá/duyệt qua DraftTable) — KHÔNG còn
+ * màn hình form-ở-giữa riêng biệt như trước (EpicTaskForm cũ). Nút sinh task đổi vị trí/nhãn tuỳ
+ * đã có draft hay chưa: CHƯA có gì -> nút to "Tạo Task Bằng AI" nằm giữa nội dung (CTA rõ ràng
+ * cho trạng thái trống); ĐÃ có draft -> chuyển vào thanh công cụ, đổi nhãn "Tạo thêm task" (không
+ * còn là lần đầu). Cả 2 đều dùng chung `handleGenerate` — vì 1 epic thật giờ chỉ có đúng 1
+ * "phiên" duy nhất (mọi lượt gộp theo sourceEntityId ở backend, xem resolveSessionGenerationIds),
+ * không cần màn hình riêng để "bắt đầu 1 lượt mới".
+ */
+const AiQuickGenerateModal = () => {
+  const { isOpen, projectId, context, close } = useAiModalStore()
+  const queryClient = useQueryClient()
+  const [creatingTurnId, setCreatingTurnId] = useState<string | null>(null)
+  const [confirmClear, setConfirmClear] = useState(false)
 
-interface RequirementFormProps {
-  projectId: string
-  onCreated: (id: string) => void
-}
+  const epicId = context?.generationType === 'EPIC_TO_TASK' ? context.sourceEntityId : undefined
+  const { data: session } = useEpicTaskDrafts(projectId, epicId)
+  const createMutation = useCreateGeneration(projectId ?? '')
+  const clearMutation = useClearEpicTaskDrafts(projectId ?? '')
 
-/** Form REQ_TO_EPIC rút gọn — không cần tab chọn chế độ như GenerateForm ở /ai-lab vì ngữ cảnh
- * (mở từ nút "Sinh Epic bằng AI") đã xác định sẵn generationType. Bố cục dạng "composer" (textarea
- * + thanh hành động liền dưới trong cùng 1 khối viền) thay vì textarea rộng hết cỡ + nút rời rạc
- * — thu hẹp về 1 cột đọc thoải mái và canh giữa trong không gian modal cố định chiều cao. */
-const RequirementForm = ({ projectId, onCreated }: RequirementFormProps) => {
-  const createMutation = useCreateGeneration(projectId)
-  const {
-    register,
-    handleSubmit,
-    watch,
-    formState: { errors },
-  } = useForm<GenerateFromRequirementValues>({
-    resolver: zodResolver(generateFromRequirementSchema),
-    defaultValues: { inputPrompt: '' },
-  })
-  const promptValue = watch('inputPrompt') || ''
+  // Modal này chỉ phục vụ EPIC_TO_TASK (từ epic thật) — REQ_TO_EPIC đã có hẳn AiGenerateEpicModal
+  // riêng, aiModalStore.openForRequirement() hiện không có nơi nào gọi tới.
+  if (!projectId || !context || context.generationType !== 'EPIC_TO_TASK') return null
 
-  const onSubmit = handleSubmit((values) => {
-    createMutation.mutate(
-      { generationType: AI_GENERATION_TYPE.REQ_TO_EPIC, inputPrompt: values.inputPrompt },
-      { onSuccess: (res) => onCreated(res.generationId) },
-    )
-  })
-
-  return (
-    <div className="flex h-full flex-col items-center justify-center px-2">
-      <div className="w-full max-w-xl space-y-4">
-        <div className="space-y-1 text-center">
-          <h3 className="font-editorial text-lg font-medium text-ink">Mô tả yêu cầu nghiệp vụ</h3>
-          <p className="text-xs text-subtle">Càng chi tiết, AI càng đề xuất sát với dự án của bạn.</p>
-        </div>
-
-        <form onSubmit={onSubmit} noValidate>
-          <div className="rounded-xl border border-hairline bg-surface transition-colors focus-within:border-ink/25">
-            <textarea
-              rows={6}
-              placeholder="Ví dụ: học viên đăng ký khóa học, thanh toán, làm quiz, nhận chứng chỉ..."
-              className="w-full resize-none rounded-t-xl bg-transparent px-4 pt-4 pb-2 text-sm text-ink outline-none placeholder:text-subtle"
-              autoFocus
-              {...register('inputPrompt')}
-            />
-            <div className="flex items-center justify-between gap-3 border-t border-hairline px-4 py-2.5">
-              <span className="text-[10px] font-medium text-subtle">{promptValue.length}/5000</span>
-              <Button type="submit" variant="primary" size="sm" loading={createMutation.isPending}>
-                <Sparkles size={13} /> Sinh Epic
-              </Button>
-            </div>
-          </div>
-          {errors.inputPrompt?.message && <p className={`${fieldErrorClass} mt-1.5`}>{errors.inputPrompt.message}</p>}
-        </form>
-      </div>
-    </div>
-  )
-}
-
-interface EpicTaskFormProps {
-  projectId: string
-  sourceEntityId: string
-  sourceEpicTitle: string
-  onCreated: (id: string) => void
-}
-
-/** EPIC_TO_TASK không cần nhập gì — epic nguồn đã biết sẵn (mở từ nút trên chính epic đó). */
-const EpicTaskForm = ({ projectId, sourceEntityId, sourceEpicTitle, onCreated }: EpicTaskFormProps) => {
-  const createMutation = useCreateGeneration(projectId)
+  const invalidateSession = () => {
+    queryClient.invalidateQueries({ queryKey: aiKeys.epicTaskDrafts(projectId, context.sourceEntityId) })
+  }
 
   const handleGenerate = () => {
+    if (creatingTurnId) return
     createMutation.mutate(
-      { generationType: AI_GENERATION_TYPE.EPIC_TO_TASK, sourceEntityId },
-      { onSuccess: (res) => onCreated(res.generationId) },
+      { generationType: AI_GENERATION_TYPE.EPIC_TO_TASK, sourceEntityId: context.sourceEntityId },
+      { onSuccess: (res) => setCreatingTurnId(res.generationId) },
     )
   }
 
+  const handleTurnSettled = (status: AiGenerationStatus, errorMessage: string | null) => {
+    setCreatingTurnId(null)
+    if (status === 'FAILED') {
+      toast.error(reportAiFailure(errorMessage))
+    } else {
+      toast.success('Đã sinh task cho epic')
+    }
+    invalidateSession()
+  }
+
+  const drafts = session?.drafts ?? []
+  const isGenerating = !!creatingTurnId
+
   return (
-    <div className="flex h-full flex-col items-center justify-center px-2">
-      <div className="w-full max-w-xl space-y-4 rounded-xl border border-hairline bg-surface p-6 text-center">
-        <div className="space-y-1">
-          <h3 className="font-editorial text-lg font-medium text-ink">Sinh task cho epic này</h3>
-          <p className="text-sm text-ink">"{sourceEpicTitle}"</p>
+    <Modal open={isOpen} onClose={close} layout="wide" title="Sinh Task bằng AI" icon={<Sparkles size={18} />}>
+      <div className="flex h-[520px] flex-col gap-3">
+        <div className="flex items-start justify-between gap-3 rounded-lg border border-hairline bg-canvas px-3 py-2">
+          <div className="flex min-w-0 items-start gap-2">
+            <Layers size={14} className="mt-0.5 shrink-0 text-brand" />
+            <p className="min-w-0 truncate text-xs text-ink">
+              Epic: <span className="font-semibold">"{context.sourceEpicTitle}"</span>
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-3">
+            {/* Còn trống thì nút chính đặt ở giữa nội dung (to, dễ thấy) — toolbar chỉ còn nút
+                này khi ĐÃ có task, đổi nhãn "Tạo thêm task" cho đúng ý (không phải lần đầu nữa). */}
+            {drafts.length > 0 && (
+              <Button variant="secondary" size="sm" loading={isGenerating} onClick={handleGenerate}>
+                <Sparkles size={13} /> Tạo thêm task
+              </Button>
+            )}
+            <button
+              type="button"
+              disabled={drafts.length === 0}
+              onClick={() => setConfirmClear(true)}
+              className="flex shrink-0 items-center gap-1 text-[11px] font-semibold text-muted transition-colors hover:text-pastel-red-ink disabled:cursor-not-allowed disabled:opacity-30"
+              title="Xoá tất cả & sinh lại"
+              aria-label="Xoá tất cả & sinh lại"
+            >
+              <Trash2 size={12} />
+            </button>
+          </div>
         </div>
-        <Button variant="primary" className="w-full" loading={createMutation.isPending} onClick={handleGenerate}>
-          <Sparkles size={15} /> Sinh Task
-        </Button>
-      </div>
-    </div>
-  )
-}
 
-/** Banner ngữ cảnh — "được sinh từ yêu cầu/epic nào", đặt ngay trên trạng thái/bảng draft vì
- * modal không tự nói rõ điều này (khác /ai-lab, ở đây không có cột lịch sử làm rõ sẵn). */
-const GenerationContextBanner = ({ generation }: { generation: AiGenerationDetail }) => (
-  <div className="flex items-start gap-2 rounded-lg border border-hairline bg-canvas px-3 py-2">
-    <Layers size={14} className="mt-0.5 shrink-0 text-brand" />
-    <p className="text-xs text-ink">{getGenerationContextLabel(generation, 160)}</p>
-  </div>
-)
-
-/**
- * Modal "Sinh AI nhanh" gắn trong trang chi tiết project — đọc toàn bộ state từ aiModalStore
- * (không cần props), nên mount 1 lần ở ProjectWorkspacePage là đủ. 2 cột: trái là khu làm việc
- * chính (nhập liệu / đang xử lý / bảng draft), phải là lịch sử các lượt sinh cùng ngữ cảnh —
- * đóng modal không huỷ gì (xem aiModalStore.ts), mở lại vẫn đúng lượt đang xem.
- */
-const AiQuickGenerateModal = () => {
-  const { isOpen, projectId, context, activeGenerationId, close, setActiveGenerationId } = useAiModalStore()
-  const { data: activeGeneration } = useGenerationPolling(projectId, activeGenerationId)
-
-  if (!projectId || !context) return null
-
-  return (
-    <Modal open={isOpen} onClose={close} layout="xl" title="Sinh bằng AI" icon={<Sparkles size={18} />}>
-      {/* min-w-0 trên cột trái là bắt buộc: mặc định track "1fr" của CSS Grid không tự co
-          nhỏ hơn kích thước nội dung bên trong (vd bảng draft nhiều cột) — thiếu dòng này,
-          DraftTable ép cả lưới rộng ra, đẩy cột lịch sử tràn ra ngoài rìa modal.
-          h-[640px] cố định chiều cao modal: ít draft -> để trống phần dưới, nhiều draft -> tự
-          cuộn dọc bên trong bảng (xem max-h + overflow-y-auto ở DraftTable), không kéo dài modal.
-          Modal 'xl' (rộng hơn 'wide' trước đây) + DraftRow rút gọn còn 1 dòng -> nhiều draft hiện
-          cùng lúc hơn hẳn mà không phải cuộn. */}
-      <div className="grid h-[640px] grid-cols-1 gap-5 overflow-x-hidden sm:grid-cols-[1fr_240px]">
         {/* scrollbar-gutter:stable — luôn chừa sẵn chỗ cho thanh cuộn dọc, kể cả khi chưa cần
-            cuộn. Thiếu dòng này: thu gọn/mở epic (ẩn-hiện task con) đổi chiều cao nội dung, thanh
-            cuộn xuất-hiện/biến-mất đột ngột kéo cả cột co giãn theo -> cảm giác "vỡ" layout. */}
-        <div className="h-full min-w-0 overflow-y-auto [scrollbar-gutter:stable]">
-          {!activeGenerationId ? (
-            context.generationType === 'REQ_TO_EPIC' ? (
-              <RequirementForm projectId={projectId} onCreated={setActiveGenerationId} />
-            ) : (
-              <EpicTaskForm
-                projectId={projectId}
-                sourceEntityId={context.sourceEntityId}
-                sourceEpicTitle={context.sourceEpicTitle}
-                onCreated={setActiveGenerationId}
-              />
-            )
+            cuộn. Thiếu dòng này: thu gọn/mở task đổi chiều cao nội dung, thanh cuộn xuất-hiện/
+            biến-mất đột ngột kéo cả khối co giãn theo -> cảm giác "vỡ" layout. */}
+        <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-gutter:stable]">
+          {isGenerating && (
+            <div className="mb-3 flex items-center gap-2 rounded-md border border-dashed border-hairline bg-canvas/40 px-3 py-2 text-xs font-medium text-subtle">
+              <Spinner className="h-3.5 w-3.5" />
+              AI đang sinh task cho epic này...
+              {creatingTurnId && (
+                <GenerationTurnWatcher projectId={projectId} turnId={creatingTurnId} onSettled={handleTurnSettled} />
+              )}
+            </div>
+          )}
+
+          {drafts.length === 0 && !isGenerating ? (
+            <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
+              <p className="text-sm font-semibold text-ink">Epic này chưa có task nào do AI tạo</p>
+              <Button variant="primary" onClick={handleGenerate}>
+                <Sparkles size={15} /> Tạo Task Bằng AI
+              </Button>
+            </div>
           ) : (
-            activeGeneration && (
-              <div className="flex h-full flex-col gap-4">
-                <GenerationContextBanner generation={activeGeneration} />
-
-                {/* PENDING/PROCESSING: spinner canh giữa phần không gian còn lại (flex-1), thay
-                    vì nằm lửng lơ ngay dưới banner để trống cả mảng lớn phía dưới. */}
-                {(activeGeneration.status === 'PENDING' || activeGeneration.status === 'PROCESSING') && (
-                  <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
-                    <Spinner className="h-8 w-8 text-brand" />
-                    <p className="text-sm font-medium text-ink">{GENERATION_STATUS_LABEL[activeGeneration.status]}</p>
-                  </div>
-                )}
-
-                {activeGeneration.status === 'FAILED' && (
-                  <GenerationStatus
-                    status={activeGeneration.status}
-                    errorMessage={activeGeneration.errorMessage}
-                    onRetry={() => setActiveGenerationId(null)}
-                  />
-                )}
-
-                {activeGeneration.status === 'COMPLETED' && (
-                  <DraftTable
-                    projectId={projectId}
-                    generationId={activeGenerationId}
-                    drafts={activeGeneration.drafts}
-                  />
-                )}
-              </div>
+            session?.generationId && (
+              <DraftTable
+                projectId={projectId}
+                generationId={session.generationId}
+                drafts={drafts}
+                manualAdd={{ type: 'TASK', parentIssueId: context.sourceEntityId }}
+              />
             )
           )}
         </div>
-
-        <AiGenerationHistoryPanel
-          projectId={projectId}
-          activeGenerationId={activeGenerationId}
-          onSelect={setActiveGenerationId}
-        />
       </div>
+
+      <ConfirmDialog
+        open={confirmClear}
+        title="Xoá tất cả & sinh lại"
+        message={`Toàn bộ task nháp CHƯA duyệt của epic "${context.sourceEpicTitle}" sẽ bị xoá vĩnh viễn. Task đã duyệt (đã thành issue thật) không bị ảnh hưởng. Hành động không thể hoàn tác.`}
+        danger
+        loading={clearMutation.isPending}
+        onClose={() => setConfirmClear(false)}
+        onConfirm={() => {
+          clearMutation.mutate(context.sourceEntityId, {
+            onSuccess: () => {
+              setConfirmClear(false)
+              invalidateSession()
+            },
+          })
+        }}
+      />
     </Modal>
   )
 }

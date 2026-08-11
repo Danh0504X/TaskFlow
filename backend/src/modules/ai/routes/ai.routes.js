@@ -7,6 +7,8 @@ import {
   addManualDraft,
   editDraft,
   deleteDraft,
+  clearEpicTaskDrafts,
+  getEpicTaskDrafts,
   acceptDrafts,
   rejectDrafts,
 } from '../controllers/aiGeneration.controller.js'
@@ -36,5 +38,10 @@ router.post('/generations/:genId/reject', rejectDrafts)
 
 router.patch('/drafts/:draftId', editDraft)
 router.delete('/drafts/:draftId', deleteDraft)
+
+// Task nháp hiện có của 1 epic thật (dùng khi mở modal "Sinh Task bằng AI"). Xoá tất cả & sinh
+// lại từ đầu — không tốn quota (không gọi AI, chỉ dọn draft).
+router.get('/epics/:epicId/task-drafts', getEpicTaskDrafts)
+router.delete('/epics/:epicId/task-drafts', clearEpicTaskDrafts)
 
 export default router

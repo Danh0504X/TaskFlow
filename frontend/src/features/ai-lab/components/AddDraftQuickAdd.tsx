@@ -1,15 +1,18 @@
 import { useRef, useState, type KeyboardEvent } from 'react'
 import { Plus } from 'lucide-react'
 
-interface AddEpicQuickAddProps {
+interface AddDraftQuickAddProps {
+  /** "Epic" hoặc "Task" — quyết định chữ hiển thị ("Thêm {label}", "Tên {label} — Enter để
+   * thêm..."). DraftTable truyền đúng loại phù hợp với bối cảnh đang hiển thị (cây Epic-Task hay
+   * danh sách Task phẳng của 1 epic thật) — xem manualAdd ở đó. */
+  label: string
   onSubmit: (title: string) => void
   pending?: boolean
 }
 
-/** Khung "+" thay cho modal "Thêm thủ công" cũ — bấm vào mới hiện ô nhập tên Epic, Enter để
- * thêm nhanh (ưu tiên mặc định Trung bình, xem DraftTable.tsx). Escape/click ra ngoài huỷ, không
- * thêm gì. Chỉ tạo Epic gốc (không hỏi loại/epic cha) — đơn giản hoá cho đúng luồng REQ_TO_EPIC. */
-const AddEpicQuickAdd = ({ onSubmit, pending }: AddEpicQuickAddProps) => {
+/** Khung "+" — bấm vào mới hiện ô nhập tên, Enter để thêm nhanh (ưu tiên mặc định Trung bình,
+ * xem DraftTable.tsx). Escape/click ra ngoài huỷ, không thêm gì. */
+const AddDraftQuickAdd = ({ label, onSubmit, pending }: AddDraftQuickAddProps) => {
   const [isAdding, setIsAdding] = useState(false)
   const [value, setValue] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
@@ -50,7 +53,7 @@ const AddEpicQuickAdd = ({ onSubmit, pending }: AddEpicQuickAddProps) => {
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={handleKeyDown}
         onBlur={cancel}
-        placeholder="Tên Epic — Enter để thêm..."
+        placeholder={`Tên ${label} — Enter để thêm...`}
         className="w-full rounded-md border border-ink/20 bg-surface px-2.5 py-2 text-xs font-semibold text-ink outline-none transition-all focus:ring-2 focus:ring-brand/15 disabled:opacity-60"
       />
     )
@@ -63,9 +66,9 @@ const AddEpicQuickAdd = ({ onSubmit, pending }: AddEpicQuickAddProps) => {
       className="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-hairline p-2 text-xs font-semibold text-muted transition-colors hover:border-ink/25 hover:bg-canvas hover:text-ink"
     >
       <Plus size={13} />
-      Thêm Epic
+      Thêm {label}
     </button>
   )
 }
 
-export default AddEpicQuickAdd
+export default AddDraftQuickAdd

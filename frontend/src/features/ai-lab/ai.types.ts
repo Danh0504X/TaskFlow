@@ -101,6 +101,15 @@ export interface AiGenerationDetail extends AiGeneration {
   drafts: AiDraftIssue[]
 }
 
+/** GET /epics/:epicId/task-drafts — trạng thái "phiên Sinh Task" hiện tại của 1 epic thật.
+ * `generationId` null nghĩa là epic này CHƯA từng "Sinh Task" lần nào (chưa có gì để duyệt/sửa/
+ * xoá) — khác null thì dùng đúng id đó cho mọi thao tác accept/reject/edit/delete như bình
+ * thường (tự resolve đúng cả phiên ở backend, xem resolveSessionGenerationIds). */
+export interface EpicTaskDrafts {
+  generationId: string | null
+  drafts: AiDraftIssue[]
+}
+
 /** GET /me/ai-quota — hạn mức sinh AI của user hiện tại, tính theo NGÀY (UTC), không theo
  * project (xem backend/src/middlewares/checkAiLimit.js). PRO còn hạn -> isPro=true, used luôn
  * là 0 (không giới hạn thật, chỉ để hiển thị "Vô hạn" ở FE thay vì 1 con số cụ thể). */
@@ -149,7 +158,11 @@ export interface AddDraftPayload {
   description?: string
   type: AiDraftType
   priority?: IssuePriority
+  /** Cha cùng lô (draft khác trong cùng generation) — dùng khi thêm tay vào cây Epic-Task. */
   parentTempId?: string | null
+  /** Cha là issue THẬT — dùng khi thêm tay Task vào danh sách phẳng của 1 epic thật cụ thể
+   * (AiQuickGenerateModal). Không dùng cùng lúc với parentTempId. */
+  parentIssueId?: string | null
 }
 
 export interface EditDraftPayload {

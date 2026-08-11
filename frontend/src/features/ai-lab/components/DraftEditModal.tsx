@@ -15,7 +15,6 @@ interface DraftEditModalProps {
   onClose: () => void
   draft: AiDraftIssue | null
   projectId: string
-  generationId: string
   /** Title epic cha — chỉ có khi draft này là Task có parentTempId (REQ_TO_EPIC). */
   parentTitle?: string | null
   /** Title các Task con — chỉ có khi draft này là Epic đang có con trong cùng mẻ. */
@@ -44,11 +43,10 @@ const DraftEditModal = ({
   onClose,
   draft,
   projectId,
-  generationId,
   parentTitle,
   childTitles = [],
 }: DraftEditModalProps) => {
-  const editMutation = useEditDraft(projectId, generationId)
+  const editMutation = useEditDraft(projectId)
 
   const {
     register,

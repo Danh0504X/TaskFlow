@@ -100,3 +100,26 @@ export const rejectDrafts = asyncHandler(async (req, res) => {
     data: result,
   })
 })
+
+// "Xoá tất cả & sinh lại từ đầu" cho 1 epic thật — xoá HẲN mọi task nháp chưa duyệt của epic đó.
+export const clearEpicTaskDrafts = asyncHandler(async (req, res) => {
+  const { projectId, epicId } = req.params
+  const result = await aiGenerationService.clearEpicTaskDrafts(projectId, epicId)
+
+  res.status(StatusCodes.OK).json({
+    message: `Đã xoá ${result.deletedCount} task nháp`,
+    data: result,
+  })
+})
+
+// Trạng thái "phiên Sinh Task" hiện tại của 1 epic thật — FE mở modal gọi ngay, không cần chờ
+// bấm "Sinh Task" mới có gì để xem.
+export const getEpicTaskDrafts = asyncHandler(async (req, res) => {
+  const { projectId, epicId } = req.params
+  const result = await aiGenerationService.getEpicTaskDrafts(projectId, epicId)
+
+  res.status(StatusCodes.OK).json({
+    message: 'Get epic task drafts successfully',
+    data: result,
+  })
+})

@@ -308,6 +308,7 @@ const AiGenerateEpicModal = ({ open, onClose, projectId }: AiGenerateEpicModalPr
                     projectId={projectId}
                     generationId={resultGeneration._id}
                     drafts={resultGeneration.drafts}
+                    manualAdd={{ type: 'EPIC' }}
                   />
                 )}
               </div>

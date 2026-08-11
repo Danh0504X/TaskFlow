@@ -23,14 +23,33 @@ const ensureValidObjectId = (id, label = 'id') => {
 }
 
 /**
- * Gom 1 "phiên" (session) thành mảng generationId phẳng: [gốc phiên, ...các turn con] — nhận
- * vào generationId BẤT KỲ (gốc hoặc 1 turn con) đều ra đúng cùng 1 tập. Dùng ở mọi nơi cần đọc/
- * ghi draft theo phạm vi cả phiên (getGeneration/acceptDrafts/rejectDrafts/deleteDraft) thay vì
- * chỉ theo đúng 1 generationId như trước — xem parentGenerationId ở models/aiGenerations.js.
+ * Gom 1 "phiên" (session) thành mảng generationId phẳng — nhận vào generationId BẤT KỲ (gốc hoặc
+ * 1 turn con) đều ra đúng cùng 1 tập. Dùng ở mọi nơi cần đọc/ghi draft theo phạm vi cả phiên
+ * (getGeneration/acceptDrafts/rejectDrafts/deleteDraft) thay vì chỉ theo đúng 1 generationId.
+ *
+ * 2 cách gom, tuỳ nguồn epic của turn:
+ * - sourceKind='ISSUE' (epic THẬT): gom mọi turn EPIC_TO_TASK cùng sourceEntityId — 1 epic thật
+ *   luôn chỉ có ĐÚNG 1 "phiên" duy nhất, không cần khái niệm gốc/con vì sourceEntityId đã là khoá
+ *   tự nhiên (mỗi lần bấm "Sinh Task" trên cùng epic đó luôn thuộc cùng phiên).
+ * - Còn lại (REQ_TO_EPIC, hoặc EPIC_TO_TASK từ epic NHÁP): gom theo parentGenerationId như cũ —
+ *   null = doc này là gốc phiên, khác null = turn con trỏ về gốc.
  */
 const resolveSessionGenerationIds = async (generationId) => {
-  const doc = await AiGeneration.findById(generationId).select('parentGenerationId').lean()
+  const doc = await AiGeneration.findById(generationId)
+    .select('parentGenerationId sourceKind sourceEntityId generationType')
+    .lean()
   if (!doc) return [generationId]
+
+  if (doc.generationType === 'EPIC_TO_TASK' && doc.sourceKind === 'ISSUE' && doc.sourceEntityId) {
+    const siblings = await AiGeneration.find({
+      generationType: 'EPIC_TO_TASK',
+      sourceKind: 'ISSUE',
+      sourceEntityId: doc.sourceEntityId,
+    })
+      .select('_id')
+      .lean()
+    return siblings.map((s) => s._id.toString())
+  }
 
   const rootId = doc.parentGenerationId ? doc.parentGenerationId.toString() : generationId.toString()
   const turns = await AiGeneration.find({ parentGenerationId: rootId }).select('_id').lean()
@@ -139,9 +158,20 @@ const runWorker = async (generationId) => {
         .select('title')
         .lean()
 
+      // Task nháp CHƯA duyệt/đã duyệt từ các lượt "Sinh Task" TRƯỚC ĐÓ cho ĐÚNG epic này (1 epic
+      // thật giờ gộp chung 1 "phiên" — xem resolveSessionGenerationIds) — chống trùng luôn với
+      // đề xuất cũ, không chỉ với task thật, để bấm "sinh thêm" nhiều lần không lặp lại ý cũ.
+      const existingDraftTasks = await AiDraftIssue.find({
+        projectId: generation.projectId,
+        parentIssueId: generation.sourceEntityId,
+        status: { $ne: 'REJECTED' },
+      })
+        .select('title')
+        .lean()
+
       context = {
         sourceEpic: { title: sourceEpic.title, description: sourceEpic.description },
-        existingTitles: existingTasks.map((t) => t.title),
+        existingTitles: [...existingTasks, ...existingDraftTasks].map((t) => t.title),
       }
     }
 
@@ -558,13 +588,18 @@ const addManualDraft = async (generationId, body = {}) => {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Generation not found')
   }
 
-  const { title, description, type, priority, parentTempId } = body
+  const { title, description, type, priority, parentTempId, parentIssueId } = body
 
   if (!title || !title.trim()) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Title là bắt buộc')
   }
   if (!DRAFT_TYPES.includes(type)) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid type')
+  }
+  // parentIssueId: task thêm tay vào danh sách PHẲNG của 1 epic THẬT (AiQuickGenerateModal) —
+  // khác parentTempId (task/epic thêm tay CÙNG LÔ với 1 epic nháp khác trong batch).
+  if (parentIssueId) {
+    ensureValidObjectId(parentIssueId, 'parent issue id')
   }
 
   const tempId = `M-${new mongoose.Types.ObjectId().toString().slice(-8)}`
@@ -578,6 +613,7 @@ const addManualDraft = async (generationId, body = {}) => {
     type,
     priority: DRAFT_PRIORITIES.includes(priority) ? priority : 'MEDIUM',
     parentTempId: parentTempId || null,
+    parentIssueId: parentIssueId || null,
     scopePreview: [],
     sourceQuote: '',
     origin: 'MANUAL',
@@ -606,6 +642,61 @@ const deleteDraft = async (draftId) => {
 
   await AiDraftIssue.deleteOne({ _id: draftId })
   return draft
+}
+
+/**
+ * "Xoá tất cả & sinh lại từ đầu" cho 1 epic THẬT — XOÁ HẲN (không phải từ chối) mọi task nháp
+ * CHƯA được duyệt (SUGGESTED lẫn REJECTED — dọn sạch luôn rác đã từ chối) của epic đó, làm sạch
+ * không gian để bấm "Sinh Task" lại không bị chống-trùng vướng vào đề xuất cũ. Task ĐÃ duyệt
+ * (ACCEPTED — đã là issue thật) KHÔNG bị đụng tới, không xoá được và cũng không nên xoá.
+ *
+ * Không xoá các doc `AiGeneration` (turn) đã tạo trước đó — giữ lại để không "hoàn" quota
+ * checkAiLimit đã tính (xoá turn sẽ vô tình cho phép né hạn mức AI/ngày bằng cách xoá-rồi-sinh-lại
+ * liên tục). Chỉ dọn phần hiển thị (AiDraftIssue), không đụng phần tính phí/audit.
+ */
+const clearEpicTaskDrafts = async (projectId, epicId) => {
+  ensureValidObjectId(projectId, 'project id')
+  ensureValidObjectId(epicId, 'epic id')
+
+  const result = await AiDraftIssue.deleteMany({
+    projectId,
+    parentIssueId: epicId,
+    status: { $ne: 'ACCEPTED' },
+  })
+
+  return { deletedCount: result.deletedCount }
+}
+
+/**
+ * Trạng thái "phiên Sinh Task" hiện tại của 1 epic THẬT — dùng để FE mở modal là thấy ngay bố
+ * cục quản lý task nháp (không cần màn hình form riêng ở giữa nữa). `generationId` là turn gần
+ * nhất (bất kỳ turn nào trong phiên cũng dùng được cho accept/reject/edit/delete — đều tự resolve
+ * đúng cả phiên qua resolveSessionGenerationIds); `null` nếu epic này CHƯA từng "Sinh Task" lần
+ * nào — FE khi đó chỉ hiện nút "Sinh Task", chưa có gì để duyệt/sửa/xoá.
+ */
+const getEpicTaskDrafts = async (projectId, epicId) => {
+  ensureValidObjectId(projectId, 'project id')
+  ensureValidObjectId(epicId, 'epic id')
+
+  const latestTurn = await AiGeneration.findOne({
+    projectId,
+    sourceEntityId: epicId,
+    generationType: 'EPIC_TO_TASK',
+    sourceKind: 'ISSUE',
+  })
+    .sort({ createdAt: -1 })
+    .select('_id')
+    .lean()
+
+  if (!latestTurn) {
+    return { generationId: null, drafts: [] }
+  }
+
+  const drafts = await AiDraftIssue.find({ projectId, parentIssueId: epicId })
+    .sort({ createdAt: 1 })
+    .lean()
+
+  return { generationId: latestTurn._id.toString(), drafts }
 }
 
 const rejectDrafts = async (generationId, ids = []) => {
@@ -756,6 +847,8 @@ export const aiGenerationService = {
   editDraft,
   addManualDraft,
   deleteDraft,
+  clearEpicTaskDrafts,
+  getEpicTaskDrafts,
   rejectDrafts,
   acceptDrafts,
 }

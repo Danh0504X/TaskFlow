@@ -11,7 +11,9 @@ export const useAcceptDrafts = (projectId: string, generationId: string) => {
   return useMutation({
     mutationFn: (tempIds: string[]) => aiApi.acceptDrafts(projectId, generationId, tempIds),
     onSuccess: (result) => {
-      qc.invalidateQueries({ queryKey: aiKeys.generation(projectId, generationId) })
+      // Invalidate cả namespace ai-lab — DraftTable dùng chung cho cả AiGenerateEpicModal (đọc
+      // qua aiKeys.generation) lẫn AiQuickGenerateModal (đọc qua aiKeys.epicTaskDrafts, khác hẳn).
+      qc.invalidateQueries({ queryKey: aiKeys.all })
       // Issue thật vừa tạo cần hiện ngay trong Danh sách/Board/Backlog của project (nhất là khi
       // accept diễn ra ngay trong modal ở trang project, không có điều hướng nào để tự remount
       // component và fetch lại) — invalidate theo tiền tố để khớp cả issueKeys.list (mọi filter)

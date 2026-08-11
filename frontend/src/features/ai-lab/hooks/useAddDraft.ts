@@ -11,7 +11,10 @@ export const useAddDraft = (projectId: string, generationId: string) => {
   return useMutation({
     mutationFn: (payload: AddDraftPayload) => aiApi.addDraft(projectId, generationId, payload),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: aiKeys.generation(projectId, generationId) })
+      // Invalidate cả namespace ai-lab (không chỉ generation(projectId, generationId)) — DraftTable
+      // dùng chung cho cả AiGenerateEpicModal (đọc qua aiKeys.generation) lẫn AiQuickGenerateModal
+      // (đọc qua aiKeys.epicTaskDrafts, khác hẳn) nên phải khớp được cả 2.
+      qc.invalidateQueries({ queryKey: aiKeys.all })
       toast.success('Đã thêm draft')
     },
     onError: (error) => toast.error(getApiErrorMessage(error)),
