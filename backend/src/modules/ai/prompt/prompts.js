@@ -180,6 +180,16 @@ export const buildClarifyPrompt = (inputPrompt, previousErrors = []) => ({
   user: buildClarifyUserPrompt(inputPrompt) + formatErrors(previousErrors),
 })
 
+// Chỉ epic NHÁP (chưa duyệt) mới có scopePreview — epic thật (issue) không lưu field này (xem
+// runWorker: sourceKind='ISSUE' không set context.sourceEpic.scopePreview). CHỈ tham khảo để bám
+// sát ý định ban đầu của epic, KHÔNG bắt buộc mỗi dòng phải ra đúng 1 task — ép cứng 1:1 dễ đi
+// ngược nguyên tắc "không độn task thừa cho đủ số" bên dưới.
+const formatScopePreview = (lines = []) => {
+  if (!lines.length) return ''
+  return `\n\nPHẠM VI ĐÃ XÁC ĐỊNH KHI TẠO EPIC NÀY (tham khảo để bám sát, KHÔNG bắt buộc mỗi dòng
+phải ra đúng 1 task — có thể gộp/tách khác số dòng nếu hợp lý hơn):\n${lines.map((l) => `- ${l}`).join('\n')}`
+}
+
 const buildEpicToTaskUserPrompt = (context, previousErrors) => {
   const { sourceEpic, existingTitles } = context
 
@@ -188,7 +198,7 @@ NHIỆM VỤ: EPIC_TO_TASK — bóc nhỏ epic dưới đây thành các TASK b�
 
 EPIC NGUỒN:
 - Tiêu đề: "${sourceEpic.title}"
-- Mô tả: "${sourceEpic.description || '(không có mô tả)'}"
+- Mô tả: "${sourceEpic.description || '(không có mô tả)'}"${formatScopePreview(sourceEpic.scopePreview)}
 
 TASK ĐANG CÓ SẴN TRONG EPIC (KHÔNG đề xuất trùng hoặc gần trùng):
 ${formatExisting(existingTitles)}

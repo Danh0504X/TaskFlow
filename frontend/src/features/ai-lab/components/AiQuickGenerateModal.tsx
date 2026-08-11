@@ -140,7 +140,10 @@ const AiQuickGenerateModal = () => {
           Modal 'xl' (rộng hơn 'wide' trước đây) + DraftRow rút gọn còn 1 dòng -> nhiều draft hiện
           cùng lúc hơn hẳn mà không phải cuộn. */}
       <div className="grid h-[640px] grid-cols-1 gap-5 overflow-x-hidden sm:grid-cols-[1fr_240px]">
-        <div className="h-full min-w-0 overflow-y-auto">
+        {/* scrollbar-gutter:stable — luôn chừa sẵn chỗ cho thanh cuộn dọc, kể cả khi chưa cần
+            cuộn. Thiếu dòng này: thu gọn/mở epic (ẩn-hiện task con) đổi chiều cao nội dung, thanh
+            cuộn xuất-hiện/biến-mất đột ngột kéo cả cột co giãn theo -> cảm giác "vỡ" layout. */}
+        <div className="h-full min-w-0 overflow-y-auto [scrollbar-gutter:stable]">
           {!activeGenerationId ? (
             context.generationType === 'REQ_TO_EPIC' ? (
               <RequirementForm projectId={projectId} onCreated={setActiveGenerationId} />

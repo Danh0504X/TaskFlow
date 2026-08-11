@@ -25,11 +25,41 @@ const aiGenerationSchema = new mongoose.Schema(
       required: true,
     },
 
-    // Epic nguồn khi generationType = EPIC_TO_TASK; null khi REQ_TO_EPIC.
+    // Epic nguồn khi generationType = EPIC_TO_TASK VÀ sourceKind = 'ISSUE'; null các trường hợp khác.
     sourceEntityId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'issue',
       default: null,
+    },
+
+    // 'ISSUE' (mặc định, mọi doc cũ): epic nguồn là issue thật, dùng sourceEntityId như trước giờ.
+    // 'DRAFT': epic nguồn là 1 AiDraftIssue CHƯA duyệt (dùng sourceDraftId) — cho phép PM sinh Task
+    // ngay trong lúc epic còn là nháp, không phải đợi duyệt epic trước.
+    sourceKind: {
+      type: String,
+      enum: ['ISSUE', 'DRAFT'],
+      default: 'ISSUE',
+    },
+
+    // Epic nháp nguồn khi sourceKind = 'DRAFT'; null các trường hợp khác. Tách field riêng khỏi
+    // sourceEntityId (thay vì dùng chung rồi đổi `ref` linh hoạt) để không phá SOURCE_EPIC_POPULATE
+    // hiện đang populate cố định từ collection 'issue'.
+    sourceDraftId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'ai_draft_issue',
+      default: null,
+    },
+
+    // Tự tham chiếu — coi 1 chuỗi AiGeneration là 1 "phiên" (session): null = doc này CHÍNH LÀ
+    // gốc phiên (mọi doc cũ tự thoả điều kiện này, không cần migrate); khác null = doc này là 1
+    // lượt gọi AI con "thêm vào" phiên gốc đó (vd sinh Task cho 1 epic nháp thuộc phiên đang mở).
+    // Luôn trỏ THẲNG về gốc (không lồng nhiều cấp) để việc gom draft theo phiên chỉ cần 1 query
+    // $in phẳng, xem resolveSessionGenerationIds ở aiGeneration.service.js.
+    parentGenerationId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'ai_generation',
+      default: null,
+      index: true,
     },
 
     inputPrompt: {

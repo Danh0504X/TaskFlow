@@ -52,11 +52,21 @@ const aiDraftIssueSchema = new mongoose.Schema(
       default: 'MEDIUM',
     },
 
-    // Nối cha-con TRONG nháp — chỉ dùng ở REQ_TO_EPIC (Epic không có cha, Task trỏ về Epic
-    // vừa sinh cùng mẻ). EPIC_TO_TASK không dùng field này vì cha đã là issue thật
-    // (xem generation.sourceEntityId).
+    // Nối cha-con TRONG nháp — dùng khi cha CŨNG là 1 draft chưa duyệt (Task sinh từ Epic nháp,
+    // hoặc Task/Epic thêm tay cùng lô). Ưu tiên đọc trước parentIssueId ở mọi nơi resolve cha
+    // thật (xem acceptDrafts) — 1 draft không thể có cả 2 field cùng lúc.
     parentTempId: {
       type: String,
+      default: null,
+    },
+
+    // Cha là issue THẬT, biết chắc ngay lúc AI vừa sinh xong (Task sinh từ Epic thật — xem
+    // runWorker) — ghi thẳng ở đây thay vì đợi tới lúc accept mới tra generation.sourceEntityId,
+    // để accept không cần biết gì về "generation nào đã sinh ra draft này" nữa (bỏ hẳn coupling
+    // vào generation.generationType).
+    parentIssueId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'issue',
       default: null,
     },
 

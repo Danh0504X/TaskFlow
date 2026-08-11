@@ -188,7 +188,10 @@ const AiGenerateEpicModal = ({ open, onClose, projectId }: AiGenerateEpicModalPr
           </div>
         </div>
 
-        <div className="h-full overflow-y-auto pr-1">
+        {/* scrollbar-gutter:stable — luôn chừa sẵn chỗ cho thanh cuộn dọc, kể cả khi chưa cần
+            cuộn. Thiếu dòng này: thu gọn/mở epic (ẩn-hiện task con) đổi chiều cao nội dung, thanh
+            cuộn xuất-hiện/biến-mất đột ngột kéo cả cột co giãn theo -> cảm giác "vỡ" layout. */}
+        <div className="h-full overflow-y-auto pr-1 [scrollbar-gutter:stable]">
           {step === 'INPUT' && (
             <div className="space-y-1.5">
               <label className="text-xs font-semibold uppercase tracking-wider text-ink">Yêu cầu nghiệp vụ</label>

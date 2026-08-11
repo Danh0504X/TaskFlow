@@ -22,6 +22,22 @@ const ensureValidObjectId = (id, label = 'id') => {
   }
 }
 
+/**
+ * Gom 1 "phiên" (session) thành mảng generationId phẳng: [gốc phiên, ...các turn con] — nhận
+ * vào generationId BẤT KỲ (gốc hoặc 1 turn con) đều ra đúng cùng 1 tập. Dùng ở mọi nơi cần đọc/
+ * ghi draft theo phạm vi cả phiên (getGeneration/acceptDrafts/rejectDrafts/deleteDraft) thay vì
+ * chỉ theo đúng 1 generationId như trước — xem parentGenerationId ở models/aiGenerations.js.
+ */
+const resolveSessionGenerationIds = async (generationId) => {
+  const doc = await AiGeneration.findById(generationId).select('parentGenerationId').lean()
+  if (!doc) return [generationId]
+
+  const rootId = doc.parentGenerationId ? doc.parentGenerationId.toString() : generationId.toString()
+  const turns = await AiGeneration.find({ parentGenerationId: rootId }).select('_id').lean()
+
+  return [rootId, ...turns.map((t) => t._id.toString())]
+}
+
 // Tạo issue THẬT từ 1 draft đã được chấp nhận. Không tái dùng issueService.createIssue vì hàm đó
 // chưa hỗ trợ set aiGenerated=true (issueService.js không nằm trong 4 file được phép sửa) — vẫn
 // dùng chung Issue/Project model, cùng cách tăng issueSeq nguyên tử như issueService.
@@ -58,6 +74,9 @@ const runWorker = async (generationId) => {
     await generation.save()
 
     let context
+    // Chỉ có giá trị khi sourceKind='DRAFT' — ép cứng parentTempId của MỌI task sinh ra ở turn
+    // này, không tin AI tự lặp lại đúng (server đã biết chắc chỉ có 1 epic cha cho cả turn).
+    let forcedParentTempId = null
 
     if (generation.generationType === 'REQ_TO_EPIC') {
       const existingEpics = await Issue.find({
@@ -73,6 +92,34 @@ const runWorker = async (generationId) => {
         clarifications: generation.clarifications,
         existingTitles: existingEpics.map((e) => e.title),
       }
+    } else if (generation.sourceKind === 'DRAFT') {
+      const sourceDraft = await AiDraftIssue.findById(generation.sourceDraftId).lean()
+
+      if (!sourceDraft || sourceDraft.status !== 'SUGGESTED') {
+        throw new Error('Epic nháp nguồn đã bị xoá/duyệt/từ chối trong lúc xử lý')
+      }
+
+      // Task đã đề xuất cho ĐÚNG epic này (nếu PM từng bấm sinh task 2 lần) — chống trùng, không
+      // cần lọc theo generationId vì tempId đã unique toàn cục (xem namespaceTempId bên dưới).
+      const existingSiblingTasks = await AiDraftIssue.find({
+        projectId: generation.projectId,
+        parentTempId: sourceDraft.tempId,
+        status: { $ne: 'REJECTED' },
+      })
+        .select('title')
+        .lean()
+
+      context = {
+        sourceEpic: {
+          title: sourceDraft.title,
+          description: sourceDraft.description,
+          // Phạm vi AI đã đề xuất lúc sinh epic — CHỈ tham khảo, không ép mỗi dòng phải ra đúng
+          // 1 task (xem buildEpicToTaskUserPrompt). Rỗng với epic thêm tay (origin=MANUAL).
+          scopePreview: sourceDraft.scopePreview || [],
+        },
+        existingTitles: existingSiblingTasks.map((t) => t.title),
+      }
+      forcedParentTempId = sourceDraft.tempId
     } else {
       const sourceEpic = await Issue.findOne({
         _id: generation.sourceEntityId,
@@ -103,15 +150,27 @@ const runWorker = async (generationId) => {
       context,
     )
 
+    // Namespace tempId theo turn hiện tại (dùng chính _id thật, luôn unique) — chống đụng độ khi
+    // nhiều turn khác nhau cùng gom draft vào 1 phiên (vd 2 epic cùng sinh task, AI ở cả 2 turn
+    // đều có thể tự trả "T1","T2"...). Áp dụng cho MỌI loại turn, không riêng EPIC_TO_TASK, để
+    // triệt để tránh bug đụng độ tempId — xem review đã thống nhất trước khi implement.
+    const namespaceTempId = (id) => (id ? `${generation._id}:${id}` : null)
+
     const draftDocs = items.map((item) => ({
       generationId: generation._id,
       projectId: generation.projectId,
-      tempId: item.tempId,
+      tempId: namespaceTempId(item.tempId),
       title: item.title,
       description: item.description || '',
       type: item.type,
       priority: DRAFT_PRIORITIES.includes(item.priority) ? item.priority : 'MEDIUM',
-      parentTempId: item.parentTempId || null,
+      parentTempId: forcedParentTempId || namespaceTempId(item.parentTempId),
+      // Epic THẬT nguồn: biết chắc cha ngay lúc này -> ghi thẳng, accept sau này chỉ cần đọc
+      // field này, không phải tra ngược generation.generationType/sourceEntityId nữa.
+      parentIssueId:
+        generation.sourceKind === 'ISSUE' && generation.generationType === 'EPIC_TO_TASK'
+          ? generation.sourceEntityId
+          : null,
       scopePreview: Array.isArray(item.scopePreview) ? item.scopePreview : [],
       sourceQuote: item.sourceQuote || '',
       origin: 'AI',
@@ -173,7 +232,7 @@ const getAiUsageToday = async (user) => {
 const createGeneration = async (projectId, requestedBy, body = {}) => {
   ensureValidObjectId(projectId, 'project id')
 
-  const { generationType, sourceEntityId, inputPrompt, clarifications } = body
+  const { generationType, sourceEntityId, sourceDraftId, parentGenerationId, inputPrompt, clarifications } = body
 
   if (!GENERATION_TYPES.includes(generationType)) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid generation type')
@@ -188,31 +247,81 @@ const createGeneration = async (projectId, requestedBy, body = {}) => {
     }
   }
 
+  // sourceKind quyết định nguồn epic: 'ISSUE' (issue thật, như cũ) hoặc 'DRAFT' (epic nháp CHƯA
+  // duyệt, sinh Task ngay trong lúc PM đang xem lại lượt Sinh Epic — không phải đợi duyệt epic).
+  let sourceKind = 'ISSUE'
+
   if (generationType === 'EPIC_TO_TASK') {
-    if (!sourceEntityId) {
-      throw new ApiError(StatusCodes.BAD_REQUEST, 'sourceEntityId is required for EPIC_TO_TASK')
+    if (!sourceEntityId && !sourceDraftId) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'sourceEntityId hoặc sourceDraftId là bắt buộc cho EPIC_TO_TASK')
     }
-    ensureValidObjectId(sourceEntityId, 'source entity id')
+    if (sourceEntityId && sourceDraftId) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'Chỉ được chọn 1 nguồn: sourceEntityId hoặc sourceDraftId')
+    }
 
-    const sourceEpic = await Issue.findOne({
-      _id: sourceEntityId,
-      projectId,
-      type: 'EPIC',
-      isDeleted: false,
-    }).lean()
+    if (sourceDraftId) {
+      sourceKind = 'DRAFT'
+      ensureValidObjectId(sourceDraftId, 'source draft id')
 
-    if (!sourceEpic) {
-      throw new ApiError(StatusCodes.NOT_FOUND, 'Epic nguồn không tồn tại hoặc đã bị xoá')
+      if (!parentGenerationId) {
+        throw new ApiError(StatusCodes.BAD_REQUEST, 'parentGenerationId is required when sourceDraftId is provided')
+      }
+      ensureValidObjectId(parentGenerationId, 'parent generation id')
+
+      const sourceDraft = await AiDraftIssue.findOne({
+        _id: sourceDraftId,
+        projectId,
+        type: 'EPIC',
+        status: 'SUGGESTED',
+      }).lean()
+
+      if (!sourceDraft) {
+        throw new ApiError(
+          StatusCodes.NOT_FOUND,
+          'Epic nháp nguồn không tồn tại hoặc không còn ở trạng thái chờ duyệt',
+        )
+      }
+
+      // Phiên chỉ sâu đúng 1 cấp (xem parentGenerationId ở models/aiGenerations.js) — bắt buộc
+      // trỏ thẳng tới gốc phiên (parentGenerationId của chính gốc luôn null), không cho lồng
+      // phiên trong phiên.
+      const session = await AiGeneration.findOne({
+        _id: parentGenerationId,
+        projectId,
+        parentGenerationId: null,
+      }).lean()
+
+      if (!session) {
+        throw new ApiError(StatusCodes.NOT_FOUND, 'Phiên (generation gốc) không tồn tại')
+      }
+    } else {
+      ensureValidObjectId(sourceEntityId, 'source entity id')
+
+      const sourceEpic = await Issue.findOne({
+        _id: sourceEntityId,
+        projectId,
+        type: 'EPIC',
+        isDeleted: false,
+      }).lean()
+
+      if (!sourceEpic) {
+        throw new ApiError(StatusCodes.NOT_FOUND, 'Epic nguồn không tồn tại hoặc đã bị xoá')
+      }
     }
   }
 
   // Rate limit hằng ngày đã được chặn ở middleware checkAiLimit trên route POST .../generations
-  // (xem backend/src/middlewares/checkAiLimit.js) — không kiểm lại ở đây nữa.
+  // (xem backend/src/middlewares/checkAiLimit.js) — không kiểm lại ở đây nữa. Turn nào cũng vẫn
+  // tạo 1 AiGeneration đầy đủ như trước (kể cả khi sourceKind='DRAFT') nên tính quota/token/audit
+  // không bị thủng — chỉ khác là gắn thêm parentGenerationId để biết nó thuộc phiên nào.
   const generation = await AiGeneration.create({
     projectId,
     requestedBy,
     generationType,
-    sourceEntityId: generationType === 'EPIC_TO_TASK' ? sourceEntityId : null,
+    sourceKind: generationType === 'EPIC_TO_TASK' ? sourceKind : 'ISSUE',
+    sourceEntityId: generationType === 'EPIC_TO_TASK' && sourceKind === 'ISSUE' ? sourceEntityId : null,
+    sourceDraftId: sourceKind === 'DRAFT' ? sourceDraftId : null,
+    parentGenerationId: sourceKind === 'DRAFT' ? parentGenerationId : null,
     inputPrompt: generationType === 'REQ_TO_EPIC' ? inputPrompt.trim() : '',
     clarifications: clarifications ?? null,
     status: 'PENDING',
@@ -391,7 +500,14 @@ const getGeneration = async (generationId) => {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Generation not found')
   }
 
-  const drafts = await AiDraftIssue.find({ generationId }).sort({ createdAt: 1 }).lean()
+  // Trả draft của CẢ PHIÊN (gốc + mọi turn con), không chỉ riêng generationId được truyền vào —
+  // dù gọi bằng id gốc hay id 1 turn con đều thấy đúng 1 cây draft đầy đủ. `generation` ở trên
+  // vẫn là đúng doc được yêu cầu (status/error của riêng nó, dùng để FE biết turn đang poll đã
+  // xong chưa) — chỉ có `drafts` mới gộp theo phạm vi phiên.
+  const sessionGenerationIds = await resolveSessionGenerationIds(generationId)
+  const drafts = await AiDraftIssue.find({ generationId: { $in: sessionGenerationIds } })
+    .sort({ createdAt: 1 })
+    .lean()
 
   return { ...generation, drafts }
 }
@@ -478,6 +594,16 @@ const deleteDraft = async (draftId) => {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Không thể xoá draft đã được chấp nhận')
   }
 
+  // Cascade xoá con (task nháp có parentTempId trỏ tới draft vừa xoá) trong TOÀN PHIÊN — con có
+  // thể nằm ở 1 turn khác (sinh sau, riêng lẻ), không chỉ trong generationId của bản thân draft
+  // này. Không cascade xuống con đã ACCEPTED (đã thành issue thật, không xoá được, giữ nguyên).
+  const sessionGenerationIds = await resolveSessionGenerationIds(draft.generationId)
+  await AiDraftIssue.deleteMany({
+    generationId: { $in: sessionGenerationIds },
+    parentTempId: draft.tempId,
+    status: { $ne: 'ACCEPTED' },
+  })
+
   await AiDraftIssue.deleteOne({ _id: draftId })
   return draft
 }
@@ -490,8 +616,24 @@ const rejectDrafts = async (generationId, ids = []) => {
   }
   ids.forEach((id) => ensureValidObjectId(id, 'draft id'))
 
+  const sessionGenerationIds = await resolveSessionGenerationIds(generationId)
+
+  const targets = await AiDraftIssue.find({
+    _id: { $in: ids },
+    generationId: { $in: sessionGenerationIds },
+    status: 'SUGGESTED',
+  }).select('tempId')
+  const tempIds = targets.map((d) => d.tempId)
+
+  // Cascade xuống con (task nháp có parentTempId trỏ tới epic vừa bị từ chối, có thể nằm ở 1
+  // turn khác trong cùng phiên) — không chặn, để PM không phải tự tay từ chối từng task con
+  // trước khi từ chối được epic.
   await AiDraftIssue.updateMany(
-    { _id: { $in: ids }, generationId, status: 'SUGGESTED' },
+    {
+      generationId: { $in: sessionGenerationIds },
+      status: 'SUGGESTED',
+      $or: [{ _id: { $in: ids } }, { parentTempId: { $in: tempIds } }],
+    },
     { $set: { status: 'REJECTED' } },
   )
 
@@ -516,7 +658,10 @@ const acceptDrafts = async (generationId, tempIds, requestedBy) => {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Generation not found')
   }
 
-  const allDrafts = await AiDraftIssue.find({ generationId })
+  // Gộp draft của CẢ PHIÊN — epic và task sinh ra từ nó có thể nằm ở 2 turn khác nhau (xem
+  // resolveSessionGenerationIds), phải thấy đủ cả 2 mới resolve cha-con đúng.
+  const sessionGenerationIds = await resolveSessionGenerationIds(generationId)
+  const allDrafts = await AiDraftIssue.find({ generationId: { $in: sessionGenerationIds } })
   const draftByTempId = new Map(allDrafts.map((d) => [d.tempId, d]))
 
   // tempId -> id issue thật, gồm cả những draft đã ACCEPTED từ lượt trước đó.
@@ -567,8 +712,10 @@ const acceptDrafts = async (generationId, tempIds, requestedBy) => {
         continue
       }
       parentIssueId = parentRealId
-    } else if (generation.generationType === 'EPIC_TO_TASK') {
-      parentIssueId = generation.sourceEntityId
+    } else if (draft.parentIssueId) {
+      // Cha là issue THẬT, đã stamp sẵn lúc AI sinh xong (xem runWorker) — không còn tra
+      // generation.generationType/sourceEntityId nữa, draft tự mô tả đủ cha của chính nó.
+      parentIssueId = draft.parentIssueId
     }
 
     const issue = await createRealIssueFromDraft({

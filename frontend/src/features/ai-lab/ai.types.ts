@@ -51,6 +51,9 @@ export interface AiDraftIssue {
   type: AiDraftType
   priority: IssuePriority
   parentTempId: string | null
+  /** Cha là issue THẬT (khi draft này sinh từ 1 epic thật) — null nếu cha là draft khác (xem
+   * parentTempId) hoặc chưa có cha. */
+  parentIssueId: string | null
   scopePreview: string[]
   sourceQuote: string
   origin: AiDraftOrigin
@@ -111,8 +114,15 @@ export interface AiQuota {
 
 export interface CreateGenerationPayload {
   generationType: AiGenerationType
-  /** Bắt buộc khi generationType = EPIC_TO_TASK (id của epic nguồn). */
+  /** Epic nguồn khi generationType = EPIC_TO_TASK. Đúng 1 trong 2: sourceEntityId (epic đã là
+   * issue thật) HOẶC sourceDraftId (epic còn là nháp, chưa duyệt) — không truyền cả hai. */
   sourceEntityId?: string
+  /** Epic nháp nguồn (id của AiDraftIssue) — dùng cùng parentGenerationId khi sinh Task ngay
+   * trong lúc epic còn ở trạng thái SUGGESTED (chưa duyệt), không phải đợi duyệt epic trước. */
+  sourceDraftId?: string
+  /** Id của phiên (generation gốc, parentGenerationId=null) đang chứa epic nháp — bắt buộc khi
+   * có sourceDraftId, để task mới lồng đúng vào cây draft đang xem. */
+  parentGenerationId?: string
   /** Bắt buộc khi generationType = REQ_TO_EPIC. */
   inputPrompt?: string
   /** Câu trả lời làm rõ dạng đóng (select/checkbox), đi kèm requirement — tuỳ chọn. */
