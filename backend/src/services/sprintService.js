@@ -324,7 +324,11 @@ const completeSprint = async (projectId, sprintId, project, userId, body = {}) =
     if (incompleteIssues.length === 0) return
 
     if (resolution === 'BACKLOG') {
-      await moveIssuesToBacklog(projectId, sprintId, options)
+      await Issue.updateMany(
+        { projectId, sprintId, status: { $ne: 'DONE' }, isDeleted: false },
+        { sprintId: null },
+        options,
+      )
     } else if (resolution === 'MOVE_TO_SPRINT') {
       await Issue.updateMany(
         { projectId, sprintId, status: { $ne: 'DONE' }, isDeleted: false },

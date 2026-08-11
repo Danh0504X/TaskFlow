@@ -149,7 +149,7 @@ const BacklogView = ({ projectId, onSelectIssue, onGoToBoard }: BacklogViewProps
   const issuesOf = (sprintId: string | null) =>
     localIssues.filter((i) => (i.sprintId ?? null) === sprintId)
 
-  const backlogIssues = issuesOf(null)
+  const backlogIssues = issuesOf(null).filter((i) => i.status !== 'DONE')
   const activeSprintIssues = activeSprint ? issuesOf(activeSprint._id) : []
 
   // Container id dùng cho DnD: 'backlog', sprintId của sprint đang ACTIVE (nếu có), hoặc
