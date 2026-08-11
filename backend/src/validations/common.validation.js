@@ -20,7 +20,7 @@ export const emailSchema = z
 // Policy mật khẩu thống nhất cho toàn bộ luồng auth (signUp/changePassword/resetPassword).
 export const passwordSchema = z
   .string()
-  .min(6, 'Password must be at least 6 characters long')
+  .min(8, 'Password must be at least 8 characters long')
 
 // Họ tên: chỉ cho phép chữ cái (kể cả có dấu) và khoảng trắng — không số, không ký tự đặc biệt.
 // \p{L} = mọi chữ cái Unicode (khớp cả tiếng Việt có dấu), cần flag "u".

@@ -4,13 +4,11 @@ import { ChevronRight } from 'lucide-react'
 import PageHeader from '@/components/layout/PageHeader'
 import Spinner from '@/components/ui/Spinner'
 import Tabs from '@/components/ui/Tabs'
-import Avatar from '@/components/ui/Avatar'
 import SearchInput from '@/components/ui/SearchInput'
 import IssueTypeIcon from '@/components/ui/IssueTypeIcon'
 import IssuePriorityBadge from '@/components/ui/IssuePriorityBadge'
 import IssueStatusBadge from '@/components/ui/IssueStatusBadge'
 import IssueDetailPanel from '@/features/issues/components/IssueDetailPanel'
-import { useAuth } from '@/features/auth/hooks/useAuth'
 import { getProjectColor } from '@/lib/projectColor'
 import { staggerContainer, fadeUpItem, easeOut } from '@/lib/motion'
 import { useMyTasks } from '../hooks/useMyTasks'
@@ -41,7 +39,6 @@ interface ProjectGroup {
 }
 
 const MyTasksPage = () => {
-  const { user } = useAuth()
   const { data: tasks, isLoading } = useMyTasks()
   const [groupMode, setGroupMode] = useState<GroupMode>('PROJECT')
   const [searchQuery, setSearchQuery] = useState('')
@@ -106,7 +103,6 @@ const MyTasksPage = () => {
       <PageHeader
         title="Việc của tôi"
         subtitle={`${tasks?.length ?? 0} việc được giao, trải trên ${projectCount} dự án — theo dõi và cập nhật trạng thái ngay tại đây.`}
-        actions={<Avatar src={user?.avatarUrl} name={user?.fullName ?? ''} size={36} />}
       />
 
       <div className="flex flex-col gap-8 px-8 md:px-12 pt-6 pb-12">

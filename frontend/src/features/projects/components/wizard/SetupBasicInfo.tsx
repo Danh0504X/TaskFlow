@@ -1,4 +1,5 @@
 import type { ChangeEvent } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion } from 'motion/react'
 import { staggerContainer, fadeUpItem } from '@/lib/motion'
 
@@ -13,15 +14,29 @@ interface SetupBasicInfoProps {
   onChange: (data: BasicInfoData) => void
 }
 
-/** Tự sinh Key viết tắt từ tên dự án (chữ cái đầu mỗi từ, tối đa 5 ký tự). */
-const deriveKey = (name: string): string =>
-  name
-    .trim()
-    .split(/\s+/)
-    .map((word) => word[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 5)
+/** Bỏ dấu tiếng Việt để lấy chữ cái ASCII chuẩn */
+export const removeVietnameseTones = (str: string): string => {
+  return str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/Đ/g, 'D')
+    .replace(/đ/g, 'd')
+}
+
+/** Tự sinh Key từ tên dự án (lấy 2 chữ cái đầu tiên của 2 chữ đầu trên tên dự án). */
+export const deriveKey = (name: string): string => {
+  const cleanName = removeVietnameseTones(name.trim()).replace(/[^a-zA-Z0-9\s]/g, '')
+  if (!cleanName) return ''
+
+  const words = cleanName.split(/\s+/).filter(Boolean)
+  if (words.length === 0) return ''
+
+  if (words.length >= 2) {
+    return (words[0][0] + words[1][0]).toUpperCase()
+  }
+
+  return words[0].slice(0, 2).toUpperCase()
+}
 
 /** Chuẩn hoá key: chỉ giữ chữ/số viết hoa — khớp quy tắc backend (projectService.js). */
 export const normalizeProjectKey = (key: string): string =>
@@ -32,19 +47,65 @@ export const isProjectKeyValid = (key: string): boolean =>
   key.trim() === '' || normalizeProjectKey(key).length >= 2
 
 const SetupBasicInfo = ({ data, onChange }: SetupBasicInfoProps) => {
-  const showKeyError = data.key.trim() !== '' && !isProjectKeyValid(data.key)
+  const [isKeyCustom, setIsKeyCustom] = useState<boolean>(() => {
+    if (!data.key.trim()) return false
+    return data.key !== deriveKey(data.name)
+  })
+
+  const dataRef = useRef(data)
+  dataRef.current = data
+
+  const onChangeRef = useRef(onChange)
+  onChangeRef.current = onChange
+
+  // Tự động gợi ý Key sau khi người dùng dừng nhập tên (debounce 500ms)
+  useEffect(() => {
+    if (isKeyCustom) return
+
+    const timer = setTimeout(() => {
+      const currentName = dataRef.current.name
+      if (currentName.trim()) {
+        const suggestedKey = deriveKey(currentName)
+        if (suggestedKey && suggestedKey !== dataRef.current.key) {
+          onChangeRef.current({ ...dataRef.current, key: suggestedKey })
+        }
+      } else if (dataRef.current.key) {
+        onChangeRef.current({ ...dataRef.current, key: '' })
+      }
+    }, 500)
+
+    return () => clearTimeout(timer)
+  }, [data.name, isKeyCustom])
+
   const handleNameChange = (e: ChangeEvent<HTMLInputElement>) => {
     const name = e.target.value
-    onChange({ ...data, name, key: data.key || deriveKey(name) })
+    onChange({ ...data, name })
+  }
+
+  const handleNameBlur = () => {
+    if (!isKeyCustom && data.name.trim()) {
+      const suggestedKey = deriveKey(data.name)
+      if (suggestedKey && suggestedKey !== data.key) {
+        onChange({ ...data, key: suggestedKey })
+      }
+    }
   }
 
   const handleKeyChange = (e: ChangeEvent<HTMLInputElement>) => {
-    onChange({ ...data, key: e.target.value.toUpperCase().slice(0, 5) })
+    const newKey = e.target.value.toUpperCase().slice(0, 5)
+    if (newKey === '') {
+      setIsKeyCustom(false)
+    } else {
+      setIsKeyCustom(true)
+    }
+    onChange({ ...data, key: newKey })
   }
 
   const handleDescriptionChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
     onChange({ ...data, description: e.target.value })
   }
+
+  const showKeyError = data.key.trim() !== '' && !isProjectKeyValid(data.key)
 
   return (
     <motion.div variants={staggerContainer} initial="hidden" animate="show" className="space-y-6 max-w-xl mx-auto text-left">
@@ -62,6 +123,7 @@ const SetupBasicInfo = ({ data, onChange }: SetupBasicInfoProps) => {
             type="text"
             value={data.name}
             onChange={handleNameChange}
+            onBlur={handleNameBlur}
             placeholder="Ví dụ: Website Revamp Q3, TaskFlow Core Engine..."
             className="w-full bg-surface border border-hairline rounded-lg px-4 py-3 text-xs font-medium focus:ring-2 focus:ring-brand/15 focus:border-ink/20 outline-none transition-all placeholder:text-subtle"
           />

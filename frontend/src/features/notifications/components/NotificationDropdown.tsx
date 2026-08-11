@@ -14,6 +14,8 @@ import { Trash2, CheckCheck, Sparkles, Inbox } from 'lucide-react'
 interface NotificationDropdownProps {
   notifications: NotificationItem[]
   onClose: () => void
+  placement?: 'top' | 'bottom'
+  isRightAligned?: boolean
 }
 
 const formatRelativeTime = (dateString: string): string => {
@@ -36,7 +38,12 @@ const formatRelativeTime = (dateString: string): string => {
   return date.toLocaleDateString('vi-VN')
 }
 
-export const NotificationDropdown = ({ notifications, onClose }: NotificationDropdownProps) => {
+export const NotificationDropdown = ({
+  notifications,
+  onClose,
+  placement = 'top',
+  isRightAligned = false,
+}: NotificationDropdownProps) => {
   const [showConfirm, setShowConfirm] = useState(false)
   const { mutate: markAllAsRead } = useMarkAllAsRead()
   const { mutate: deleteNotification } = useDeleteNotification()
@@ -66,9 +73,14 @@ export const NotificationDropdown = ({ notifications, onClose }: NotificationDro
     deleteNotification(id)
   }
 
+  const positionClasses =
+    placement === 'bottom'
+      ? `top-full mt-2 ${isRightAligned ? 'right-0' : 'left-0'} slide-in-from-top-2`
+      : `bottom-16 ${isRightAligned ? 'right-0' : 'left-0'} slide-in-from-bottom-2`
+
   return (
     <div
-      className="absolute bottom-16 left-0 w-80 bg-surface border border-hairline rounded-xl shadow-2xl z-50 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-150"
+      className={`absolute w-80 max-w-[calc(100vw-32px)] bg-surface border border-hairline rounded-xl shadow-2xl z-50 flex flex-col overflow-hidden animate-in fade-in duration-150 ${positionClasses}`}
       style={{ maxHeight: '420px' }}
       onClick={(e) => e.stopPropagation()}
     >
