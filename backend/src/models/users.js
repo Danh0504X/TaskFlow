@@ -83,6 +83,13 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+
+    // Lần gần nhất user gọi 1 API cần đăng nhập (cập nhật ở protectedRoute, có throttle) — dùng
+    // để tính "user hoạt động gần đây" cho dashboard admin, khác với createdAt (ngày đăng ký).
+    lastActiveAt: {
+      type: Date,
+      default: null,
+    },
   },
   {
     // Bật cả createdAt + updatedAt để trang Profile theo dõi lần sửa gần nhất.

@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
+import { motion } from 'motion/react'
 import PageHeader from '@/components/layout/PageHeader'
+import PageHeaderButton from '@/components/layout/PageHeaderButton'
+import Tabs, { type TabItem } from '@/components/ui/Tabs'
 import { staggerContainer } from '@/lib/motion'
 import { AvatarCard } from '../components/AvatarCard'
 import { AiQuotaCard } from '../components/AiQuotaCard'
@@ -9,13 +11,20 @@ import { SecuritySettings } from '../components/SecuritySettings'
 import { PaymentHistoryTab } from '@/features/payment/components/PaymentHistoryTab'
 import { PricingModal } from '@/features/payment/components/PricingModal'
 import { UpgradeModal } from '@/features/payment/components/UpgradeModal'
-import { User, CreditCard, Eye, Crown } from 'lucide-react'
+import { Eye, Crown } from 'lucide-react'
 import { useAuthStore } from '@/features/auth/authStore'
 import { authApi } from '@/features/auth/auth.api'
 
+type ProfileTab = 'profile' | 'payments'
+
+const TAB_ITEMS: TabItem<ProfileTab>[] = [
+  { value: 'profile', label: 'Thông tin cá nhân & Bảo mật' },
+  { value: 'payments', label: 'Lịch sử thanh toán & Gói PRO' },
+]
+
 export function ProfilePage() {
   const { user, setUser } = useAuthStore()
-  const [activeTab, setActiveTab] = useState<'profile' | 'payments'>('profile')
+  const [activeTab, setActiveTab] = useState<ProfileTab>('profile')
   const [isPricingOpen, setIsPricingOpen] = useState<boolean>(false)
   const [isUpgradeOpen, setIsUpgradeOpen] = useState<boolean>(false)
 
@@ -32,55 +41,24 @@ export function ProfilePage() {
 
   return (
     <div className="max-w-6xl mx-auto flex flex-col">
-      {/* Header với các Nút Action nổi bật */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-8 md:px-12 pt-6">
-        <div>
-          <PageHeader title="Hồ sơ của tôi" subtitle="Quản lý thông tin cá nhân, hạn mức AI và lịch sử thanh toán." />
-        </div>
+      <PageHeader
+        title="Hồ sơ của tôi"
+        subtitle="Quản lý thông tin cá nhân, hạn mức AI và lịch sử thanh toán."
+        actions={
+          <>
+            <PageHeaderButton icon={Eye} onClick={() => setIsPricingOpen(true)}>
+              Xem bảng giá
+            </PageHeaderButton>
+            <PageHeaderButton icon={Crown} variant="primary" onClick={() => setIsUpgradeOpen(true)}>
+              {isPro ? 'Gia hạn PRO' : 'Nâng cấp PRO'}
+            </PageHeaderButton>
+          </>
+        }
+      />
 
-        <div className="flex items-center gap-2 shrink-0">
-          {/* Nút Xem Bảng Giá nổi bật ở Header */}
-          <button
-            onClick={() => setIsPricingOpen(true)}
-            className="py-2 px-3.5 bg-canvas border border-hairline hover:bg-surface text-ink text-xs font-semibold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
-          >
-            <Eye size={14} className="text-amber-500" /> Xem Bảng Giá Dịch Vụ
-          </button>
-
-          {/* Nút Nâng cấp/Gia hạn PRO */}
-          <button
-            onClick={() => setIsUpgradeOpen(true)}
-            className="py-2 px-3.5 bg-gradient-to-r from-amber-500 to-indigo-600 hover:from-amber-600 hover:to-indigo-700 text-white text-xs font-bold rounded-xl transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
-          >
-            <Crown size={14} /> {isPro ? 'Gia hạn PRO' : 'Nâng cấp PRO'}
-          </button>
-        </div>
-      </div>
-
-      {/* Nav Tabs */}
+      {/* Nav Tabs — dùng component Tabs dùng chung (pill trượt), giống mọi bộ tab khác trong app. */}
       <div className="px-8 md:px-12 pt-4">
-        <div className="flex border-b border-hairline gap-6 text-sm">
-          <button
-            onClick={() => setActiveTab('profile')}
-            className={`py-3 font-semibold flex items-center gap-2 border-b-2 transition-all cursor-pointer ${
-              activeTab === 'profile'
-                ? 'border-brand text-brand'
-                : 'border-transparent text-subtle hover:text-ink'
-            }`}
-          >
-            <User size={16} /> Thông tin cá nhân & Bảo mật
-          </button>
-          <button
-            onClick={() => setActiveTab('payments')}
-            className={`py-3 font-semibold flex items-center gap-2 border-b-2 transition-all cursor-pointer ${
-              activeTab === 'payments'
-                ? 'border-brand text-brand'
-                : 'border-transparent text-subtle hover:text-ink'
-            }`}
-          >
-            <CreditCard size={16} /> Lịch sử thanh toán & Gói PRO
-          </button>
-        </div>
+        <Tabs items={TAB_ITEMS} value={activeTab} onChange={setActiveTab} layoutGroupId="profile-tabs-pill" className="inline-flex" />
       </div>
 
       {/* Tab Content */}

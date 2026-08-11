@@ -1,6 +1,7 @@
 import api from '@/lib/api'
 import type { ApiResponse } from '@/lib/http'
 import type {
+  AdminOverview,
   AdminUserItem,
   AiLeaderboardRow,
   AiOverviewStats,
@@ -11,6 +12,12 @@ import type {
 } from './admin.types'
 
 export const adminApi = {
+  /** GET /admin/overview — Tổng quan hệ thống: người dùng, doanh thu SePay, cảnh báo AI (dữ liệu thật). */
+  getOverview: async (): Promise<AdminOverview> => {
+    const res = await api.get<ApiResponse<AdminOverview>>('/admin/overview')
+    return res.data.data
+  },
+
   /** GET /admin/users — Lấy danh sách & tìm kiếm tài khoản (U051) */
   getUsers: async (query: GetUsersQuery = {}): Promise<GetUsersResponse> => {
     const params = new URLSearchParams()

@@ -26,6 +26,59 @@ const isProUser = (user) =>
   !!(user?.plan === 'PRO' && user?.currentPlanExpiresAt && new Date(user.currentPlanExpiresAt) > new Date())
 
 /**
+ * Cảnh báo AI cần admin chú ý ngay: lượt sinh kẹt ở PROCESSING quá lâu, user chạm trần quota hôm
+ * nay. Tách riêng khỏi getOverview() để trang Tổng quan (dashboard toàn hệ thống) gọi được mà
+ * không phải tính kèm phễu/theo loại/token 30 ngày — những phần chỉ tab AI mới cần.
+ */
+const getAiAlerts = async () => {
+  const today = startOfTodayUtc()
+
+  const [stuckProcessing, quotaCappedGroups] = await Promise.all([
+    AiGeneration.find({
+      status: 'PROCESSING',
+      updatedAt: { $lt: new Date(Date.now() - STUCK_PROCESSING_MINUTES * 60 * 1000) },
+    })
+      .select('_id requestedBy updatedAt')
+      .populate('requestedBy', 'fullName')
+      .sort({ updatedAt: 1 })
+      .limit(5)
+      .lean(),
+
+    AiGeneration.aggregate([
+      { $match: { createdAt: { $gte: today } } },
+      { $group: { _id: '$requestedBy', count: { $sum: 1 } } },
+      { $match: { count: { $gte: aiEnv.AI_DAILY_LIMIT } } },
+    ]),
+  ])
+
+  // PRO còn hạn không thật sự bị chặn (checkAiLimit bỏ qua) -> loại khỏi cảnh báo "chạm trần",
+  // kẻo báo nhầm cho user không hề bị ảnh hưởng.
+  const cappedUserIds = quotaCappedGroups.map((r) => r._id).filter(Boolean)
+  const cappedUsers = await User.find({ _id: { $in: cappedUserIds } }).select('plan currentPlanExpiresAt').lean()
+  const cappedCount = cappedUsers.filter((u) => !isProUser(u)).length
+
+  const alerts = []
+  stuckProcessing.forEach((g) => {
+    const minutesAgo = Math.round((Date.now() - new Date(g.updatedAt).getTime()) / 60000)
+    alerts.push({
+      id: `stuck-${g._id}`,
+      kind: 'STUCK_PROCESSING',
+      message: `1 lượt sinh của ${g.requestedBy?.fullName || 'user đã xoá'} đang kẹt ở PROCESSING hơn ${minutesAgo} phút.`,
+      createdAt: g.updatedAt,
+    })
+  })
+  if (cappedCount > 0) {
+    alerts.push({
+      id: 'quota-capped-today',
+      kind: 'QUOTA_CAPPED',
+      message: `${cappedCount} user đã chạm trần quota AI hôm nay và đang bị chặn tạo thêm.`,
+      createdAt: new Date().toISOString(),
+    })
+  }
+  return alerts
+}
+
+/**
  * Số liệu tab "Tổng quan" — mọi con số tính trực tiếp trên AiGeneration/AiDraftIssue tại thời
  * điểm gọi, không lưu sẵn (giống cách getUsageStats/getAiUsageToday đang làm), nên luôn khớp
  * dữ liệu gốc.
@@ -42,8 +95,7 @@ const getOverview = async () => {
     funnelDrafts30d,
     byTypeAgg,
     daily30dAgg,
-    stuckProcessing,
-    quotaCappedGroups,
+    alerts,
   ] = await Promise.all([
     AiGeneration.countDocuments({ generationType: { $in: CONTENT_TYPES }, createdAt: { $gte: today } }),
 
@@ -86,28 +138,8 @@ const getOverview = async () => {
       },
     ]),
 
-    AiGeneration.find({
-      status: 'PROCESSING',
-      updatedAt: { $lt: new Date(Date.now() - STUCK_PROCESSING_MINUTES * 60 * 1000) },
-    })
-      .select('_id requestedBy updatedAt')
-      .populate('requestedBy', 'fullName')
-      .sort({ updatedAt: 1 })
-      .limit(5)
-      .lean(),
-
-    AiGeneration.aggregate([
-      { $match: { createdAt: { $gte: today } } },
-      { $group: { _id: '$requestedBy', count: { $sum: 1 } } },
-      { $match: { count: { $gte: aiEnv.AI_DAILY_LIMIT } } },
-    ]),
+    getAiAlerts(),
   ])
-
-  // PRO còn hạn không thật sự bị chặn (checkAiLimit bỏ qua) -> loại khỏi cảnh báo "chạm trần",
-  // kẻo báo nhầm cho user không hề bị ảnh hưởng.
-  const cappedUserIds = quotaCappedGroups.map((r) => r._id).filter(Boolean)
-  const cappedUsers = await User.find({ _id: { $in: cappedUserIds } }).select('plan currentPlanExpiresAt').lean()
-  const cappedCount = cappedUsers.filter((u) => !isProUser(u)).length
 
   const errRow = errorStats7d[0] || { total: 0, failed: 0 }
   const draftRow30d = funnelDrafts30d[0] || { total: 0, accepted: 0 }
@@ -131,25 +163,6 @@ const getOverview = async () => {
     const dateStr = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10)
     const row = dailyMap.get(dateStr)
     daily30d.push({ date: dateStr, tokens: row?.tokens || 0, errorsCount: row?.errorsCount || 0 })
-  }
-
-  const alerts = []
-  stuckProcessing.forEach((g) => {
-    const minutesAgo = Math.round((Date.now() - new Date(g.updatedAt).getTime()) / 60000)
-    alerts.push({
-      id: `stuck-${g._id}`,
-      kind: 'STUCK_PROCESSING',
-      message: `1 lượt sinh của ${g.requestedBy?.fullName || 'user đã xoá'} đang kẹt ở PROCESSING hơn ${minutesAgo} phút.`,
-      createdAt: g.updatedAt,
-    })
-  })
-  if (cappedCount > 0) {
-    alerts.push({
-      id: 'quota-capped-today',
-      kind: 'QUOTA_CAPPED',
-      message: `${cappedCount} user đã chạm trần quota AI hôm nay và đang bị chặn tạo thêm.`,
-      createdAt: new Date().toISOString(),
-    })
   }
 
   return {
@@ -227,4 +240,5 @@ const getQuotaLeaderboard = async (timeframe = '30d') => {
 export const adminAiService = {
   getOverview,
   getQuotaLeaderboard,
+  getAiAlerts,
 }

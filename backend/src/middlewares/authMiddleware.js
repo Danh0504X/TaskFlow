@@ -3,6 +3,17 @@ import User from '../models/users.js'
 import { JwtProvider } from '../providers/JwtProvider.js'
 import { env } from '../config/environment.js'
 
+// Throttle ghi lastActiveAt: mọi request đều qua đây, nhưng ghi DB mỗi request thì quá tốn —
+// 1 giờ mới cập nhật lại là đủ chính xác cho mục đích thống kê "hoạt động 7 ngày qua".
+const ACTIVITY_THROTTLE_MS = 60 * 60 * 1000
+
+// Không await — không được để việc ghi nhận hoạt động làm chậm hoặc làm fail request chính.
+const touchLastActive = (user) => {
+  if (user.lastActiveAt && Date.now() - user.lastActiveAt.getTime() < ACTIVITY_THROTTLE_MS) return
+  User.updateOne({ _id: user._id }, { lastActiveAt: new Date() })
+    .catch((err) => console.error('>> [protectedRoute] Failed to update lastActiveAt:', err.message))
+}
+
 export const protectedRoute = async (req, res, next) => {
   try {
     const accessToken = req.cookies?.accessToken
@@ -40,6 +51,7 @@ export const protectedRoute = async (req, res, next) => {
       }
 
       req.user = user
+      touchLastActive(user)
 
       next()
     } catch (err) {

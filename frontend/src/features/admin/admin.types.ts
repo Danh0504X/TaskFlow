@@ -1,8 +1,8 @@
 // Type cho toàn bộ dữ liệu khu vực Admin.
-// Phần "Tài khoản" (AdminUserItem và các type liên quan) dùng dữ liệu THẬT từ
-// GET/PUT/DELETE /admin/users — khớp đúng response của backend (userService.js).
-// Các phần còn lại (Tổng quan, Giám sát AI, Nhật ký hệ thống) vẫn dùng mock (xem mock/)
-// vì backend chưa có — chỉ cần đổi queryFn trong hook khi có API thật, không đụng component.
+// "Tài khoản" (AdminUserItem...), "Tổng quan" (AdminOverview) và "Giám sát AI" (AiOverviewStats...)
+// đều dùng dữ liệu THẬT — khớp response backend (userService.js / adminOverviewService.js /
+// adminAiService.js). Chỉ "Nhật ký hệ thống" còn dùng mock (xem mock/audit.mock.ts) vì backend
+// chưa có — đổi queryFn trong hook khi có API thật, không đụng component.
 
 export type UserStatus = 'active' | 'inactive' | 'banned'
 export type UserRole = 'admin' | 'user'
@@ -66,9 +66,19 @@ export interface DailyPoint {
 }
 
 export interface AdminOverview {
+  /** Tổng số tài khoản hiện có — không có "trend" vì đây là số cộng dồn, không phải số theo kỳ. */
+  totalUsers: number
+  /** User có gọi ít nhất 1 API cần đăng nhập trong 7 ngày qua (dựa trên User.lastActiveAt ở
+   * backend) — khác user MỚI đăng ký, phản ánh đúng ai đang thật sự dùng app. */
   activeUsers7d: TrendValue
-  aiCostThisMonth: TrendValue
   userGrowth30d: DailyPoint[]
+  /** Tổng tiền giao dịch đã PAID trong tháng — đơn vị VNĐ, so với cùng kỳ tháng trước. */
+  revenueThisMonth: TrendValue
+  /** Giao dịch SePay lỗi/chưa khớp đang chờ admin duyệt thủ công (resolutionStatus=MANUAL_PENDING). */
+  pendingPayments: number
+  /** Cảnh báo AI cần chú ý ngay (lượt sinh kẹt xử lý, user chạm trần quota) — cùng dữ liệu với
+   * tab Giám sát AI, xem AiAlert bên dưới. */
+  alerts: AiAlert[]
 }
 
 // ---------- Giám sát AI ----------

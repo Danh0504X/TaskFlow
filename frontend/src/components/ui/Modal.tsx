@@ -1,9 +1,9 @@
 import { useEffect, type ReactNode } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
-import { AlertTriangle, CheckCircle2, Info, Sparkles, X } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Crown, Info, Sparkles, X } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
-export type ModalTone = 'brand' | 'success' | 'danger' | 'info'
+export type ModalTone = 'brand' | 'success' | 'danger' | 'info' | 'premium'
 export type ModalLayout = 'center' | 'compact' | 'sheet' | 'wide'
 
 interface ModalProps {
@@ -24,11 +24,13 @@ interface ModalProps {
 
 // brand = trung tính (form tạo/sửa thông thường, không cần nhấn màu); success/danger/info dùng
 // đúng 3 pastel tương ứng trong bộ token chung — khớp với priority/status badge trong app.
+// premium = pastel-yellow — dùng cho modal liên quan gói PRO/thanh toán (Bảng giá, Nâng cấp).
 const toneConfig: Record<ModalTone, { Icon: typeof Sparkles; chip: string }> = {
   brand: { Icon: Sparkles, chip: 'bg-canvas text-ink' },
   success: { Icon: CheckCircle2, chip: 'bg-pastel-green text-pastel-green-ink' },
   danger: { Icon: AlertTriangle, chip: 'bg-pastel-red text-pastel-red-ink' },
   info: { Icon: Info, chip: 'bg-pastel-blue text-pastel-blue-ink' },
+  premium: { Icon: Crown, chip: 'bg-pastel-yellow text-pastel-yellow-ink' },
 }
 
 const layoutMaxWidth: Record<ModalLayout, string> = {

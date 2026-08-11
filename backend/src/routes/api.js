@@ -9,6 +9,7 @@ import aiRoute from '../modules/ai/routes/ai.routes.js'
 import paymentRoute from './paymentRoute.js'
 import adminPaymentRoute from './adminPaymentRoute.js'
 import adminAiRoute from './adminAiRoute.js'
+import adminOverviewRoute from './adminOverviewRoute.js'
 
 const router = express.Router()
 
@@ -28,6 +29,7 @@ router.use('/payments', paymentRoute)
 router.use('/v1/payments', paymentRoute)
 router.use('/admin/payments', adminPaymentRoute)
 router.use('/admin/ai', adminAiRoute)
+router.use('/admin/overview', adminOverviewRoute)
 // Beta/Demo — AI Lab (modules/ai/**), additive-only: xem modules/ai/routes/ai.routes.js
 router.use('/projects/:projectId/ai', aiRoute)
 
