@@ -1,8 +1,7 @@
 // Type cho toàn bộ dữ liệu khu vực Admin.
 // "Tài khoản" (AdminUserItem...), "Tổng quan" (AdminOverview) và "Giám sát AI" (AiOverviewStats...)
 // đều dùng dữ liệu THẬT — khớp response backend (userService.js / adminOverviewService.js /
-// adminAiService.js). Chỉ "Nhật ký hệ thống" còn dùng mock (xem mock/audit.mock.ts) vì backend
-// chưa có — đổi queryFn trong hook khi có API thật, không đụng component.
+// adminAiService.js).
 
 export type UserStatus = 'active' | 'inactive' | 'banned'
 export type UserRole = 'admin' | 'user'
@@ -141,42 +140,4 @@ export interface AiLeaderboardRow {
   acceptedCount: number
   quotaUsedToday: number
   quotaLimitToday: number
-}
-
-// ---------- Nhật ký hệ thống ----------
-
-export type AuditAction =
-  | 'USER_LOCK'
-  | 'USER_UNLOCK'
-  | 'USER_ROLE_CHANGE'
-  | 'USER_DELETE'
-  | 'PROJECT_OWNER_TRANSFER'
-  | 'AI_PROMPT_VIEW'
-  | 'SETTINGS_CHANGE'
-  | 'AI_GLOBAL_TOGGLE'
-
-export interface AuditLogItem {
-  _id: string
-  createdAt: string
-  adminName: string
-  adminEmail: string
-  action: AuditAction
-  targetLabel: string
-  detail: string
-}
-
-export interface AuditLogQuery {
-  page?: number
-  limit?: number
-  action?: AuditAction | ''
-  adminEmail?: string
-  dateFrom?: string
-  dateTo?: string
-}
-
-export interface AuditLogResponse {
-  items: AuditLogItem[]
-  total: number
-  page: number
-  limit: number
 }

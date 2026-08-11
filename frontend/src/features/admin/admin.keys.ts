@@ -1,4 +1,4 @@
-import type { AuditLogQuery, GetUsersQuery, QuotaTimeframe } from './admin.types'
+import type { GetUsersQuery, QuotaTimeframe } from './admin.types'
 
 export const adminKeys = {
   all: ['admin'] as const,
@@ -12,7 +12,4 @@ export const adminKeys = {
   ai: () => [...adminKeys.all, 'ai'] as const,
   aiOverview: () => [...adminKeys.ai(), 'overview'] as const,
   aiQuota: (timeframe: QuotaTimeframe) => [...adminKeys.ai(), 'quota', timeframe] as const,
-
-  audit: () => [...adminKeys.all, 'audit'] as const,
-  auditList: (query: AuditLogQuery) => [...adminKeys.audit(), 'list', query] as const,
 }
