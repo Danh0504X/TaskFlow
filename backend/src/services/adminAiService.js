@@ -80,8 +80,7 @@ const getAiAlerts = async () => {
 
 /**
  * Số liệu tab "Tổng quan" — mọi con số tính trực tiếp trên AiGeneration/AiDraftIssue tại thời
- * điểm gọi, không lưu sẵn (giống cách getUsageStats/getAiUsageToday đang làm), nên luôn khớp
- * dữ liệu gốc.
+ * điểm gọi, không lưu sẵn (giống cách getAiUsageToday đang làm), nên luôn khớp dữ liệu gốc.
  */
 const getOverview = async () => {
   const today = startOfTodayUtc()
@@ -181,9 +180,9 @@ const getOverview = async () => {
 }
 
 /**
- * Bảng xếp hạng token/lượt sinh theo user trong 1 khung thời gian — cùng cách tính với
- * getUsageStats().byUser (aiGeneration.service.js) và getAiUsageToday (checkAiLimit.js),
- * chỉ khác là trả cho NHIỀU user cùng lúc, có thêm tỉ lệ chấp nhận qua $lookup draft.
+ * Bảng xếp hạng token/lượt sinh theo user trong 1 khung thời gian — cùng cách đếm trực tiếp trên
+ * AiGeneration như getAiUsageToday (checkAiLimit.js), chỉ khác là trả cho NHIỀU user cùng lúc,
+ * có thêm tỉ lệ chấp nhận qua $lookup draft.
  */
 const getQuotaLeaderboard = async (timeframe = '30d') => {
   const days = Object.prototype.hasOwnProperty.call(TIMEFRAME_DAYS, timeframe) ? TIMEFRAME_DAYS[timeframe] : TIMEFRAME_DAYS['30d']

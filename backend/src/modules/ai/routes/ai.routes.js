@@ -23,7 +23,6 @@ const router = express.Router({ mergeParams: true })
 router.use(protectedRoute)
 
 // Chỉ chủ dự án (role OWNER — vai trò duy nhất có toàn quyền quản trị project trong hệ thống
-// hiện tại, tương đương "PM" trong tài liệu thiết kế tính năng) được dùng AI Lab. MEMBER bị 403.
 router.use(authorizeProjectRole('OWNER'))
 
 // checkAiLimit áp cho route TẠO lượt sinh mới VÀ route hỏi làm rõ (CLARIFY cũng là 1
@@ -40,7 +39,6 @@ router.patch('/drafts/:draftId', editDraft)
 router.delete('/drafts/:draftId', deleteDraft)
 
 // Task nháp hiện có của 1 epic thật (dùng khi mở modal "Sinh Task bằng AI"). Xoá tất cả & sinh
-// lại từ đầu — không tốn quota (không gọi AI, chỉ dọn draft).
 router.get('/epics/:epicId/task-drafts', getEpicTaskDrafts)
 router.delete('/epics/:epicId/task-drafts', clearEpicTaskDrafts)
 

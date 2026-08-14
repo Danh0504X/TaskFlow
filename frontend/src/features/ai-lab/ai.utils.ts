@@ -10,7 +10,7 @@ export const truncateText = (text: string, max: number) =>
  * component vừa export hằng số khác. */
 export const GENERATION_STATUS_LABEL: Record<AiGenerationStatus, string> = {
   PENDING: 'Đang chờ xử lý...',
-  PROCESSING: 'AI đang phân tích và sinh issue...',
+  PROCESSING: 'AI đang phân tích và phân rã công việc...',
   COMPLETED: 'Hoàn tất',
   FAILED: 'Sinh thất bại',
 }

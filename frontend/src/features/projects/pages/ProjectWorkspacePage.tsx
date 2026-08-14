@@ -214,7 +214,7 @@ const ProjectWorkspacePage = () => {
                 className="flex items-center gap-1.5 px-3.5 py-2 bg-surface text-ink border border-hairline rounded-lg text-xs font-semibold hover:border-ink/20 transition-colors active:scale-[0.98]"
               >
                 <Sparkles size={14} className="text-muted" />
-                <span>Sinh Epic bằng AI</span>
+                <span>AI Phân rã công việc</span>
               </button>
             )}
             {isOwner && (

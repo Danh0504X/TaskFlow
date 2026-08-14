@@ -405,7 +405,7 @@ const HeroDemoInput = ({ typedText }: { typedText: string }) => (
       className="flex w-fit items-center gap-1.5 rounded-lg bg-pastel-blue px-3 py-2 text-[11px] font-bold text-pastel-blue-ink"
     >
       <Sparkles size={12} />
-      Sinh Epic bằng AI
+      AI Phân rã công việc
     </button>
   </motion.div>
 )
@@ -791,7 +791,7 @@ const AiBreakdownPanel = () => (
     </div>
     <button disabled className="flex items-center gap-1.5 rounded-lg bg-pastel-blue px-3.5 py-2 text-[11px] font-bold text-pastel-blue-ink">
       <Sparkles size={13} />
-      Sinh Epic bằng AI
+      AI Phân rã công việc
     </button>
     <motion.div variants={springContainer} initial="hidden" animate="show" className="space-y-1.5 pt-2">
       {['Tích hợp cổng thanh toán', 'Xử lý webhook thanh toán', 'Gửi email xác nhận đơn hàng'].map((t) => (

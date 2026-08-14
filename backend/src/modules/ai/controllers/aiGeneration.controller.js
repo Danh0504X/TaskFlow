@@ -1,6 +1,7 @@
 import { StatusCodes } from 'http-status-codes'
 import { asyncHandler } from '../../../middlewares/asyncHandler.js'
 import { aiGenerationService } from '../services/aiGeneration.service.js'
+import { aiDraftService } from '../services/aiDraft.service.js'
 
 // Beta/Demo — AI Lab. Controller mỏng: nhận req, gọi service, trả JSON — lỗi tự next(err) qua asyncHandler.
 
@@ -49,7 +50,7 @@ export const getGeneration = asyncHandler(async (req, res) => {
 
 export const addManualDraft = asyncHandler(async (req, res) => {
   const { genId } = req.params
-  const result = await aiGenerationService.addManualDraft(genId, req.body)
+  const result = await aiDraftService.addManualDraft(genId, req.body)
 
   res.status(StatusCodes.CREATED).json({
     message: 'Đã thêm draft thủ công',
@@ -59,7 +60,7 @@ export const addManualDraft = asyncHandler(async (req, res) => {
 
 export const editDraft = asyncHandler(async (req, res) => {
   const { draftId } = req.params
-  const result = await aiGenerationService.editDraft(draftId, req.body)
+  const result = await aiDraftService.editDraft(draftId, req.body)
 
   res.status(StatusCodes.OK).json({
     message: 'Đã cập nhật draft',
@@ -69,7 +70,7 @@ export const editDraft = asyncHandler(async (req, res) => {
 
 export const deleteDraft = asyncHandler(async (req, res) => {
   const { draftId } = req.params
-  const result = await aiGenerationService.deleteDraft(draftId)
+  const result = await aiDraftService.deleteDraft(draftId)
 
   res.status(StatusCodes.OK).json({
     message: 'Đã xoá draft',
@@ -81,7 +82,7 @@ export const deleteDraft = asyncHandler(async (req, res) => {
 export const acceptDrafts = asyncHandler(async (req, res) => {
   const { genId } = req.params
   const { tempIds } = req.body
-  const result = await aiGenerationService.acceptDrafts(genId, tempIds, req.user._id)
+  const result = await aiDraftService.acceptDrafts(genId, tempIds, req.user._id)
 
   res.status(StatusCodes.OK).json({
     message: `Đã tạo ${result.created.length} issue`,
@@ -93,7 +94,7 @@ export const acceptDrafts = asyncHandler(async (req, res) => {
 export const rejectDrafts = asyncHandler(async (req, res) => {
   const { genId } = req.params
   const { ids } = req.body
-  const result = await aiGenerationService.rejectDrafts(genId, ids)
+  const result = await aiDraftService.rejectDrafts(genId, ids)
 
   res.status(StatusCodes.OK).json({
     message: 'Đã từ chối các draft đã chọn',
@@ -104,7 +105,7 @@ export const rejectDrafts = asyncHandler(async (req, res) => {
 // "Xoá tất cả & sinh lại từ đầu" cho 1 epic thật — xoá HẲN mọi task nháp chưa duyệt của epic đó.
 export const clearEpicTaskDrafts = asyncHandler(async (req, res) => {
   const { projectId, epicId } = req.params
-  const result = await aiGenerationService.clearEpicTaskDrafts(projectId, epicId)
+  const result = await aiDraftService.clearEpicTaskDrafts(projectId, epicId)
 
   res.status(StatusCodes.OK).json({
     message: `Đã xoá ${result.deletedCount} task nháp`,
@@ -116,7 +117,7 @@ export const clearEpicTaskDrafts = asyncHandler(async (req, res) => {
 // bấm "Sinh Task" mới có gì để xem.
 export const getEpicTaskDrafts = asyncHandler(async (req, res) => {
   const { projectId, epicId } = req.params
-  const result = await aiGenerationService.getEpicTaskDrafts(projectId, epicId)
+  const result = await aiDraftService.getEpicTaskDrafts(projectId, epicId)
 
   res.status(StatusCodes.OK).json({
     message: 'Get epic task drafts successfully',

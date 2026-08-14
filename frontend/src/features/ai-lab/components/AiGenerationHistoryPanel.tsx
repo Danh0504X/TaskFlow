@@ -12,7 +12,7 @@ interface AiGenerationHistoryPanelProps {
   onSelect: (generationId: string) => void
 }
 
-/** Cột lịch sử bên trái modal "Sinh Epic bằng AI" — chỉ liệt kê lượt REQ_TO_EPIC (không CLARIFY,
+/** Cột lịch sử bên trái modal "AI Phân rã công việc" — chỉ liệt kê lượt REQ_TO_EPIC (không CLARIFY,
  * không EPIC_TO_TASK — modal đó (AiQuickGenerateModal) không còn cột lịch sử nữa, vì 1 epic thật
  * giờ chỉ có đúng 1 "phiên" Sinh Task duy nhất, liệt kê nhiều lượt không còn ý nghĩa). Luôn chiếm
  * trọn chiều cao khung cố định do component cha (AiGenerateEpicModal) cấp qua flex `h-full` —

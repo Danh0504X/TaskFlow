@@ -26,7 +26,8 @@ const fieldErrorClass = 'text-[10px] text-pastel-red-ink font-medium'
 
 type WizardStep = 'INPUT' | 'QUESTIONS' | 'RESULT'
 
-/** Modal "Sinh Epic bằng AI" — 2 cột: trái là lịch sử các lượt REQ_TO_EPIC đã sinh của project
+/** Modal "AI Phân rã công việc" (trước đây gọi "Sinh Epic bằng AI" — đổi tên vì tính năng hỗ trợ
+ * cả Epic lẫn Task, không chỉ mỗi Epic) — 2 cột: trái là lịch sử các lượt REQ_TO_EPIC đã sinh của project
  * (AiGenerationHistoryPanel), phải là khu vực làm việc chính: nhập yêu cầu -> AI hỏi làm rõ (nếu
  * cần) -> trả lời từng câu -> xem trạng thái sinh -> duyệt (sửa/xoá/chấp nhận) draft — TẤT CẢ
  * ngay trong modal này, không điều hướng sang trang nào khác (không còn phụ thuộc /ai-lab).
@@ -140,7 +141,7 @@ const AiGenerateEpicModal = ({ open, onClose, projectId }: AiGenerateEpicModalPr
   }
 
   return (
-    <Modal open={open} onClose={handleClose} title="Sinh Epic bằng AI" icon={<Sparkles size={18} />} layout="xl" footer={
+    <Modal open={open} onClose={handleClose} title="AI Phân rã công việc" icon={<Sparkles size={18} />} layout="xl" footer={
       step === 'INPUT' ? (
         <>
           <Button variant="secondary" onClick={handleClose}>
